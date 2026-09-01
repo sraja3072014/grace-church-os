@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import FusionSidebar from './components/layout/FusionSidebar';
 import Header from './components/layout/Header';
+import MainDashboard from './components/dashboard/MainDashboard';
+import AttendanceDesk from './components/attendance/AttendanceDesk';
 import SettingsHub from './components/settings/SettingsHub';
 import LoginModal from './components/auth/LoginModal';
+import MembersDesk from './components/members/MembersDesk';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -24,12 +27,12 @@ export default function App() {
       <div className="absolute bottom-[-10%] left-[30%] w-[45vw] h-[45vw] min-w-[400px] min-h-[400px] rounded-full bg-purple-700/20 blur-[160px] pointer-events-none animate-crimson-float" />
       <div className="absolute top-[20%] right-[-10%] w-[45vw] h-[45vw] min-w-[400px] min-h-[400px] rounded-full bg-rose-700/15 blur-[150px] pointer-events-none animate-sunset-1" />
 
-      {/* 1. Login Authentication Viewport */}
+      {/* Login Screen */}
       {!session ? (
         <LoginModal onLoginSuccess={(user) => setSession(user)} />
       ) : (
-        /* 2. Main Desktop OS Workspace */
         <>
+          {/* Fusion Sidebar with Direct Routing */}
           <FusionSidebar 
             activeTab={activeTab} 
             setActiveTab={setActiveTab} 
@@ -41,36 +44,43 @@ export default function App() {
             <Header />
 
             <main className="flex-1 p-5 overflow-y-auto">
-              {activeTab === 'settings' ? (
-                <SettingsHub />
-              ) : (
-                <div className="crystal-card rounded-2xl p-6 min-h-full flex flex-col justify-between border border-white/[0.08]">
-                  <div>
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4 mb-5">
-                      <div>
-                        <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white capitalize">
-                          {activeTab} Overview
-                        </h2>
-                        <p className="text-xs text-cyan-400 font-semibold mt-0.5">
-                          Active Node: {session.activeCampus}
-                        </p>
-                      </div>
-                      <div className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-                        ● Live Synced
-                      </div>
-                    </div>
+              {/* Main Dashboard Routing */}
+              {activeTab === 'dashboard' && (
+                <MainDashboard setActiveTab={setActiveTab} session={session} />
+              )}
 
-                    {/* Standard Dashboard Cards */}
-                    <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-                      <div className="p-5 crystal-card rounded-xl">
-                        <p className="text-xs text-slate-400 font-medium">Campus Members</p>
-                        <p className="text-2xl font-black text-white mt-1">2,840</p>
-                      </div>
-                      <div className="p-5 crystal-card rounded-xl">
-                        <p className="text-xs text-slate-400 font-medium">Today Attendance</p>
-                        <p className="text-2xl font-black text-orange-300 mt-1">642</p>
-                      </div>
+              {/* Sunday Attendance Desk Routing */}
+              {activeTab === 'attendance' && (
+                <AttendanceDesk session={session} />
+              )}
+              {activeTab === 'members' && (
+              <MembersDesk session={session} />
+              )}
+              {/* Settings Hub Routing */}
+              {activeTab === 'settings' && (
+                <SettingsHub />
+              )}
+
+              {/* Fallback Screen for Upcoming Tabs */}
+              {activeTab !== 'dashboard' && activeTab !== 'attendance' && activeTab !== 'settings' && (
+                <div className="crystal-card rounded-2xl p-6 min-h-full flex flex-col justify-between border border-white/[0.08]">
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-5">
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-black text-white capitalize">
+                        {activeTab} Desk
+                      </h2>
+                      <p className="text-xs text-cyan-400 font-semibold mt-0.5">
+                        Active Campus: {session.activeCampus}
+                      </p>
                     </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                      ● Ready for Data Entry
+                    </span>
+                  </div>
+
+                  <div className="h-64 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-2xl bg-black/20 text-center p-6">
+                    <p className="text-sm font-semibold text-slate-300 capitalize">{activeTab} Viewport</p>
+                    <p className="text-xs text-slate-500 mt-1">Ready for module integration.</p>
                   </div>
 
                   <div className="mt-6 pt-3 border-t border-white/[0.05] flex items-center justify-between text-[11px] text-slate-500 font-medium">
