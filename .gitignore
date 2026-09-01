@@ -1,0 +1,27 @@
+# Tauri / Rust Build Folders (மிக முக்கியம்)
+src-tauri/target/
+target/
+Cargo.lock
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.next/
+out/
+
+# Python
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Databases & Environment
+*.sqlite3
+*.db
+.env
+.env.local
+.env.*.local
+*.log
