@@ -210,50 +210,93 @@ export default function MainDashboard({ setActiveTab, session }) {
       </div>
 
       {/* 2. Top 4 Metric Tiles */}
+      {/* 2. Top 4 Metric Tiles (With 2-Layer High Contrast Masking) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between">
+        
+        {/* Card 1: Total Believers */}
+        <div 
+          onClick={() => setActiveTab?.('members')}
+          className="p-5 win11-card rounded-2xl cursor-pointer flex flex-col justify-between transition hover:scale-[1.01]"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400">Total Believers</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">+12.4%</span>
+            <span className="text-xs font-semibold">Total Congregation</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full badge-emerald">
+              +12.4%
+            </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-white font-mono">{allBelievers.length > 0 ? allBelievers.length.toLocaleString() : '3,420'}</div>
-            <span className="text-[10px] text-slate-400 font-semibold mt-0.5 block">active registered souls</span>
+            <p className="text-2xl sm:text-3xl font-black stat-number">
+              {allBelievers.length > 0 ? allBelievers.length.toLocaleString() : '3,420'}
+            </p>
+            <span className="text-[10px] font-semibold mt-1 inline-block">
+              Active registered souls
+            </span>
           </div>
         </div>
 
-        <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between">
+        {/* Card 2: Registered Households */}
+        <div 
+          onClick={() => setActiveTab?.('members')}
+          className="p-5 win11-card rounded-2xl cursor-pointer flex flex-col justify-between transition hover:scale-[1.01]"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400">Registered Households</span>
-            <span className="px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 text-[10px] font-bold border border-sky-500/20">+4.1%</span>
+            <span className="text-xs font-semibold">Registered Households</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full badge-cyan">
+              +4.1%
+            </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-white font-mono">{families.length || 84}</div>
-            <span className="text-[10px] text-slate-400 font-semibold mt-0.5 block">family units enrolled</span>
+            <p className="text-2xl sm:text-3xl font-black stat-number">
+              {families.length || 84}
+            </p>
+            <span className="text-[10px] font-semibold mt-1 inline-block">
+              Family units enrolled
+            </span>
           </div>
         </div>
 
-        <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between">
+        {/* Card 3: Monthly Giving */}
+        <div 
+          onClick={() => setActiveTab?.('finance')}
+          className="p-5 win11-card rounded-2xl cursor-pointer flex flex-col justify-between transition hover:scale-[1.01]"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400">Month Giving Inflow</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">+8.2%</span>
+            <span className="text-xs font-semibold">Month Giving Inflow</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full badge-emerald">
+              +8.2%
+            </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-amber-300 font-mono">₹1,42,500</div>
-            <span className="text-[10px] text-slate-400 font-semibold mt-0.5 block font-mono">Audited 80G Compliant</span>
+            <p className="text-2xl sm:text-3xl font-black stat-number">
+              ₹1,42,500
+            </p>
+            <span className="text-[10px] font-semibold mt-1 inline-block font-mono">
+              Audited 80G Compliant
+            </span>
           </div>
         </div>
 
-        <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between">
+        {/* Card 4: Reserve Liquidity */}
+        <div 
+          onClick={() => setActiveTab?.('finance')}
+          className="p-5 win11-card rounded-2xl cursor-pointer flex flex-col justify-between transition hover:scale-[1.01]"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400">Reserve Liquidity</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">+2.3%</span>
+            <span className="text-xs font-semibold">Reserve Liquidity</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full badge-amber">
+              +2.3%
+            </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-emerald-300 font-mono">₹4,12,000</div>
-            <span className="text-[10px] text-slate-400 font-semibold mt-0.5 block">Treasury balance surplus</span>
+            <p className="text-2xl sm:text-3xl font-black stat-number">
+              ₹4,12,000
+            </p>
+            <span className="text-[10px] font-semibold mt-1 inline-block">
+              Treasury balance surplus
+            </span>
           </div>
         </div>
+
       </div>
 
       {/* 3. 3-in-1 Core Operational Grid: Pipeline, Critical Care, Multi-Branch Routing */}
