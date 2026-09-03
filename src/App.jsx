@@ -5,6 +5,7 @@ import MainDashboard from './components/dashboard/MainDashboard';
 import AttendanceDesk from './components/attendance/AttendanceDesk';
 import MembersDesk from './components/members/MembersDesk';
 import FinanceDesk from './components/finance/FinanceDesk';
+import CommunityHub from './components/community/CommunityHub';
 import SettingsHub from './components/settings/SettingsHub';
 import LoginModal from './components/auth/LoginModal';
 import RainCanvas from './components/layout/RainCanvas';
@@ -13,6 +14,8 @@ import { getLargeWallpaper } from './utils/storageDB';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [wallpaperData, setWallpaperData] = useState(null);
+
+  // 1. Session State
   const [session, setSession] = useState(() => {
     try {
       const local = localStorage.getItem('graceos_session');
@@ -22,6 +25,7 @@ export default function App() {
     }
   });
 
+  // 2. Theme Configuration State (முதலில் அறிவிக்கப்பட வேண்டும்)
   const [theme, setTheme] = useState(() => {
     try {
       const local = localStorage.getItem('graceos_theme_config');
@@ -31,6 +35,11 @@ export default function App() {
         customColor: parsed.customColor || '#06b6d4',
         useCustomColor: parsed.useCustomColor || false,
         activeTextColor: parsed.activeTextColor || '#ffffff',
+        manualTextColorOverride: parsed.manualTextColorOverride || false,
+        wallpaperDim: parsed.wallpaperDim ?? 20,
+        wallpaperBrightness: parsed.wallpaperBrightness ?? 100,
+        glassGlowColor: parsed.glassGlowColor || '#06b6d4',
+        shadowIntensity: parsed.shadowIntensity ?? 40,
         enableRainFX: parsed.enableRainFX || false,
         enableThunderPulse: parsed.enableThunderPulse || false,
         enableHolyDustFX: parsed.enableHolyDustFX || false
@@ -41,6 +50,11 @@ export default function App() {
         customColor: '#06b6d4',
         useCustomColor: false,
         activeTextColor: '#ffffff',
+        manualTextColorOverride: false,
+        wallpaperDim: 20,
+        wallpaperBrightness: 100,
+        glassGlowColor: '#06b6d4',
+        shadowIntensity: 40,
         enableRainFX: false,
         enableThunderPulse: false,
         enableHolyDustFX: false
@@ -48,6 +62,7 @@ export default function App() {
     }
   });
 
+  // 3. Sync Functions
   const syncThemeAndWallpaper = async () => {
     try {
       const local = localStorage.getItem('graceos_theme_config');
@@ -65,14 +80,20 @@ export default function App() {
     return () => window.removeEventListener('graceos_theme_updated', syncThemeAndWallpaper);
   }, []);
 
-  // பிழையைத் தீர்க்கும் வரையறை: textColor-க்கு fallback மதிப்பு #ffffff
-  const textColor = theme?.activeTextColor || '#ffffff';
+  // 4. Safe Extracted Variables (State உருவான பின் பாதுகாப்பாக எடுக்கப்படும் மதிப்புகள்)
+  const dynamicTextColor = theme?.activeTextColor || '#ffffff';
+  const wallpaperDim = theme?.wallpaperDim ?? 20;
+  const wallpaperBrightness = theme?.wallpaperBrightness ?? 100;
+  const glassGlow = theme?.glassGlowColor || '#06b6d4';
+  const shadowAlpha = (theme?.shadowIntensity ?? 40) / 100;
 
   return (
     <div 
       style={{
-        '--dynamic-text-color': textColor,
-        color: textColor
+        '--dynamic-text-color': dynamicTextColor,
+        '--card-glow-color': glassGlow,
+        '--shadow-depth': `rgba(0, 0, 0, ${shadowAlpha})`,
+        color: dynamicTextColor
       }}
       className="relative flex h-screen w-screen overflow-hidden select-none font-sans bg-[#07050d]"
     >
@@ -83,13 +104,20 @@ export default function App() {
         enableHolyDust={theme.enableHolyDustFX} 
       />
 
-      {/* 2. 10MB Custom Wallpaper (IndexedDB) */}
+      {/* 2. 100% Sharp Original Quality Image (No blur, native resolution with custom brightness & dimming) */}
       {wallpaperData && (
         <div 
-          className="fixed inset-0 bg-cover bg-center pointer-events-none z-[0] transition-all duration-700"
-          style={{ backgroundImage: `url(${wallpaperData})` }}
+          className="fixed inset-0 bg-cover bg-center pointer-events-none z-[0] transition-all duration-300"
+          style={{ 
+            backgroundImage: `url(${wallpaperData})`,
+            filter: `brightness(${wallpaperBrightness}%)`,
+            imageRendering: '-webkit-optimize-contrast'
+          }}
         >
-          <div className="w-full h-full backdrop-blur-md bg-black/75" />
+          <div 
+            className="w-full h-full pointer-events-none transition-colors duration-300"
+            style={{ backgroundColor: `rgba(0, 0, 0, ${wallpaperDim / 100})` }}
+          />
         </div>
       )}
 
@@ -101,7 +129,7 @@ export default function App() {
         />
       )}
 
-      {/* 4. Fluid Waves Dark Ambient Lighting */}
+      {/* 4. Fluid Dark Ambient Lighting (Custom wallpaper இல்லாத போது மட்டும்) */}
       {!wallpaperData && !theme.useCustomColor && (
         <>
           {theme.preset === 'fluid_aurora_mesh' && (
@@ -120,7 +148,7 @@ export default function App() {
           {theme.preset === 'velvet_pink' && (
             <>
               <div className="absolute top-[-10%] left-[20%] w-[50vw] h-[50vw] rounded-full bg-rose-600/20 blur-[150px] pointer-events-none" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-purple-800/25 blur-[160px] pointer-events-none" />
+              <div className="absolute bottom-[-10%] left-[-10%] w-[45vw] h-[45vw] rounded-full bg-purple-800/25 blur-[160px] pointer-events-none" />
             </>
           )}
           {theme.preset === 'midnight_rain' && (
@@ -155,6 +183,7 @@ export default function App() {
               {activeTab === 'attendance' && <AttendanceDesk session={session} />}
               {activeTab === 'members' && <MembersDesk session={session} />}
               {activeTab === 'finance' && <FinanceDesk session={session} />}
+              {activeTab === 'community' && <CommunityHub session={session} />}
               {activeTab === 'settings' && <SettingsHub />}
             </main>
           </div>

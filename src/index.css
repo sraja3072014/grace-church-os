@@ -105,3 +105,39 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+/* =========================================================
+   Ultra Sharp Crystal Acrylic (பிரஷ் & இமேஜ் துல்லியமாகத் தெரிய)
+   ========================================================= */
+.win11-card,
+.crystal-card,
+.glass-panel {
+  /* பின்னணி இமேஜை மறைக்காமல் லேசான கிளாஸ் டின்ட் */
+  background: rgba(15, 23, 42, 0.35) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(130%) !important;
+  backdrop-filter: blur(10px) saturate(130%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 
+    0 16px 36px 0 var(--shadow-depth, rgba(0, 0, 0, 0.4)),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.2) !important;
+  color: var(--dynamic-text-color, #ffffff) !important;
+  transition: all 0.25s ease-in-out;
+}
+
+/* மவுஸ் வைக்கும்போது கார்டின் விளிம்புகள் யூசர் தேர்ந்தெடுத்த கலரில் ஒளிரும் */
+.win11-card:hover {
+  border-color: var(--card-glow-color, #06b6d4) !important;
+  box-shadow: 
+    0 20px 48px 0 var(--shadow-depth, rgba(0, 0, 0, 0.6)),
+    0 0 14px -1px var(--card-glow-color, #06b6d4) !important;
+}
+
+/* டெக்ஸ்ட் எந்த இமேஜ் மீதும் தெளிவாகத் தெரிய சுற்றிலும் மெல்லிய அவுட்லைன் நிழல் */
+.stat-number,
+.win11-card h2,
+.win11-card h3,
+.win11-card p,
+.win11-card span {
+  color: inherit !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.4);
+}

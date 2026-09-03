@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   Building2, GitBranch, Users, UserPlus, ClipboardCheck, ShieldCheck, ShieldAlert,
   CreditCard, HeartHandshake, Receipt, BarChart3,
-  Palette, Smartphone, MessageSquare, BookOpen, Database, Wrench, Sliders, Save, CheckCircle2
+  Palette, Smartphone, MessageSquare, BookOpen, Database, Wrench, Sliders, 
+  Globe, Save, CheckCircle2 
 } from 'lucide-react';
 
 // 1. Church Setup
@@ -30,6 +31,7 @@ import BibleHubTab from './system/BibleHubTab';
 import BackupDatabaseTab from './system/BackupDatabaseTab';
 import ServiceRequestsTab from './system/ServiceRequestsTab';
 import AdvancedSettingsTab from './system/AdvancedSettingsTab';
+import LanguageRegionTab from './system/LanguageRegionTab';
 
 export default function SettingsHub() {
   const [activeTab, setActiveTab] = useState('main_church');
@@ -66,6 +68,7 @@ export default function SettingsHub() {
       group: 'System & Hardware',
       items: [
         { id: 'theme_display', label: 'Theme & Glass Polish', icon: Palette },
+        { id: 'language_region', label: 'Language & Region', icon: Globe },
         { id: 'mobile_sync', label: 'Mobile App Node', icon: Smartphone },
         { id: 'whatsapp_hub', label: 'WhatsApp Messenger Hub', icon: MessageSquare },
         { id: 'bible_hub', label: 'Bible Display Engine', icon: BookOpen },
@@ -94,7 +97,7 @@ export default function SettingsHub() {
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 text-left active:scale-98 ${
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 text-left active:scale-98 cursor-pointer ${
                       isSelected
                         ? 'bg-gradient-to-r from-cyan-500/25 to-blue-600/20 text-cyan-200 border border-cyan-500/40 shadow-lg shadow-cyan-500/10'
                         : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
@@ -132,6 +135,7 @@ export default function SettingsHub() {
 
           {/* System & Hardware */}
           {activeTab === 'theme_display' && <ThemeDisplayTab />}
+          {activeTab === 'language_region' && <LanguageRegionTab />}
           {activeTab === 'mobile_sync' && <MobileSyncTab />}
           {activeTab === 'whatsapp_hub' && <WhatsappHubTab />}
           {activeTab === 'bible_hub' && <BibleHubTab />}
