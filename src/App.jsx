@@ -11,6 +11,8 @@ import LoginModal from './components/auth/LoginModal';
 import RainCanvas from './components/layout/RainCanvas';
 import TaskbarDock from './components/layout/TaskbarDock';
 import { getLargeWallpaper } from './utils/storageDB';
+import VisitorsHub from "./components/visitors/VisitorsDashboard";
+import PrayerWall from './components/prayer/PrayerWall';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -195,6 +197,14 @@ export default function App() {
               {activeTab === 'finance' && <FinanceDesk session={session} />}
               {activeTab === 'community' && <CommunityHub session={session} />}
               {activeTab === 'settings' && <SettingsHub />}
+              {activeTab === 'reports' && <div className="win11-card p-6 rounded-2xl text-white">Reports & Audits Desk</div>}
+              {(activeTab === 'prayer_wall' || activeTab === 'prayer') && (
+  <PrayerWall session={session} />
+)}
+              {activeTab === 'events_hub' && <div className="win11-card p-6 rounded-2xl text-white">Events & Sunday Services Hub</div>}
+              {activeTab === 'live_desk' && <div className="win11-card p-6 rounded-2xl text-white">Live Service Flow Desk</div>}
+              {activeTab === 'bible_engine' && <div className="win11-card p-6 rounded-2xl text-white">Bible Engine Projection</div>}
+              {activeTab === 'visitors' && <VisitorsHub session={session} />}             
             </main>
           </div>
 
