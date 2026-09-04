@@ -9,6 +9,7 @@ import CommunityHub from './components/community/CommunityHub';
 import SettingsHub from './components/settings/SettingsHub';
 import LoginModal from './components/auth/LoginModal';
 import RainCanvas from './components/layout/RainCanvas';
+import TaskbarDock from './components/layout/TaskbarDock';
 import { getLargeWallpaper } from './utils/storageDB';
 
 export default function App() {
@@ -25,7 +26,7 @@ export default function App() {
     }
   });
 
-  // 2. Theme Configuration State (முதலில் அறிவிக்கப்பட வேண்டும்)
+  // 2. Theme Configuration State (எந்த மாறியும் இதற்கு முன் theme-ஐ அழைக்கக்கூடாது)
   const [theme, setTheme] = useState(() => {
     try {
       const local = localStorage.getItem('graceos_theme_config');
@@ -40,6 +41,7 @@ export default function App() {
         wallpaperBrightness: parsed.wallpaperBrightness ?? 100,
         glassGlowColor: parsed.glassGlowColor || '#06b6d4',
         shadowIntensity: parsed.shadowIntensity ?? 40,
+        layoutStyle: parsed.layoutStyle || 'sidebar', // 'sidebar' | 'windows_dock'
         enableRainFX: parsed.enableRainFX || false,
         enableThunderPulse: parsed.enableThunderPulse || false,
         enableHolyDustFX: parsed.enableHolyDustFX || false
@@ -55,6 +57,7 @@ export default function App() {
         wallpaperBrightness: 100,
         glassGlowColor: '#06b6d4',
         shadowIntensity: 40,
+        layoutStyle: 'sidebar',
         enableRainFX: false,
         enableThunderPulse: false,
         enableHolyDustFX: false
@@ -62,7 +65,7 @@ export default function App() {
     }
   });
 
-  // 3. Sync Functions
+  // 3. Theme & Wallpaper Synchronization
   const syncThemeAndWallpaper = async () => {
     try {
       const local = localStorage.getItem('graceos_theme_config');
@@ -80,12 +83,18 @@ export default function App() {
     return () => window.removeEventListener('graceos_theme_updated', syncThemeAndWallpaper);
   }, []);
 
-  // 4. Safe Extracted Variables (State உருவான பின் பாதுகாப்பாக எடுக்கப்படும் மதிப்புகள்)
+  // 4. Safe Variables (theme அறிவிக்கப்பட்டதற்குப் பின்னரே கணக்கிட வேண்டும்)
   const dynamicTextColor = theme?.activeTextColor || '#ffffff';
   const wallpaperDim = theme?.wallpaperDim ?? 20;
   const wallpaperBrightness = theme?.wallpaperBrightness ?? 100;
   const glassGlow = theme?.glassGlowColor || '#06b6d4';
   const shadowAlpha = (theme?.shadowIntensity ?? 40) / 100;
+  const isDockLayout = theme?.layoutStyle === 'windows_dock';
+
+  const handleLogout = () => {
+    localStorage.removeItem('graceos_session');
+    setSession(null);
+  };
 
   return (
     <div 
@@ -97,14 +106,14 @@ export default function App() {
       }}
       className="relative flex h-screen w-screen overflow-hidden select-none font-sans bg-[#07050d]"
     >
-      {/* 1. Atmospheric Rain, Thunder & Sanctuary Dust Canvas */}
+      {/* Atmospheric Weather Canvas */}
       <RainCanvas 
-        enableRain={theme.enableRainFX} 
-        enableThunder={theme.enableThunderPulse} 
-        enableHolyDust={theme.enableHolyDustFX} 
+        enableRain={theme?.enableRainFX} 
+        enableThunder={theme?.enableThunderPulse} 
+        enableHolyDust={theme?.enableHolyDustFX} 
       />
 
-      {/* 2. 100% Sharp Original Quality Image (No blur, native resolution with custom brightness & dimming) */}
+      {/* 100% Native Sharp Resolution Wallpaper Layer */}
       {wallpaperData && (
         <div 
           className="fixed inset-0 bg-cover bg-center pointer-events-none z-[0] transition-all duration-300"
@@ -121,37 +130,37 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. Custom Glow Color Orb */}
-      {theme.useCustomColor && !wallpaperData && (
+      {/* Custom Glow Aura */}
+      {theme?.useCustomColor && !wallpaperData && (
         <div 
           className="fixed top-[-15%] left-[-10%] w-[65vw] h-[65vw] rounded-full blur-[170px] pointer-events-none opacity-25 transition-all duration-700 z-[0]"
           style={{ backgroundColor: theme.customColor }}
         />
       )}
 
-      {/* 4. Fluid Dark Ambient Lighting (Custom wallpaper இல்லாத போது மட்டும்) */}
-      {!wallpaperData && !theme.useCustomColor && (
+      {/* Fluid Mesh Waves (Wallpaper இல்லாத போது) */}
+      {!wallpaperData && !theme?.useCustomColor && (
         <>
-          {theme.preset === 'fluid_aurora_mesh' && (
+          {theme?.preset === 'fluid_aurora_mesh' && (
             <>
               <div className="absolute top-[-15%] left-[-10%] w-[55vw] h-[55vw] rounded-full bg-rose-600/20 blur-[160px] pointer-events-none animate-pulse" />
               <div className="absolute bottom-[-15%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-700/20 blur-[170px] pointer-events-none" />
               <div className="absolute top-[25%] left-[30%] w-[45vw] h-[45vw] rounded-full bg-amber-500/15 blur-[150px] pointer-events-none" />
             </>
           )}
-          {theme.preset === 'sunset_glow' && (
+          {theme?.preset === 'sunset_glow' && (
             <>
               <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-orange-600/20 blur-[150px] pointer-events-none" />
               <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-purple-700/20 blur-[160px] pointer-events-none" />
             </>
           )}
-          {theme.preset === 'velvet_pink' && (
+          {theme?.preset === 'velvet_pink' && (
             <>
               <div className="absolute top-[-10%] left-[20%] w-[50vw] h-[50vw] rounded-full bg-rose-600/20 blur-[150px] pointer-events-none" />
-              <div className="absolute bottom-[-10%] left-[-10%] w-[45vw] h-[45vw] rounded-full bg-purple-800/25 blur-[160px] pointer-events-none" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-purple-800/25 blur-[160px] pointer-events-none" />
             </>
           )}
-          {theme.preset === 'midnight_rain' && (
+          {theme?.preset === 'midnight_rain' && (
             <>
               <div className="absolute top-[-10%] left-[-5%] w-[50vw] h-[50vw] rounded-full bg-cyan-600/20 blur-[150px] pointer-events-none" />
               <div className="absolute bottom-[-10%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-blue-800/25 blur-[160px] pointer-events-none" />
@@ -160,25 +169,26 @@ export default function App() {
         </>
       )}
 
-      {/* 5. Main Desktop Workspace */}
+      {/* Main Workspace Area */}
       {!session ? (
         <LoginModal onLoginSuccess={(user) => setSession(user)} />
       ) : (
         <>
-          <FusionSidebar 
-            activeTab={activeTab} 
-            setActiveTab={setActiveTab} 
-            session={session} 
-            onLogout={() => {
-              localStorage.removeItem('graceos_session');
-              setSession(null);
-            }} 
-          />
+          {/* 1. Classic Sidebar: Windows Dock பயன்முறையில் இல்லாதபோது மட்டும் தோன்றும் */}
+          {!isDockLayout && (
+            <FusionSidebar 
+              activeTab={activeTab} 
+              setActiveTab={setActiveTab} 
+              session={session} 
+              onLogout={handleLogout} 
+            />
+          )}
 
+          {/* 2. Primary Screen Container */}
           <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
             <Header />
 
-            <main className="flex-1 p-5 overflow-y-auto">
+            <main className={`flex-1 p-5 overflow-y-auto ${isDockLayout ? 'pb-24' : ''}`}>
               {activeTab === 'dashboard' && <MainDashboard setActiveTab={setActiveTab} session={session} />}
               {activeTab === 'attendance' && <AttendanceDesk session={session} />}
               {activeTab === 'members' && <MembersDesk session={session} />}
@@ -187,6 +197,11 @@ export default function App() {
               {activeTab === 'settings' && <SettingsHub />}
             </main>
           </div>
+
+          {/* 3. Windows 11 Centered Dock: டாஸ்க்பார் மோட் ஆக்டிவ்வாக இருக்கும்போது மிதக்கும் */}
+          {isDockLayout && (
+            <TaskbarDock activeTab={activeTab} setActiveTab={setActiveTab} />
+          )}
         </>
       )}
     </div>

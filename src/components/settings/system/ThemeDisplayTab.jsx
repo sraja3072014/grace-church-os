@@ -399,6 +399,52 @@ export default function ThemeDisplayTab() {
         </div>
       </div>
 
+      {/* Desktop Shell Layout Switcher */}
+<div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] flex flex-col gap-3">
+  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+    <span className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
+      Desktop Navigation Layout Style
+    </span>
+    <span className="text-[10px] font-mono text-cyan-300 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
+      Windows 11 / macOS Dock
+    </span>
+  </div>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+    <button
+      type="button"
+      onClick={() => updateConfig({ ...themeConfig, layoutStyle: 'sidebar' })}
+      className={`p-3.5 rounded-xl border text-left flex items-center justify-between transition cursor-pointer ${
+        themeConfig.layoutStyle !== 'windows_dock'
+          ? 'border-cyan-400 bg-cyan-500/10 text-cyan-300 shadow-md'
+          : 'border-white/5 bg-black/20 text-slate-400 hover:bg-white/5'
+      }`}
+    >
+      <div>
+        <div className="text-xs font-bold text-white">Classic Fusion Sidebar</div>
+        <div className="text-[10px] text-slate-400">இடதுபுறம் நிலையான நேவிகேஷன் பார்</div>
+      </div>
+      {themeConfig.layoutStyle !== 'windows_dock' && <CheckCircle2 size={16} className="text-cyan-400" />}
+    </button>
+
+    <button
+      type="button"
+      onClick={() => updateConfig({ ...themeConfig, layoutStyle: 'windows_dock' })}
+      className={`p-3.5 rounded-xl border text-left flex items-center justify-between transition cursor-pointer ${
+        themeConfig.layoutStyle === 'windows_dock'
+          ? 'border-cyan-400 bg-cyan-500/10 text-cyan-300 shadow-md'
+          : 'border-white/5 bg-black/20 text-slate-400 hover:bg-white/5'
+      }`}
+    >
+      <div>
+        <div className="text-xs font-bold text-white">Windows 11 Centered Dock</div>
+        <div className="text-[10px] text-slate-400">கீழே மிதக்கும் டாஸ்க்பார் + ஸ்டார்ட் மெனு</div>
+      </div>
+      {themeConfig.layoutStyle === 'windows_dock' && <CheckCircle2 size={16} className="text-cyan-400" />}
+    </button>
+  </div>
+</div>
+
       {/* 6. Atmospheric Weather Engine */}
       <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.08] flex flex-col gap-3">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
