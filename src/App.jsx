@@ -13,9 +13,12 @@ import TaskbarDock from './components/layout/TaskbarDock';
 import { getLargeWallpaper } from './utils/storageDB';
 import VisitorsHub from "./components/visitors/VisitorsDashboard";
 import PrayerWall from './components/prayer/PrayerWall';
+import EventsHub from './components/events/EventsHub';
+import LiveDesk from './components/live/LiveDesk';
+import ReportDashboard from './components/reports/ReportDashboard';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(null);
   const [wallpaperData, setWallpaperData] = useState(null);
 
   // 1. Session State
@@ -190,21 +193,50 @@ export default function App() {
           <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
             <Header />
 
-            <main className={`flex-1 p-5 overflow-y-auto ${isDockLayout ? 'pb-24' : ''}`}>
-              {activeTab === 'dashboard' && <MainDashboard setActiveTab={setActiveTab} session={session} />}
-              {activeTab === 'attendance' && <AttendanceDesk session={session} />}
-              {activeTab === 'members' && <MembersDesk session={session} />}
-              {activeTab === 'finance' && <FinanceDesk session={session} />}
-              {activeTab === 'community' && <CommunityHub session={session} />}
-              {activeTab === 'settings' && <SettingsHub />}
-              {activeTab === 'reports' && <div className="win11-card p-6 rounded-2xl text-white">Reports & Audits Desk</div>}
-              {(activeTab === 'prayer_wall' || activeTab === 'prayer') && (
-  <PrayerWall session={session} />
-)}
-              {activeTab === 'events_hub' && <div className="win11-card p-6 rounded-2xl text-white">Events & Sunday Services Hub</div>}
-              {activeTab === 'live_desk' && <div className="win11-card p-6 rounded-2xl text-white">Live Service Flow Desk</div>}
-              {activeTab === 'bible_engine' && <div className="win11-card p-6 rounded-2xl text-white">Bible Engine Projection</div>}
-              {activeTab === 'visitors' && <VisitorsHub session={session} />}             
+            <main className={`flex-1 overflow-y-auto ${isDockLayout ? 'pb-24' : 'p-5'}`}>
+              {/* activeTab மதிப்பு இருக்கும் போது மட்டுமே கார்டு ஓபன் ஆகும் */}
+              {activeTab && (
+                <div className="relative p-5 animate-in fade-in zoom-in-95 duration-200">
+                  {/* 🌟 விண்டோவை மூடி டெஸ்க்டாப்பிற்குச் செல்ல Close Button */}
+                  <div className="flex justify-end mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab(null)}
+                      className="px-3 py-1 bg-black/40 hover:bg-rose-500/30 text-slate-300 hover:text-rose-300 border border-white/10 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer backdrop-blur-md"
+                      title="Close to Desktop"
+                    >
+                      <span>✕ Close Window</span>
+                    </button>
+                  </div>
+
+                  {/* தொடர்புடைய டேஷ்போர்டுகள் */}
+                  {activeTab === 'dashboard' && <MainDashboard setActiveTab={setActiveTab} session={session} />}
+                  {activeTab === 'attendance' && <AttendanceDesk session={session} />}
+                  {activeTab === 'members' && <MembersDesk session={session} />}
+                  {activeTab === 'finance' && <FinanceDesk session={session} />}
+                  {activeTab === 'community' && <CommunityHub session={session} />}
+                  {activeTab === 'visitors' && <VisitorsHub session={session} />}
+                  {(activeTab === 'prayer_wall' || activeTab === 'prayer') && <PrayerWall session={session} />}
+                  {(activeTab === 'events_hub' || activeTab === 'events') && <EventsHub session={session} />}
+                  {(activeTab === 'live_desk' || activeTab === 'live') && <LiveDesk session={session} />}
+                  {(activeTab === 'reports' || activeTab === 'report_hub') && <ReportDashboard session={session} />}
+                  {activeTab === 'settings' && <SettingsHub />}
+                </div>
+              )}
+
+              {/* activeTab ஏதுமில்லை என்றால் விண்டோஸ் 11 டெஸ்க்டாப் போல சுத்தமான பின்னணி மட்டும் தெரியும் */}
+              {!activeTab && (
+                <div
+                  onClick={() => {}}
+                  className="w-full h-full flex flex-col items-center justify-center select-none pointer-events-none"
+                >
+                  {/* விருப்பப்பட்டால் டெஸ்க்டாப்பில் ஒரு லேசான வாசகம் வைக்கலாம் */}
+                  <div className="text-center opacity-30">
+                    <h1 className="text-4xl font-black text-white tracking-widest uppercase">GraceOS</h1>
+                    <p className="text-xs text-slate-300 mt-1">Click taskbar icons below to open modules</p>
+                  </div>
+                </div>
+              )}
             </main>
           </div>
 
