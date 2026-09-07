@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GitBranch, Plus, MapPin, UserCheck, Trash2, Edit3, X, Check, Building2 } from 'lucide-react';
+import { persistModuleData, MODULE_STORAGE_REGISTRY } from '../../../utils/storageDispatcher';
 
 export default function BranchesTab() {
   const loadBranches = () => {
@@ -41,9 +42,9 @@ export default function BranchesTab() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const sync = (data) => {
+  const sync = async (data) => {
     setBranches(data);
-    localStorage.setItem('graceos_branches', JSON.stringify(data));
+    await persistModuleData(MODULE_STORAGE_REGISTRY.BRANCHES, data);
   };
 
   const handleOpenAdd = () => {
@@ -58,23 +59,23 @@ export default function BranchesTab() {
     setModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const target = branches.find(b => b.id === id);
     if (target?.code === 'GCC-MAIN' || target?.id === 1) {
       alert('The Main Headquarters Campus cannot be deleted.');
       return;
     }
-    sync(branches.filter(b => b.id !== id));
+    await sync(branches.filter(b => b.id !== id));
   };
 
-  const handleSaveBranch = (e) => {
+  const handleSaveBranch = async (e) => {
     e.preventDefault();
     if (!form.name || !form.pastor) return;
 
     if (editItem) {
-      sync(branches.map(b => b.id === editItem.id ? { ...form, id: editItem.id, members: Number(form.members) || 0 } : b));
+      await sync(branches.map(b => b.id === editItem.id ? { ...form, id: editItem.id, members: Number(form.members) || 0 } : b));
     } else {
-      sync([...branches, { ...form, id: Date.now(), members: Number(form.members) || 0 }]);
+      await sync([...branches, { ...form, id: Date.now(), members: Number(form.members) || 0 }]);
     }
     setModalOpen(false);
   };

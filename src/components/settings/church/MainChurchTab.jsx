@@ -4,6 +4,7 @@ import {
   FileText, Image as ImageIcon, Target, Compass, Heart,
   Share2, Video, MessageCircle, RotateCcw, CheckCircle2, Upload, Save
 } from 'lucide-react';
+import { persistModuleData, MODULE_STORAGE_REGISTRY } from '../../../utils/storageDispatcher';
 
 export default function MainChurchTab() {
   const [activeSubSection, setActiveSubSection] = useState('profile');
@@ -52,17 +53,48 @@ export default function MainChurchTab() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveAll = (e) => {
+  const handleSaveProfile = async (e) => {
     if (e) e.preventDefault();
-    
-    // 1. Save Main Church Profile
-    localStorage.setItem('graceos_main_church', JSON.stringify(formData));
 
-    // 2. Automatically sync Main Campus branch details
+    const profileData = {
+      churchName: formData.churchName,
+      tagline: formData.motto,
+      registrationNo: formData.trustRegNo,
+      panNo: formData.panNo || '',
+      tax80GNo: formData.tax80GNo || '',
+      address: formData.address,
+      city: formData.city || formData.address?.split(',')?.[1]?.trim() || '',
+      pincode: formData.pincode || '',
+      phone: formData.phone,
+      email: formData.email,
+      bankDetails: {
+        bankName: formData.bankName || '',
+        accountNo: formData.accountNo || '',
+        ifscCode: formData.ifscCode || '',
+        branch: formData.branch || ''
+      },
+      updatedAt: new Date().toISOString(),
+      vision: formData.vision,
+      mission: formData.mission,
+      coreValues: formData.coreValues,
+      seniorPastor: formData.seniorPastor,
+      establishedYear: formData.establishedYear,
+      currency: formData.currency,
+      receiptPrefix: formData.receiptPrefix,
+      website: formData.website,
+      youtube: formData.youtube,
+      facebook: formData.facebook,
+      instagram: formData.instagram,
+      whatsappChannel: formData.whatsappChannel,
+      altPhone: formData.altPhone
+    };
+
     const localBranches = localStorage.getItem('graceos_branches');
+    let updatedBranches = null;
+
     if (localBranches) {
       const branches = JSON.parse(localBranches);
-      const updatedBranches = branches.map(b => {
+      updatedBranches = branches.map(b => {
         if (b.code === 'GCC-MAIN' || b.id === 1) {
           return {
             ...b,
@@ -73,12 +105,22 @@ export default function MainChurchTab() {
         }
         return b;
       });
-      localStorage.setItem('graceos_branches', JSON.stringify(updatedBranches));
     }
 
-    // Trigger storage event for live multi-tab sync
-    window.dispatchEvent(new Event('storage'));
-    showToast(`${formData.churchName} Profile Saved & Synced Successfully!`);
+    const success = await persistModuleData(MODULE_STORAGE_REGISTRY.CHURCH_PROFILE, profileData);
+
+    if (updatedBranches) {
+      localStorage.setItem('graceos_branches', JSON.stringify(updatedBranches));
+      await persistModuleData(MODULE_STORAGE_REGISTRY.BRANCHES, updatedBranches);
+    }
+
+    if (success) {
+      localStorage.setItem('graceos_main_church', JSON.stringify(profileData));
+      window.dispatchEvent(new Event('storage'));
+      showToast('சபை மற்றும் வங்கி விவரங்கள் ஹார்ட் டிரைவில் வெற்றிகரமாகச் சேமிக்கப்பட்டன! ✓');
+    } else {
+      showToast('சேமிப்பதில் பிழை ஏற்பட்டது.');
+    }
   };
 
   const handleLogoUpload = (e) => {
@@ -109,7 +151,7 @@ export default function MainChurchTab() {
   ];
 
   return (
-    <form onSubmit={handleSaveAll} className="flex flex-col gap-6 max-w-4xl relative select-none">
+    <form className="flex flex-col gap-6 max-w-4xl relative select-none">
       
       {/* Toast Alert */}
       {toastMsg && (
@@ -152,11 +194,12 @@ export default function MainChurchTab() {
             <RotateCcw size={13} /> Reset
           </button>
           
-          <button 
+          <button
             type="submit"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition"
+            onClick={handleSaveProfile}
+            className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-amber-600 text-white rounded-xl text-xs font-bold cursor-pointer"
           >
-            <Save size={14} /> Save Profile
+            Save Church Profile
           </button>
         </div>
       </div>
