@@ -4,6 +4,7 @@ import {
   ArrowUpRight, ArrowDownLeft, ShieldCheck, Trash2, 
   Printer, CheckCircle2, Search, DollarSign, X
 } from 'lucide-react';
+import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
 
 export const DEFAULT_GIVING_CATEGORIES = [
   'Sunday Tithes (10%)',
@@ -614,14 +615,24 @@ export default function FinanceDesk({ session }) {
                 <div className="w-24 border-b border-slate-400 mb-1"></div>
                 <span>Senior Pastor / Trustee</span>
               </div>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer print:hidden"
-              >
-                <Printer size={14} />
-                <span>Print Official Receipt</span>
-              </button>
+              <div className="flex items-center gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => sendReceiptViaWhatsApp(selectedReceipt)}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer transition active:scale-95"
+                >
+                  <span>WhatsApp ரசீது அனுப்புக</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer size={14} />
+                  <span>Print Receipt</span>
+                </button>
+              </div>
             </div>
 
           </div>
