@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import MemberIdCardModal from './MemberIdCardModal';
+import ExcelDataEngineModal from '../tools/ExcelDataEngineModal';
+import ProfileApprovalQueueModal from './ProfileApprovalQueueModal';
 import { soundFX } from '../../utils/audioEngine';
 import { 
   Users, UserPlus, Search, Layers, Plus, Trash2, Edit2, 
   Phone, Mail, MapPin, Heart, Sparkles, Calendar, ShieldCheck, 
-  QrCode, X, CheckCircle2, AlertCircle, HeartHandshake, Printer
+  QrCode, X, CheckCircle2, AlertCircle, HeartHandshake, Printer, FileSpreadsheet, UserCheck
 } from 'lucide-react';
 
 export default function MembersDesk({ session }) {
@@ -86,6 +88,18 @@ export default function MembersDesk({ session }) {
   const [toastMessage, setToastMessage] = useState('');
   const [idCardMember, setIdCardMember] = useState(null);
   const [selectedMemberForCard, setSelectedMemberForCard] = useState(null);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const checkPending = () => {
+    const list = JSON.parse(localStorage.getItem('graceos_pending_profile_updates') || '[]');
+    setPendingCount(list.length);
+  };
+
+  useEffect(() => {
+    checkPending();
+  }, []);
 
   // Modals State
   const [isHeadModalOpen, setIsHeadModalOpen] = useState(false);
@@ -345,14 +359,38 @@ export default function MembersDesk({ session }) {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => handleOpenHeadModal()}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 active:scale-95 transition"
-        >
-          <UserPlus size={15} />
-          <span>+ Register New Family</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsApprovalModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition active:scale-95"
+          >
+            <UserCheck size={15} />
+            <span>Approvals</span>
+            {pendingCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-mono text-[10px] font-black">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsExcelModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition active:scale-95"
+            title="Import or export believers with Excel / CSV"
+          >
+            <FileSpreadsheet size={15} />
+            <span>Excel Hub</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleOpenHeadModal()}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 active:scale-95 transition"
+          >
+            <UserPlus size={15} />
+            <span>+ Register New Family</span>
+          </button>
+        </div>
       </div>
 
       {/* Search & Metric Strip */}
@@ -910,6 +948,21 @@ export default function MembersDesk({ session }) {
           onClose={() => setSelectedMemberForCard(null)}
         />
       )}
+
+      <ExcelDataEngineModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        onRefreshData={() => window.location.reload()}
+      />
+
+      <ProfileApprovalQueueModal
+        isOpen={isApprovalModalOpen}
+        onClose={() => setIsApprovalModalOpen(false)}
+        onUpdated={() => {
+          checkPending();
+          window.location.reload();
+        }}
+      />
 
     </div>
   );

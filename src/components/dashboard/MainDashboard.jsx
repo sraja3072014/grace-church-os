@@ -5,10 +5,13 @@ import {
   CalendarCheck, ArrowUpRight, Sparkles, Receipt, 
   HeartHandshake, X, Search, Check, 
   Clock, Phone, AlertCircle, Info, Landmark, MapPin, 
-  QrCode, UserPlus, Database, CheckCircle2
+  QrCode, UserPlus, Database, CheckCircle2, Tv
 } from 'lucide-react';
+import SanctuaryLiveScreen from '../display/SanctuaryLiveScreen';
+import CelebrationDispatcherWidget from '../widgets/CelebrationDispatcherWidget';
 
 export default function MainDashboard({ setActiveTab, session }) {
+  const [showProjector, setShowProjector] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [directInputId, setDirectInputId] = useState('');
@@ -358,6 +361,15 @@ export default function MainDashboard({ setActiveTab, session }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setShowProjector(true)}
+            className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-2 transition cursor-pointer shadow-lg"
+          >
+            <Tv size={15} />
+            <span>Live Screen (F11)</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsAttendanceModalOpen(true)}
             className="px-4 py-2 bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 hover:to-amber-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-rose-500/20 flex items-center gap-1.5 active:scale-95 transition cursor-pointer"
           >
@@ -488,7 +500,7 @@ export default function MainDashboard({ setActiveTab, session }) {
       </div>
 
       {/* 🌟 4. 3-IN-1 CORE OPERATIONAL GRID (NOW ROW 3 - MOVED DOWN) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         
         {/* 1. Visitor Engagement Pipeline */}
         <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between gap-3">
@@ -613,6 +625,8 @@ export default function MainDashboard({ setActiveTab, session }) {
             Realtime multi-campus ledger routing active.
           </p>
         </div>
+
+        <CelebrationDispatcherWidget />
 
       </div>
 
@@ -953,6 +967,10 @@ export default function MainDashboard({ setActiveTab, session }) {
             </div>
           </div>
         </div>
+      )}
+
+      {showProjector && (
+        <SanctuaryLiveScreen onClose={() => setShowProjector(false)} />
       )}
 
     </div>

@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { 
   TrendingUp, Wallet, Receipt, FileText, Plus,
   ArrowUpRight, ArrowDownLeft, ShieldCheck, Trash2, 
-  Printer, CheckCircle2, Search, DollarSign, X
+  Printer, CheckCircle2, Search, DollarSign, X, FileCheck2
 } from 'lucide-react';
 import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
 import FinanceAnalyticsTab from './FinanceAnalyticsTab';
+import Annual80GCertificateModal from './Annual80GCertificateModal';
 
 export const DEFAULT_GIVING_CATEGORIES = [
   'Sunday Tithes (10%)',
@@ -31,6 +32,7 @@ export default function FinanceDesk({ session }) {
   const [activeTab, setActiveTab] = useState('income'); // 'income' | 'expenses' | 'receipts_80g' | 'analytics'
   const [toastMessage, setToastMessage] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
   // Settings-ல் இருந்து கரன்சி சிம்பலை எடுத்தல்
   const currencySymbol = useMemo(() => {
@@ -173,42 +175,52 @@ export default function FinanceDesk({ session }) {
         </div>
 
         {/* Sub-tab Navigation */}
-        <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/10 shrink-0">
-          <button
-            onClick={() => setActiveTab('income')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'income' ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <TrendingUp size={14} />
-            <span>Income & Tithes</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('expenses')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'expenses' ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Receipt size={14} />
-            <span>Expense Vouchers</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('receipts_80g')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <FileText size={14} />
-            <span>80G Receipt Generator</span>
-          </button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/10 shrink-0">
+            <button
+              onClick={() => setActiveTab('income')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'income' ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <TrendingUp size={14} />
+              <span>Income & Tithes</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('expenses')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'expenses' ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Receipt size={14} />
+              <span>Expense Vouchers</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('receipts_80g')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileText size={14} />
+              <span>80G Receipt Generator</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('analytics')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'analytics' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>📊 Audit &amp; Analytics</span>
+            </button>
+          </div>
           <button
             type="button"
-            onClick={() => setActiveTab('analytics')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'analytics' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            onClick={() => setIsCertificateOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-md"
           >
-            <span>📊 Audit &amp; Analytics</span>
+            <FileCheck2 size={15} />
+            <span>Annual 80G Certificate</span>
           </button>
         </div>
       </div>
@@ -650,6 +662,11 @@ export default function FinanceDesk({ session }) {
           </div>
         </div>
       )}
+
+      <Annual80GCertificateModal
+        isOpen={isCertificateOpen}
+        onClose={() => setIsCertificateOpen(false)}
+      />
 
     </div>
   );

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import CloudSyncStatusWidget from '../CloudSyncStatusWidget';
 import { 
   Database, HardDrive, Download, Upload, RefreshCw, 
-  Clock, CheckCircle2, FolderOpen, Trash2, FolderCheck, ShieldCheck, Usb, Lock
+  Clock, CheckCircle2, FolderOpen, Trash2, FolderCheck, ShieldCheck, Usb, Lock, FileSpreadsheet, Cloud
 } from 'lucide-react';
+import ExcelDataEngineModal from '../../tools/ExcelDataEngineModal';
 import { 
   selectVaultFolder,
   initVaultFolder,
@@ -22,6 +24,7 @@ export default function BackupDatabaseTab() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isEncrypting, setIsEncrypting] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
   const [backupHistory, setBackupHistory] = useState(() => {
     try {
@@ -228,7 +231,7 @@ export default function BackupDatabaseTab() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl relative select-none">
+    <div className="flex flex-col gap-6 max-w-4xl relative select-none animate-in fade-in pb-12">
       {toast && (
         <div className="fixed top-5 right-5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 backdrop-blur-md shadow-2xl z-50 animate-in fade-in">
           <CheckCircle2 size={15} />
@@ -254,6 +257,26 @@ export default function BackupDatabaseTab() {
           </button>
         </div>
       )}
+
+      <div className="p-5 rounded-2xl win11-card border border-white/10 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            <Cloud size={22} />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              Supabase Real-time Cloud Sync
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 font-mono">
+                Auto Relay
+              </span>
+            </h4>
+            <p className="text-xs text-slate-400 mt-0.5">
+              இணைய இணைப்பு இருக்கும்போது லோக்கல் வால்ட் தரவுகளை கிளவுடுடன் முரண்பாடுகள் இன்றி ஒத்திசைக்கும்.
+            </p>
+          </div>
+        </div>
+        <CloudSyncStatusWidget />
+      </div>
 
       <div className="p-5 rounded-2xl win11-card border border-white/[0.08] flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -398,6 +421,34 @@ export default function BackupDatabaseTab() {
         </form>
       </div>
 
+      <div className="p-5 rounded-2xl win11-card border border-white/10 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <FileSpreadsheet size={22} />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              Excel / CSV Data Migration &amp; Reports
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-mono">
+                Spreadsheet
+              </span>
+            </h4>
+            <p className="text-xs text-slate-400 mt-0.5">
+              சபை விசுவாசிகள் பட்டியல் மற்றும் 80G தணிக்கை லெட்ஜரை எக்செல் வழியாக ஏற்றுமதி/இறக்குமதி செய்தல்.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsExcelModalOpen(true)}
+          className="px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shrink-0"
+        >
+          <FileSpreadsheet size={15} />
+          <span>Open Excel Hub</span>
+        </button>
+      </div>
+
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h5 className="text-xs font-bold uppercase tracking-wider text-slate-300">
@@ -456,6 +507,12 @@ export default function BackupDatabaseTab() {
           </table>
         </div>
       </div>
+
+      <ExcelDataEngineModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        onRefreshData={() => window.location.reload()}
+      />
     </div>
   );
 }

@@ -82,7 +82,32 @@ export default function MemberPortalView({ userSession, onLogout }) {
     reader.readAsDataURL(file);
   };
 
-  // 4. ஜெப விண்ணப்பம் சேமிப்பு
+  // 4. சுயவிவர மாற்றக் கோரிக்கையை போதகர் ஒப்புதலுக்கு அனுப்புதல்
+  const handleRequestProfileUpdate = () => {
+    soundFX?.playSuccessChime?.();
+
+    const newRequest = {
+      requestId: `REQ-${Date.now().toString().slice(-6)}`,
+      memberId: userSession.member?.memberId,
+      memberName: profileData.name,
+      phone: profileData.phone,
+      requestedAt: new Date().toISOString().slice(0, 10),
+      oldValue: `DOB: ${userSession.member?.dob || 'N/A'}, Edu: ${userSession.member?.education || 'N/A'}`,
+      newValue: `DOB: ${profileData.dob}, Edu: ${profileData.education}`,
+      updatedFields: {
+        dob: profileData.dob,
+        education: profileData.education,
+        photo: profileData.photo
+      }
+    };
+
+    const existing = JSON.parse(localStorage.getItem('graceos_pending_profile_updates') || '[]');
+    localStorage.setItem('graceos_pending_profile_updates', JSON.stringify([newRequest, ...existing]));
+
+    showToast('சுயவிவர மாற்றக் கோரிக்கை போதகரின் ஒப்புதலுக்கு அனுப்பப்பட்டது! ⏳');
+  };
+
+  // 5. ஜெப விண்ணப்பம் சேமிப்பு
   const handleSubmitPrayer = (e) => {
     e.preventDefault();
     if (!prayerText) return;
@@ -329,10 +354,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
 
               <button
                 type="button"
-                onClick={() => {
-                  soundFX.playSuccessChime();
-                  showToast('சுயவிவர விவரங்கள் புதுப்பிக்கப்பட்டன! ✓');
-                }}
+                onClick={handleRequestProfileUpdate}
                 className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs mt-2 cursor-pointer"
               >
                 விவரங்களைச் சேமி
