@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { soundFX } from '../../utils/audioEngine';
 import { 
   Users, Building2, TrendingUp, DollarSign, 
   CalendarCheck, ArrowUpRight, Sparkles, Receipt, 
@@ -202,6 +203,10 @@ export default function MainDashboard({ setActiveTab, session }) {
 
     if (matchedBeliever) {
       handleMarkPresent(matchedBeliever.uniqueId, matchedBeliever.name, 'Member');
+
+      // 🌟 Play High-End Confirmation Chime
+      soundFX.playSuccessChime();
+
       setQrCheckinFeedback({
         success: true,
         msg: `Verified! ${matchedBeliever.name} marked Present ✓`

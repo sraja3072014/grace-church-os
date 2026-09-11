@@ -5,6 +5,7 @@ import {
   Printer, CheckCircle2, Search, DollarSign, X
 } from 'lucide-react';
 import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
+import FinanceAnalyticsTab from './FinanceAnalyticsTab';
 
 export const DEFAULT_GIVING_CATEGORIES = [
   'Sunday Tithes (10%)',
@@ -27,7 +28,7 @@ const SEED_EXPENSES = [
 ];
 
 export default function FinanceDesk({ session }) {
-  const [activeTab, setActiveTab] = useState('income'); // 'income' | 'expenses' | 'receipts_80g'
+  const [activeTab, setActiveTab] = useState('income'); // 'income' | 'expenses' | 'receipts_80g' | 'analytics'
   const [toastMessage, setToastMessage] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 
@@ -200,8 +201,19 @@ export default function FinanceDesk({ session }) {
             <FileText size={14} />
             <span>80G Receipt Generator</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('analytics')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'analytics' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <span>📊 Audit &amp; Analytics</span>
+          </button>
         </div>
       </div>
+
+      {activeTab === 'analytics' && <FinanceAnalyticsTab />}
 
       {/* 3 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

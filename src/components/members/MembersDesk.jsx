@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import MemberIdCardModal from './MemberIdCardModal';
+import { soundFX } from '../../utils/audioEngine';
 import { 
   Users, UserPlus, Search, Layers, Plus, Trash2, Edit2, 
   Phone, Mail, MapPin, Heart, Sparkles, Calendar, ShieldCheck, 
@@ -83,6 +85,7 @@ export default function MembersDesk({ session }) {
   const [expandedFamilyId, setExpandedFamilyId] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const [idCardMember, setIdCardMember] = useState(null);
+  const [selectedMemberForCard, setSelectedMemberForCard] = useState(null);
 
   // Modals State
   const [isHeadModalOpen, setIsHeadModalOpen] = useState(false);
@@ -467,11 +470,15 @@ export default function MembersDesk({ session }) {
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => setIdCardMember({ ...head, campus: fam.campus })}
-                          className="p-1.5 rounded-xl bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 border border-cyan-500/20 transition"
-                          title="Print Digital Pass"
+                          onClick={() => {
+                            soundFX.playClickPop();
+                            setSelectedMemberForCard({ ...head, familyId: fam.familyId, campus: fam.campus });
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                          title="Print Smart PVC ID Card"
                         >
                           <QrCode size={13} />
+                          <span>Smart ID</span>
                         </button>
                         <button
                           type="button"
@@ -550,11 +557,15 @@ export default function MembersDesk({ session }) {
                                   <div className="flex items-center gap-1">
                                     <button
                                       type="button"
-                                      onClick={() => setIdCardMember({ ...member, campus: fam.campus })}
-                                      className="p-1 rounded-lg bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
-                                      title="Print Pass"
+                                      onClick={() => {
+                                        soundFX.playClickPop();
+                                        setSelectedMemberForCard({ ...member, familyId: fam.familyId, campus: fam.campus });
+                                      }}
+                                      className="px-2.5 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                                      title="Print Smart PVC ID Card"
                                     >
-                                      <QrCode size={12} />
+                                      <QrCode size={13} />
+                                      <span>Smart ID</span>
                                     </button>
                                     <button
                                       type="button"
@@ -890,6 +901,14 @@ export default function MembersDesk({ session }) {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedMemberForCard && (
+        <MemberIdCardModal
+          member={selectedMemberForCard}
+          family={families.find(f => f.familyId === selectedMemberForCard.familyId)}
+          onClose={() => setSelectedMemberForCard(null)}
+        />
       )}
 
     </div>

@@ -4,8 +4,10 @@ import {
   Sparkles, CheckCircle2, Download, RefreshCw, AlertCircle, 
   Volume2, VolumeX, ShieldCheck, Clock, UserPlus
 } from 'lucide-react';
+import AttendanceAnalyticsTab from './AttendanceAnalyticsTab';
 
 export default function AttendanceDesk({ session }) {
+  const [activeTab, setActiveTab] = useState('kiosk');
   const [activeService, setActiveService] = useState('1st Service (Tamil) - 06:00 AM');
   const [searchQuery, setSearchQuery] = useState('');
   const [scannerActive, setScannerActive] = useState(true);
@@ -150,6 +152,25 @@ export default function AttendanceDesk({ session }) {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="flex rounded-xl bg-slate-900 p-1 border border-white/10">
+            <button
+              type="button"
+              onClick={() => setActiveTab('kiosk')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${activeTab === 'kiosk' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400'}`}
+            >
+              Check-in Kiosk
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('pastoral_care')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${activeTab === 'pastoral_care' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'text-slate-400'}`}
+            >
+              ⚠️ Inactive Alerts &amp; Care
+            </button>
+          </div>
+
+          {activeTab === 'kiosk' && (
+            <>
           <button 
             type="button"
             onClick={() => setSoundEnabled(!soundEnabled)}
@@ -176,10 +197,16 @@ export default function AttendanceDesk({ session }) {
             <Download size={14} />
             <span>Export CSV</span>
           </button>
+            </>
+          )}
         </div>
       </div>
 
+      {activeTab === 'pastoral_care' && <AttendanceAnalyticsTab />}
+
       {/* Check-In Action Stage */}
+      {activeTab === 'kiosk' && (
+        <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* Optical Scanner & Search Box (2 Cols) */}
@@ -366,6 +393,9 @@ export default function AttendanceDesk({ session }) {
           </table>
         </div>
       </div>
+
+        </>
+      )}
 
     </div>
   );

@@ -7,7 +7,8 @@ import MembersDesk from './components/members/MembersDesk';
 import FinanceDesk from './components/finance/FinanceDesk';
 import CommunityHub from './components/community/CommunityHub';
 import SettingsHub from './components/settings/SettingsHub';
-import LoginModal from './components/auth/LoginModal';
+import UnifiedLoginModal from './components/auth/UnifiedLoginModal';
+import MemberPortalView from './components/portal/MemberPortalView';
 import RainCanvas from './components/layout/RainCanvas';
 import TaskbarDock from './components/layout/TaskbarDock';
 import { getLargeWallpaper } from './utils/storageDB';
@@ -16,13 +17,14 @@ import PrayerWall from './components/prayer/PrayerWall';
 import EventsHub from './components/events/EventsHub';
 import LiveDesk from './components/live/LiveDesk';
 import ReportDashboard from './components/reports/ReportDashboard';
+import QuickWidgetBar from './components/widgets/QuickWidgetBar';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState(null);
   const [wallpaperData, setWallpaperData] = useState(null);
 
   // 1. Session State
-  const [session, setSession] = useState(() => {
+  const [currentUser, setCurrentUser] = useState(() => {
     try {
       const local = localStorage.getItem('graceos_session');
       return local ? JSON.parse(local) : null;
@@ -30,6 +32,8 @@ export default function App() {
       return null;
     }
   });
+  // Keep the existing admin dashboard components compatible with the unified session.
+  const session = currentUser;
 
   // 2. Theme Configuration State (எந்த மாறியும் இதற்கு முன் theme-ஐ அழைக்கக்கூடாது)
   const [theme, setTheme] = useState(() => {
@@ -98,8 +102,22 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('graceos_session');
-    setSession(null);
+    setCurrentUser(null);
   };
+
+  const handleLoginSuccess = (user) => {
+    localStorage.setItem('graceos_session', JSON.stringify(user));
+    setCurrentUser(user);
+  };
+
+  if (currentUser?.role === 'MEMBER') {
+    return (
+      <MemberPortalView
+        userSession={currentUser}
+        onLogout={handleLogout}
+      />
+    );
+  }
 
   return (
     <div 
@@ -176,7 +194,7 @@ export default function App() {
 
       {/* Main Workspace Area */}
       {!session ? (
-        <LoginModal onLoginSuccess={(user) => setSession(user)} />
+        <UnifiedLoginModal onLoginSuccess={handleLoginSuccess} />
       ) : (
         <>
           {/* 1. Classic Sidebar: Windows Dock பயன்முறையில் இல்லாதபோது மட்டும் தோன்றும் */}
@@ -246,6 +264,9 @@ export default function App() {
           )}
         </>
       )}
+
+      {/* 🌟 Windows 11 Slide-out Quick Widget Bar */}
+      <QuickWidgetBar />
     </div>
   );
 }

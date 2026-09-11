@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Database, HardDrive, Download, Upload, RefreshCw, 
-  Clock, CheckCircle2, FolderOpen, Trash2, FolderCheck, Archive, ShieldCheck, FileSpreadsheet
+  Clock, CheckCircle2, FolderOpen, Trash2, FolderCheck, ShieldCheck, Usb, Lock
 } from 'lucide-react';
 import { 
   selectVaultFolder,
@@ -9,6 +9,8 @@ import {
   createBackupSnapshot,
   isVaultConnected
 } from '../../../utils/vaultFS';
+import { encryptDataPayload, decryptDataPayload } from '../../../utils/cryptoEngine';
+import { soundFX } from '../../../utils/audioEngine';
 
 export default function BackupDatabaseTab() {
   const [isBackingUp, setIsBackingUp] = useState(false);
@@ -16,6 +18,10 @@ export default function BackupDatabaseTab() {
   const [mountedFolder, setMountedFolder] = useState(null);
   const [autoBackup, setAutoBackup] = useState(true);
   const [backupFrequency, setBackupFrequency] = useState('Daily (11:59 PM)');
+  const [daysSinceBackup, setDaysSinceBackup] = useState(0);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isEncrypting, setIsEncrypting] = useState(false);
 
   const [backupHistory, setBackupHistory] = useState(() => {
     try {
@@ -33,6 +39,11 @@ export default function BackupDatabaseTab() {
     initVaultFolder().then(folder => {
       if (folder) setMountedFolder(folder);
     });
+
+    const lastDate = localStorage.getItem('graceos_last_backup_time');
+    setDaysSinceBackup(lastDate
+      ? Math.floor((Date.now() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
+      : 3);
   }, []);
 
   const showToast = (msg) => {
@@ -49,12 +60,14 @@ export default function BackupDatabaseTab() {
     const folder = await selectVaultFolder();
     if (folder) {
       setMountedFolder(folder);
+      soundFX.playSuccessChime();
       showToast(`Target Root Mounted: "${folder}". Created /database and /backup.`);
     }
   };
 
   const handleCreateBackup = async () => {
     setIsBackingUp(true);
+    soundFX.playClickPop();
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
@@ -88,22 +101,87 @@ export default function BackupDatabaseTab() {
 
     const updated = [newBackup, ...backupHistory];
     syncHistory(updated);
+    localStorage.setItem('graceos_last_backup_time', now.toISOString());
+    setDaysSinceBackup(0);
     setIsBackingUp(false);
+    soundFX.playSuccessChime();
     showToast(`Snapshot written to ${newBackup.path}`);
+  };
+
+  const handleExportEncryptedVault = async (e) => {
+    e.preventDefault();
+    if (!password || password.length < 4) {
+      showToast('Password must contain at least 4 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      showToast('The passwords do not match.');
+      return;
+    }
+
+    setIsEncrypting(true);
+    soundFX.playClickPop();
+    try {
+      const fullData = {
+        timestamp: new Date().toISOString(),
+        church: JSON.parse(localStorage.getItem('graceos_main_church') || '{}'),
+        members: JSON.parse(localStorage.getItem('app_members_family_database') || '[]'),
+        visitors: JSON.parse(localStorage.getItem('app_visitors_database') || '[]'),
+        finance: JSON.parse(localStorage.getItem('app_finance_transactions_ledger') || '[]'),
+        expenses: JSON.parse(localStorage.getItem('app_expenses_ledger') || '[]'),
+        prayers: JSON.parse(localStorage.getItem('app_prayer_requests_db') || '[]'),
+        events: JSON.parse(localStorage.getItem('app_events_database') || '[]')
+      };
+      const encryptedString = await encryptDataPayload(fullData, password);
+      const blob = new Blob([encryptedString], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const fileName = `GraceOS_Secured_Backup_${new Date().toISOString().slice(0, 10)}.godb`;
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const newEntry = {
+        id: Date.now(), name: fileName, path: 'USB / Pen Drive Storage',
+        size: `${(encryptedString.length / 1024).toFixed(1)} KB`,
+        date: 'Today, Just now', type: 'AES-256 .godb'
+      };
+      syncHistory([newEntry, ...backupHistory]);
+      localStorage.setItem('graceos_last_backup_time', new Date().toISOString());
+      setDaysSinceBackup(0);
+      soundFX.playSuccessChime();
+      showToast('Password-protected .godb backup downloaded successfully!');
+      setPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      showToast(err.message || 'Encryption failed.');
+    } finally {
+      setIsEncrypting(false);
+    }
   };
 
   const handleRestoreDB = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json,.db,.bak';
+    input.accept = '.json,.db,.godb,.bak';
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
-          const parsed = JSON.parse(event.target.result);
+          let parsed;
+          if (file.name.endsWith('.godb')) {
+            const userPassword = window.prompt('Enter the password for this .godb file:');
+            if (!userPassword) return;
+            parsed = await decryptDataPayload(event.target.result, userPassword);
+          } else {
+            parsed = JSON.parse(event.target.result);
+          }
           if (parsed.members) localStorage.setItem('app_members_family_database', JSON.stringify(parsed.members));
           if (parsed.visitors) localStorage.setItem('app_visitors_database', JSON.stringify(parsed.visitors));
           if (parsed.finance) localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(parsed.finance));
@@ -111,9 +189,10 @@ export default function BackupDatabaseTab() {
           if (parsed.prayers) localStorage.setItem('app_prayer_requests_db', JSON.stringify(parsed.prayers));
           if (parsed.events) localStorage.setItem('app_events_database', JSON.stringify(parsed.events));
 
+          soundFX.playSuccessChime();
           showToast(`Database restored from "${file.name}" successfully! ✓`);
-        } catch {
-          showToast('Invalid backup file format.');
+        } catch (err) {
+          showToast(err.message || 'Invalid backup file format.');
         }
       };
       reader.readAsText(file);
@@ -154,6 +233,25 @@ export default function BackupDatabaseTab() {
         <div className="fixed top-5 right-5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 backdrop-blur-md shadow-2xl z-50 animate-in fade-in">
           <CheckCircle2 size={15} />
           <span className="font-semibold">{toast}</span>
+        </div>
+      )}
+
+      {daysSinceBackup >= 3 && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-300 shadow-lg">
+          <div className="flex items-center gap-3">
+            <Clock size={20} className="text-amber-400 shrink-0" />
+            <div>
+              <h5 className="text-xs font-bold">Backup reminder: {daysSinceBackup} days since the last backup.</h5>
+              <p className="text-[11px] text-slate-400 mt-0.5">Save the church&apos;s latest records to your connected storage.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleCreateBackup}
+            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition cursor-pointer"
+          >
+            Backup now
+          </button>
         </div>
       )}
 
@@ -260,6 +358,44 @@ export default function BackupDatabaseTab() {
             Snapshots will automatically write directly into the /backup folder without interrupting UI.
           </span>
         </div>
+      </div>
+
+      <div className="p-6 rounded-3xl win11-card border border-white/10 space-y-5">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                AES-256 Encrypted Vault Export (.godb)
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">USB Ready</span>
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Protect an offline backup with a password before storing it externally.</p>
+            </div>
+          </div>
+          <Usb size={20} className="text-slate-400" />
+        </div>
+
+        <form onSubmit={handleExportEncryptedVault} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-slate-300 font-medium block">Password</label>
+              <input type="password" required minLength={4} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 4 characters" className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white mt-1.5 focus:outline-none focus:border-indigo-400 font-mono" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-300 font-medium block">Confirm password</label>
+              <input type="password" required minLength={4} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat password" className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white mt-1.5 focus:outline-none focus:border-indigo-400 font-mono" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-white/5">
+            <span className="text-[10px] text-slate-500 font-mono">Format: .godb • PBKDF2 &amp; AES-GCM 256-Bit Protection</span>
+            <button type="submit" disabled={isEncrypting} className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95 transition cursor-pointer disabled:opacity-50">
+              <Lock size={14} />
+              <span>{isEncrypting ? 'Encrypting...' : 'Save Encrypted .godb'}</span>
+            </button>
+          </div>
+        </form>
       </div>
 
       <div className="flex flex-col gap-3">
