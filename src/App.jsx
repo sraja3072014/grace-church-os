@@ -9,6 +9,7 @@ import CommunityHub from './components/community/CommunityHub';
 import SettingsHub from './components/settings/SettingsHub';
 import UnifiedLoginModal from './components/auth/UnifiedLoginModal';
 import MemberPortalView from './components/portal/MemberPortalView';
+import LeaderPortalView from './components/portal/LeaderPortalView';
 import RainCanvas from './components/layout/RainCanvas';
 import TaskbarDock from './components/layout/TaskbarDock';
 import { getLargeWallpaper } from './utils/storageDB';
@@ -17,11 +18,15 @@ import PrayerWall from './components/prayer/PrayerWall';
 import EventsHub from './components/events/EventsHub';
 import LiveDesk from './components/live/LiveDesk';
 import ReportDashboard from './components/reports/ReportDashboard';
+import BulkBroadcastMessenger from './components/broadcast/BulkBroadcastMessenger';
 import QuickWidgetBar from './components/widgets/QuickWidgetBar';
+import ExcelDataEngineModal from './components/tools/ExcelDataEngineModal';
+import { FileSpreadsheet } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState(null);
   const [wallpaperData, setWallpaperData] = useState(null);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
   // 1. Session State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -119,6 +124,15 @@ export default function App() {
     );
   }
 
+  if (currentUser?.role === 'LEADER') {
+    return (
+      <LeaderPortalView
+        userSession={currentUser}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   return (
     <div 
       style={{
@@ -209,7 +223,19 @@ export default function App() {
 
           {/* 2. Primary Screen Container */}
           <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
-            <Header />
+            <Header
+              headerActions={(
+                <button
+                  type="button"
+                  onClick={() => setIsExcelModalOpen(true)}
+                  className="px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-2 cursor-pointer transition"
+                  title="Import or export member and finance data"
+                >
+                  <FileSpreadsheet size={15} />
+                  <span className="hidden lg:inline">Excel Import / Export</span>
+                </button>
+              )}
+            />
 
             <main className={`flex-1 overflow-y-auto ${isDockLayout ? 'pb-24' : 'p-5'}`}>
               {/* activeTab மதிப்பு இருக்கும் போது மட்டுமே கார்டு ஓபன் ஆகும் */}
@@ -232,6 +258,7 @@ export default function App() {
                   {activeTab === 'attendance' && <AttendanceDesk session={session} />}
                   {activeTab === 'members' && <MembersDesk session={session} />}
                   {activeTab === 'finance' && <FinanceDesk session={session} />}
+                  {activeTab === 'broadcast' && <BulkBroadcastMessenger />}
                   {activeTab === 'community' && <CommunityHub session={session} />}
                   {activeTab === 'visitors' && <VisitorsHub session={session} />}
                   {(activeTab === 'prayer_wall' || activeTab === 'prayer') && <PrayerWall session={session} />}
@@ -267,6 +294,12 @@ export default function App() {
 
       {/* 🌟 Windows 11 Slide-out Quick Widget Bar */}
       <QuickWidgetBar />
+
+      <ExcelDataEngineModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        onRefreshData={() => window.location.reload()}
+      />
     </div>
   );
 }

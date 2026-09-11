@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, ClipboardCheck, UserPlus, 
   HeartHandshake, Calendar, Radio, DollarSign, 
-  BarChart3, Settings, ShieldCheck, LogOut, ChevronDown, Building2
+  BarChart3, Settings, ShieldCheck, LogOut, ChevronDown, Building2, Megaphone
 } from 'lucide-react';
+import { soundFX } from '../../utils/audioEngine';
 
 export default function FusionSidebar({ activeTab, setActiveTab, session, onLogout }) {
   const [churchName, setChurchName] = useState('Grace City Church');
@@ -51,6 +52,7 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
     { id: 'events', label: 'Events Hub', icon: Calendar, color: 'from-sky-500 to-indigo-600' },
     { id: 'livestream', label: 'Live Desk', icon: Radio, color: 'from-violet-500 to-fuchsia-600' },
     { id: 'finance', label: 'Finance & 80G', icon: DollarSign, color: 'from-emerald-400 to-green-600' },
+    { id: 'broadcast', label: 'Broadcast Hub', icon: Megaphone, color: 'from-amber-500 to-rose-600', badge: 'SMS/WA' },
     { id: 'reports', label: 'Reports', icon: BarChart3, color: 'from-teal-400 to-cyan-600' },
     { id: 'settings', label: 'Settings', icon: Settings, color: 'from-slate-400 to-slate-600' },
   ];
@@ -119,7 +121,11 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                type="button"
+                onClick={() => {
+                  soundFX.playClickPop();
+                  setActiveTab(item.id);
+                }}
                 className={`relative w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl transition-all duration-300 text-left text-xs font-semibold active:scale-95 ${
                   isActive 
                     ? 'win11-card text-white border-white/20 shadow-lg shadow-cyan-500/10' 
@@ -137,6 +143,11 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
                 </div>
 
                 <span className="truncate">{item.label}</span>
+                {item.badge && (
+                  <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {item.badge}
+                  </span>
+                )}
               </button>
             );
           })}

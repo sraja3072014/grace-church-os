@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Flame } from 'lucide-react';
 
-export default function Header() {
+export default function Header({ headerActions }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -37,6 +37,8 @@ export default function Header() {
 
       {/* Right Controls */}
       <div className="flex items-center gap-4 shrink-0">
+        {headerActions}
+
         <div className="text-right hidden sm:block border-r border-orange-500/20 pr-4">
           <p className="text-xs md:text-sm font-bold tracking-wider text-orange-100 font-mono">
             {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
