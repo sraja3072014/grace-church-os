@@ -4,6 +4,7 @@ import {
   ArrowRight, Shield, RefreshCw, MapPin, ExternalLink, Navigation
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import { getVaultData, setVaultData } from '../../utils/vaultStore';
 
 export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }) {
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -23,9 +24,10 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
   }, [isOpen]);
 
   // கோரிக்கையை ஏற்றுக்கொண்டு குடும்பம் & உறுப்பினர் டேட்டாபேஸில் புதுப்பித்தல்
-  const handleApprove = (req) => {
+  const handleApprove = async (req) => {
     soundFX?.playSuccessChime?.();
-    const families = JSON.parse(localStorage.getItem('app_members_family_database') || '[]');
+    const legacyFamilies = JSON.parse(localStorage.getItem('app_members_family_database') || '[]');
+    const families = await getVaultData('members', legacyFamilies);
 
     let updated = false;
     const modifiedFamilies = families.map(fam => {
@@ -56,6 +58,8 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
     });
 
     if (updated) {
+      await setVaultData('members', modifiedFamilies, true);
+      // Keep legacy consumers compatible until they migrate to the vault.
       localStorage.setItem('app_members_family_database', JSON.stringify(modifiedFamilies));
     }
 

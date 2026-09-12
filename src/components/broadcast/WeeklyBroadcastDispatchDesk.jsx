@@ -1,34 +1,49 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Megaphone, MessageSquare, Send, Users, 
   Sparkles, CheckCircle2, Search, Filter 
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import { getVaultData } from '../../utils/vaultStore';
 
 export default function WeeklyBroadcastDispatchDesk() {
   const [selectedTemplate, setSelectedTemplate] = useState('SUNDAY_SERVICE');
   const [customNote, setCustomNote] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 1. விசுவாசிகள் பட்டியல்
-  const membersList = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('app_members_family_database');
-      const families = raw ? JSON.parse(raw) : [];
-      const flatMembers = [];
-      families.forEach(fam => {
-        if (fam.headMember?.phone) flatMembers.push({ ...fam.headMember, familyName: fam.familyName });
-        (fam.members || []).forEach(m => {
-          if (m.phone) flatMembers.push({ ...m, familyName: fam.familyName });
+  // 1. விசுவாசிகள் பட்டியல் — லோக்கல் டிஸ்க் வால்ட்டிலிருந்து ஏற்றுதல்
+  const [membersList, setMembersList] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        const families = await getVaultData('members', []);
+        const flatMembers = [];
+
+        families.forEach(fam => {
+          if (fam.headMember?.phone) {
+            flatMembers.push({ ...fam.headMember, familyName: fam.familyName });
+          }
+          (fam.members || []).forEach(member => {
+            if (member.phone) {
+              flatMembers.push({ ...member, familyName: fam.familyName });
+            }
+          });
         });
-      });
-      return flatMembers.length > 0 ? flatMembers : [
-        { memberId: 'MBR-101', name: 'Bro. David Paul', phone: '+91 98401 11223', familyName: 'David Household' },
-        { memberId: 'MBR-102', name: 'Sis. Esther Rani', phone: '+91 98401 44556', familyName: 'Rani Household' }
-      ];
-    } catch {
-      return [];
+
+        if (isMounted) setMembersList(flatMembers);
+      } catch (error) {
+        console.error('[WeeklyBroadcastDispatchDesk] Failed to load members from vault:', error);
+      }
     }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 2. முன்வடிவமைக்கப்பட்ட செய்திகள் (Templates)
@@ -79,11 +94,14 @@ _Grace Cathedral Fellowship Committee_`
     window.open(`https://web.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  const filteredMembers = membersList.filter(m => 
-    m.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.familyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.phone?.includes(searchQuery)
-  );
+  const filteredMembers = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return membersList.filter(m => 
+      m.name?.toLowerCase().includes(query) ||
+      m.familyName?.toLowerCase().includes(query) ||
+      m.phone?.includes(searchQuery)
+    );
+  }, [membersList, searchQuery]);
 
   return (
     <div className="space-y-6 max-w-5xl select-none text-slate-200 animate-in fade-in pb-12">

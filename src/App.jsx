@@ -21,6 +21,7 @@ import ReportDashboard from './components/reports/ReportDashboard';
 import BulkBroadcastMessenger from './components/broadcast/BulkBroadcastMessenger';
 import QuickWidgetBar from './components/widgets/QuickWidgetBar';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
+import VaultConnectionGuard from './components/layout/VaultConnectionGuard';
 import MinistriesHubDesk from './components/fellowships/MinistriesHubDesk';
 import ChurchInventoryDesk from './components/inventory/ChurchInventoryDesk';
 
@@ -224,6 +225,7 @@ export default function App() {
 
           {/* 2. Primary Screen Container */}
           <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
+            <VaultConnectionGuard />
             <Header />
 
             <main className={`flex-1 overflow-y-auto ${isDockLayout ? 'pb-24' : 'p-5'}`}>

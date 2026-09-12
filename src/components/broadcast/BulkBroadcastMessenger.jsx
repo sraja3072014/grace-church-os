@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Send, MessageSquare, Users, Sparkles, 
   CheckCircle2, AlertCircle, Copy, ExternalLink, Filter 
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import { getVaultData } from '../../utils/vaultStore';
 import WeeklyBroadcastDispatchDesk from './WeeklyBroadcastDispatchDesk';
 
 export default function BulkBroadcastMessenger() {
@@ -12,14 +13,27 @@ export default function BulkBroadcastMessenger() {
   const [broadcastType, setBroadcastType] = useState('FESTIVAL'); // 'FESTIVAL' | 'MEETING' | 'URGENT'
   const [customMessage, setCustomMessage] = useState('');
   const [toast, setToast] = useState('');
+  const [families, setFamilies] = useState([]);
 
-  const families = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('app_members_family_database');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadMembersFromDisk() {
+      try {
+        const diskData = await getVaultData('members', []);
+        if (isMounted) {
+          setFamilies(Array.isArray(diskData) ? diskData : []);
+        }
+      } catch (error) {
+        console.error('[BulkBroadcastMessenger] Failed to load members from vault:', error);
+      }
     }
+
+    loadMembersFromDisk();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // இலக்கு விசுவாசிகளை வடிகட்டுதல்
@@ -40,22 +54,13 @@ export default function BulkBroadcastMessenger() {
       }
     });
 
-    // மாதிரி விசுவாசிகள் பட்டியல் (Live data இல்லாத போது)
-    if (list.length === 0) {
-      return [
-        { name: 'Bro. David Paul', phone: '+91 98401 11223', family: 'Paul Household' },
-        { name: 'Sis. Mary Stella', phone: '+91 98401 44556', family: 'Stella Household' },
-        { name: 'Bro. Joshua Samuel', phone: '+91 98401 77889', family: 'Samuel Household' }
-      ];
-    }
-
     return list;
   }, [families, selectedTarget]);
 
   // டெம்ப்ளேட்கள்
   const handlePresetSelect = (type) => {
     setBroadcastType(type);
-    soundFX.playClickPop();
+    soundFX?.playClickPop?.();
     if (type === 'FESTIVAL') {
       setCustomMessage(
 `🕊️ *அன்பான சபை விசுவாசிகளுக்கு வாழ்த்துகள்!* 🕊️\nகிறிஸ்துவுக்குள் பிரியமானவர்களே, வரவிருக்கும் பண்டிகை நாட்களில் கர்த்தருடைய சமாதானமும் ஆசீர்வாதமும் உங்கள் குடும்பத்தோடு இருப்பதாக!\n\n_"கர்த்தர் உங்கள் எல்லைகளையெல்லாம் ஆசீர்வதிப்பாராக."_\n- போதகர் & சபை நிர்வாகம்.`
@@ -154,6 +159,7 @@ export default function BulkBroadcastMessenger() {
           {/* Preset Buttons */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <button
+              type="button"
               onClick={() => handlePresetSelect('FESTIVAL')}
               className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${broadcastType === 'FESTIVAL' ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-white/5 text-slate-300'}`}
             >
@@ -161,6 +167,7 @@ export default function BulkBroadcastMessenger() {
               <span>பண்டிகை வாழ்த்து</span>
             </button>
             <button
+              type="button"
               onClick={() => handlePresetSelect('MEETING')}
               className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${broadcastType === 'MEETING' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'bg-white/5 text-slate-300'}`}
             >
@@ -168,6 +175,7 @@ export default function BulkBroadcastMessenger() {
               <span>சிறப்புக் கூட்டம்</span>
             </button>
             <button
+              type="button"
               onClick={() => handlePresetSelect('URGENT')}
               className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${broadcastType === 'URGENT' ? 'bg-rose-500 text-white shadow-md' : 'bg-white/5 text-slate-300'}`}
             >
@@ -225,6 +233,7 @@ export default function BulkBroadcastMessenger() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => sendToMember(rec.phone, rec.name)}
                     className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer"
                     title="Send via WhatsApp"

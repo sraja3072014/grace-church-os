@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   TrendingUp, Wallet, Receipt, FileText, Plus,
   ArrowUpRight, ArrowDownLeft, ShieldCheck, Trash2, 
   Printer, CheckCircle2, Search, DollarSign, X, FileCheck2
 } from 'lucide-react';
 import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
+import { getVaultData, setVaultData } from '../../utils/vaultStore';
 import FinanceAnalyticsTab from './FinanceAnalyticsTab';
 import Annual80GCertificateModal from './Annual80GCertificateModal';
 import StaffPayrollDesk from './StaffPayrollDesk';
@@ -76,6 +77,45 @@ export default function FinanceDesk({ session }) {
     }
   });
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFinanceData = async () => {
+      const legacyIncome = JSON.parse(localStorage.getItem('app_finance_transactions_ledger') || '[]');
+      const legacyExpenses = JSON.parse(localStorage.getItem('app_expenses_ledger') || '[]');
+
+      const storedIncome = await getVaultData('finance', legacyIncome.length > 0 ? legacyIncome : SEED_INCOME);
+      const storedExpenses = await getVaultData('expenses', legacyExpenses.length > 0 ? legacyExpenses : SEED_EXPENSES);
+
+      if (!isMounted) return;
+
+      // Accept both the current ledger shape and the vault receipt shape.
+      const normalizedIncome = (Array.isArray(storedIncome) ? storedIncome : []).map((item) => ({
+        ...item,
+        member: item.member || item.donor || 'Anonymous Believer',
+        mode: item.mode || item.paymentMode || 'Cash',
+        panNumber: item.panNumber || ''
+      }));
+      const normalizedExpenses = (Array.isArray(storedExpenses) ? storedExpenses : []).map((item) => ({
+        ...item,
+        category: item.category || item.title || 'General Expense',
+        paymentMode: item.paymentMode || 'Bank Transfer',
+        notes: item.notes || item.paidTo || ''
+      }));
+
+      setIncomeList(normalizedIncome);
+      setExpensesList(normalizedExpenses);
+    };
+
+    loadFinanceData().catch((error) => {
+      console.error('[FinanceDesk] Failed to load vault data:', error);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // New Income Form
   const [incomeForm, setIncomeForm] = useState({
     member: '',
@@ -103,7 +143,7 @@ export default function FinanceDesk({ session }) {
   const totalExpenses = expensesList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
   const netBalance = totalIncome - totalExpenses;
 
-  const handleAddIncome = (e) => {
+  const handleAddIncome = async (e) => {
     e.preventDefault();
     if (!incomeForm.amount || Number(incomeForm.amount) <= 0) return;
 
@@ -116,12 +156,13 @@ export default function FinanceDesk({ session }) {
 
     const updated = [newIncome, ...incomeList];
     setIncomeList(updated);
+    await setVaultData('finance', updated, true);
     localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(updated));
     setIncomeForm({ member: '', panNumber: '', category: DEFAULT_GIVING_CATEGORIES[0], amount: '', mode: 'UPI / GPay' });
     showToast('Tithe / Offering collection recorded successfully!');
   };
 
-  const handleAddExpense = (e) => {
+  const handleAddExpense = async (e) => {
     e.preventDefault();
     if (!expenseForm.amount || Number(expenseForm.amount) <= 0) return;
 
@@ -134,21 +175,24 @@ export default function FinanceDesk({ session }) {
 
     const updated = [newExp, ...expensesList];
     setExpensesList(updated);
+    await setVaultData('expenses', updated, true);
     localStorage.setItem('app_expenses_ledger', JSON.stringify(updated));
     setExpenseForm({ category: 'Electricity & Utility Bills', amount: '', paymentMode: 'Bank Transfer', notes: '' });
     showToast('Expense voucher added to records!');
   };
 
-  const handleDeleteIncome = (id) => {
+  const handleDeleteIncome = async (id) => {
     const updated = incomeList.filter(item => item.id !== id);
     setIncomeList(updated);
+    await setVaultData('finance', updated, true);
     localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(updated));
     showToast('Income receipt removed.');
   };
 
-  const handleDeleteExpense = (id) => {
+  const handleDeleteExpense = async (id) => {
     const updated = expensesList.filter(item => item.id !== id);
     setExpensesList(updated);
+    await setVaultData('expenses', updated, true);
     localStorage.setItem('app_expenses_ledger', JSON.stringify(updated));
     showToast('Expense record removed.');
   };

@@ -33,6 +33,7 @@ import BackupDatabaseTab from './system/BackupDatabaseTab';
 import ServiceRequestsTab from './system/ServiceRequestsTab';
 import AdvancedSettingsTab from './system/AdvancedSettingsTab';
 import LanguageRegionTab from './system/LanguageRegionTab';
+import AuditTrailViewerDesk from './AuditTrailViewerDesk';
 
 export default function SettingsHub({ session }) {
   const [activeTab, setActiveTab] = useState('local_vault');
@@ -79,6 +80,7 @@ export default function SettingsHub({ session }) {
         { id: 'mobile_sync', label: 'Mobile App Node', icon: Smartphone },
         { id: 'whatsapp_hub', label: 'WhatsApp Messenger Hub', icon: MessageSquare },
         { id: 'bible_hub', label: 'Bible Display Engine', icon: BookOpen },
+        { id: 'audit', label: 'Audit Trail & Security Logs', icon: ShieldAlert },
         { id: 'service_req', label: 'Hardware Maintenance', icon: Wrench },
         { id: 'advanced_cfg', label: 'Advanced Settings', icon: Sliders },
       ]
@@ -147,6 +149,7 @@ export default function SettingsHub({ session }) {
           {activeTab === 'mobile_sync' && <MobileSyncTab />}
           {activeTab === 'whatsapp_hub' && <WhatsappHubTab />}
           {activeTab === 'bible_hub' && <BibleHubTab />}
+          {activeTab === 'audit' && <AuditTrailViewerDesk />}
           {activeTab === 'service_req' && <ServiceRequestsTab />}
           {activeTab === 'advanced_cfg' && <AdvancedSettingsTab />}
         </div>

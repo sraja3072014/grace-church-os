@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Package, Wrench, AlertTriangle, CheckCircle2, 
   Plus, Search, Shield, DollarSign, Calendar, 
@@ -6,6 +6,7 @@ import {
   Landmark, AlertCircle, Phone, ArrowUpRight, Heart, Gift, Utensils, Trash2, Sparkles
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import { getVaultData, setVaultData } from '../../utils/vaultStore';
 
 export default function ChurchInventoryDesk() {
   const [activeSubTab, setActiveSubTab] = useState('EQUIPMENT'); // 'EQUIPMENT' | 'PROPERTIES' | 'FELLOWSHIP_GIFTS'
@@ -15,51 +16,7 @@ export default function ChurchInventoryDesk() {
   // -------------------------------------------------------------
   // 1. GEAR & EQUIPMENT STATE
   // -------------------------------------------------------------
-  const [assets, setAssets] = useState(() => {
-    try {
-      const raw = localStorage.getItem('graceos_church_assets_db');
-      return raw ? JSON.parse(raw) : [
-        {
-          id: 'AST-101',
-          name: 'Shure Wireless Cordless Mic (Pair)',
-          category: 'SOUND',
-          quantity: 2,
-          location: 'Main Sanctuary Stage',
-          purchaseDate: '2025-03-15',
-          cost: 38000,
-          condition: 'EXCELLENT',
-          lastService: '2026-06-10',
-          warrantyTill: '2027-03-15'
-        },
-        {
-          id: 'AST-102',
-          name: 'Behringer X32 Digital Mixer',
-          category: 'SOUND',
-          quantity: 1,
-          location: 'Sound Control Booth',
-          purchaseDate: '2024-11-20',
-          cost: 185000,
-          condition: 'EXCELLENT',
-          lastService: '2026-05-12',
-          warrantyTill: '2026-11-20'
-        },
-        {
-          id: 'AST-103',
-          name: 'Epson 4K Laser Projector',
-          category: 'MEDIA',
-          quantity: 1,
-          location: 'Central Ceiling Mount',
-          purchaseDate: '2025-01-10',
-          cost: 92000,
-          condition: 'NEEDS_SERVICE',
-          lastService: '2025-08-14',
-          warrantyTill: '2027-01-10'
-        }
-      ];
-    } catch {
-      return [];
-    }
-  });
+  const [assets, setAssets] = useState([]);
 
   const [equipmentForm, setEquipmentForm] = useState({
     name: '',
@@ -73,42 +30,7 @@ export default function ChurchInventoryDesk() {
   // -------------------------------------------------------------
   // 2. PROPERTY, LEASE & REAL ESTATE STATE
   // -------------------------------------------------------------
-  const [properties, setProperties] = useState(() => {
-    try {
-      const raw = localStorage.getItem('graceos_church_properties_db');
-      return raw ? JSON.parse(raw) : [
-        {
-          id: 'PROP-01',
-          title: 'Grace Main Cathedral Sanctuary',
-          ownershipType: 'OWNED', // 'OWNED' | 'RENTED' | 'TRUST_LEASE'
-          location: 'Main Road Campus, Anna Nagar',
-          surveyNo: 'SF-142/3A',
-          pattaNo: 'PATTA-9082',
-          docNo: 'DOC-812/2018 (SRO Chennai North)',
-          landArea: '4,800 Sq.Ft (2.2 Grounds)',
-          trustName: 'Grace Cathedral Charitable Trust',
-          propertyTaxStatus: 'PAID',
-          ebConsumerNo: '01-204-009-881'
-        },
-        {
-          id: 'PROP-02',
-          title: 'Grace City Youth & Fellowship Center',
-          ownershipType: 'RENTED',
-          location: 'Tambaram East Branch',
-          landlordName: 'Mr. R. Sundaram',
-          landlordPhone: '+91 98401 22998',
-          monthlyRent: 35000,
-          advanceDeposit: 250000,
-          leaseStartDate: '2025-11-01',
-          leaseExpiryDate: '2026-10-01',
-          ebConsumerNo: '04-112-901-440',
-          agreementDocRef: 'RENT-AGR-2025-TBM'
-        }
-      ];
-    } catch {
-      return [];
-    }
-  });
+  const [properties, setProperties] = useState([]);
 
   const [propertyForm, setPropertyForm] = useState({
     title: '',
@@ -132,14 +54,7 @@ export default function ChurchInventoryDesk() {
   // -------------------------------------------------------------
   // 3. FELLOWSHIP, GIFTS & SPONSORSHIPS STATE
   // -------------------------------------------------------------
-  const [sponsorships, setSponsorships] = useState(() => {
-    try {
-      const raw = localStorage.getItem('graceos_fellowship_sponsorships_db');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [sponsorships, setSponsorships] = useState([]);
 
   const [sponsorForm, setSponsorForm] = useState({
     cause: 'FELLOWSHIP_MEALS',
@@ -152,24 +67,49 @@ export default function ChurchInventoryDesk() {
     occasion: ''
   });
 
-  // LocalStorage Helpers
-  const saveAssets = (updated) => {
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadInventoryFromDisk() {
+      const [diskAssets, diskProperties, diskSponsorships] = await Promise.all([
+        getVaultData('assets', []),
+        getVaultData('properties', []),
+        getVaultData('sponsorships', [])
+      ]);
+
+      if (!isMounted) return;
+      setAssets(Array.isArray(diskAssets) ? diskAssets : []);
+      setProperties(Array.isArray(diskProperties) ? diskProperties : []);
+      setSponsorships(Array.isArray(diskSponsorships) ? diskSponsorships : []);
+    }
+
+    loadInventoryFromDisk().catch((error) => {
+      console.error('[ChurchInventoryDesk] Failed to load vault data:', error);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Direct local disk vault persistence with cloud relay.
+  const saveAssets = async (updated) => {
     setAssets(updated);
-    localStorage.setItem('graceos_church_assets_db', JSON.stringify(updated));
+    await setVaultData('assets', updated, true);
   };
 
-  const saveProperties = (updated) => {
+  const saveProperties = async (updated) => {
     setProperties(updated);
-    localStorage.setItem('graceos_church_properties_db', JSON.stringify(updated));
+    await setVaultData('properties', updated, true);
   };
 
-  const saveSponsorships = (updated) => {
+  const saveSponsorships = async (updated) => {
     setSponsorships(updated);
-    localStorage.setItem('graceos_fellowship_sponsorships_db', JSON.stringify(updated));
+    await setVaultData('sponsorships', updated, true);
   };
 
   // Add Equipment Handler
-  const handleAddAsset = (e) => {
+  const handleAddAsset = async (e) => {
     e.preventDefault();
     if (!equipmentForm.name) return;
     soundFX?.playSuccessChime?.();
@@ -187,12 +127,12 @@ export default function ChurchInventoryDesk() {
       warrantyTill: '1 Year'
     };
 
-    saveAssets([newItem, ...assets]);
+    await saveAssets([newItem, ...assets]);
     setEquipmentForm({ name: '', category: 'SOUND', quantity: 1, location: '', cost: '', condition: 'EXCELLENT' });
   };
 
   // Add Property Handler
-  const handleAddProperty = (e) => {
+  const handleAddProperty = async (e) => {
     e.preventDefault();
     if (!propertyForm.title || !propertyForm.location) return;
     soundFX?.playSuccessChime?.();
@@ -205,7 +145,7 @@ export default function ChurchInventoryDesk() {
       propertyTaxStatus: 'PAID'
     };
 
-    saveProperties([newProperty, ...properties]);
+    await saveProperties([newProperty, ...properties]);
     setPropertyForm({
       title: '', ownershipType: 'RENTED', location: '', landArea: '',
       docNo: '', surveyNo: '', pattaNo: '', trustName: 'Grace Cathedral Charitable Trust',
@@ -213,7 +153,7 @@ export default function ChurchInventoryDesk() {
     });
   };
 
-  const handleAddSponsorship = (e) => {
+  const handleAddSponsorship = async (e) => {
     e.preventDefault();
     if (!sponsorForm.sponsorName.trim() || !sponsorForm.targetDate) return;
     soundFX?.playSuccessChime?.();
@@ -243,26 +183,26 @@ export default function ChurchInventoryDesk() {
       }
     }
 
-    saveSponsorships([newSponsor, ...sponsorships]);
+    await saveSponsorships([newSponsor, ...sponsorships]);
     setSponsorForm({
       cause: 'FELLOWSHIP_MEALS', sponsorName: '', phone: '', frequency: 'ONE_TIME',
       mode: 'IN_KIND', targetDate: '', amountEstimate: '', occasion: ''
     });
   };
 
-  const handleDeleteSponsorship = (id) => {
+  const handleDeleteSponsorship = async (id) => {
     soundFX?.playClickPop?.();
-    saveSponsorships(sponsorships.filter((sponsorship) => sponsorship.id !== id));
+    await saveSponsorships(sponsorships.filter((sponsorship) => sponsorship.id !== id));
   };
 
   // Service Log Action
-  const handleLogService = (assetId) => {
+  const handleLogService = async (assetId) => {
     soundFX?.playClickPop?.();
     const dateToday = new Date().toISOString().slice(0, 10);
     const updated = assets.map(a => 
       a.id === assetId ? { ...a, condition: 'EXCELLENT', lastService: dateToday } : a
     );
-    saveAssets(updated);
+    await saveAssets(updated);
   };
 
   // Direct Rent Entry to Finance Ledger
