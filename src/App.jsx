@@ -21,7 +21,8 @@ import ReportDashboard from './components/reports/ReportDashboard';
 import BulkBroadcastMessenger from './components/broadcast/BulkBroadcastMessenger';
 import QuickWidgetBar from './components/widgets/QuickWidgetBar';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
-
+import MinistriesHubDesk from './components/fellowships/MinistriesHubDesk';
+import ChurchInventoryDesk from './components/inventory/ChurchInventoryDesk';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -245,6 +246,8 @@ export default function App() {
                   {activeTab === 'dashboard' && <MainDashboard setActiveTab={setActiveTab} session={session} />}
                   {activeTab === 'attendance' && <AttendanceDesk session={session} />}
                   {activeTab === 'members' && <MembersDesk session={session} />}
+                  {activeTab === 'ministries' && <MinistriesHubDesk session={session} />}
+                  {activeTab === 'inventory' && <ChurchInventoryDesk session={session} />}
                   {activeTab === 'finance' && <FinanceDesk session={session} />}
                   {activeTab === 'broadcast' && <BulkBroadcastMessenger />}
                   {activeTab === 'community' && <CommunityHub session={session} />}

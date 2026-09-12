@@ -3,8 +3,10 @@ import {
   FileText, Download, TrendingUp, Users, 
   CalendarCheck, DollarSign, Sparkles, Filter, 
   CheckCircle2, Printer, ArrowUpRight, Search,
-  HeartHandshake, PieChart, Layers, Check, Award, Eye, X, ShieldCheck
+  HeartHandshake, PieChart, Layers, Check, Award, Eye, X, ShieldCheck, ClipboardList
 } from 'lucide-react';
+import ComprehensiveAuditReportsDesk from './ComprehensiveAuditReportsDesk';
+import ServiceDigestDesk from './ServiceDigestDesk';
 
 export default function ReportDashboard({ session }) {
   const [activeReportTab, setActiveReportTab] = useState('attendance');
@@ -15,7 +17,7 @@ export default function ReportDashboard({ session }) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState(null);
 
-  // Settings-ல் இருந்து கரன்சி சிம்பலை எடுத்தல்
+  // Settings Currency Configuration
   const currencySymbol = useMemo(() => {
     try {
       const cfg = JSON.parse(localStorage.getItem('graceos_locale_config') || '{}');
@@ -37,7 +39,7 @@ export default function ReportDashboard({ session }) {
 
   const [visitors] = useState(() => {
     try {
-      const saved = localStorage.getItem('app_visitors_database');
+      const saved = localStorage.getItem('app_visitors_database') || localStorage.getItem('graceos_visitors_database');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -86,7 +88,7 @@ export default function ReportDashboard({ session }) {
 
   const totalFamiliesCount = families.length > 0 ? families.length : 84;
   const totalSeekers = visitors.length > 0 ? visitors.length : 24;
-  const convertedMembers = visitors.filter(v => v.followUpStage === 'ready_for_membership').length || 8;
+  const convertedMembers = visitors.filter(v => v.followUpStage === 'ready_for_membership' || v.stage === 'COMMITTED').length || 8;
   const totalGivingAmount = incomeList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0) || 142500;
 
   return (
@@ -151,8 +153,8 @@ export default function ReportDashboard({ session }) {
         </div>
       </div>
 
-      {/* 5 Audit Category Selectors */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      {/* 6 Audit Category Selectors */}
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         <button
           type="button"
           onClick={() => setActiveReportTab('attendance')}
@@ -218,7 +220,7 @@ export default function ReportDashboard({ session }) {
             <span className="text-[10px] font-mono text-emerald-400 font-bold">{currencySymbol} {(totalGivingAmount/1000).toFixed(1)}k</span>
           </div>
           <div className="text-xs font-bold mt-2">4. Treasury</div>
-          <span className="text-[10px] text-slate-400">Giving & Expenses</span>
+          <span className="text-[10px] text-slate-400">Giving & Audit</span>
         </button>
 
         <button
@@ -236,6 +238,23 @@ export default function ReportDashboard({ session }) {
           </div>
           <div className="text-xs font-bold mt-2">5. Certificates</div>
           <span className="text-[10px] text-slate-400">Sacraments</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveReportTab('digest')}
+          className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+            activeReportTab === 'digest'
+              ? 'bg-cyan-500/15 border-cyan-500 text-white shadow-lg'
+              : 'win11-card border-white/5 text-slate-400 hover:text-white'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <ClipboardList size={16} className="text-cyan-400" />
+            <span className="text-[10px] font-mono text-cyan-400 font-bold">LIVE</span>
+          </div>
+          <div className="text-xs font-bold mt-2">6. Sunday Digest</div>
+          <span className="text-[10px] text-slate-400">Service Summary</span>
         </button>
       </div>
 
@@ -319,29 +338,14 @@ export default function ReportDashboard({ session }) {
         </div>
       )}
 
+      {/* Treasury: Comprehensive Audit Sheet Integrated */}
       {activeReportTab === 'finance' && (
         <div className="space-y-4 pt-1">
-          <div className="win11-card p-4 rounded-2xl border border-white/10 flex justify-between items-center text-xs">
-            <span className="font-bold text-white uppercase tracking-wider">Kingdom Treasury & Financial Audit</span>
-            <span className="text-emerald-400 font-mono font-bold">Net Inflow Tracked</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="win11-card p-5 rounded-2xl border border-emerald-500/20 space-y-1">
-              <span className="text-xs text-slate-400">Total Giving Inflow</span>
-              <div className="text-2xl font-black text-emerald-400 font-mono">{currencySymbol} {Number(totalGivingAmount).toLocaleString()}</div>
-            </div>
-            <div className="win11-card p-5 rounded-2xl border border-rose-500/20 space-y-1">
-              <span className="text-xs text-slate-400">Operating Expenses</span>
-              <div className="text-2xl font-black text-rose-400 font-mono">{currencySymbol} 63,000</div>
-            </div>
-            <div className="win11-card p-5 rounded-2xl border border-sky-500/20 space-y-1">
-              <span className="text-xs text-slate-400">Building Fund Reserves</span>
-              <div className="text-2xl font-black text-sky-400 font-mono">{currencySymbol} 4,12,000</div>
-            </div>
-          </div>
+          <ComprehensiveAuditReportsDesk />
         </div>
       )}
+
+      {activeReportTab === 'digest' && <ServiceDigestDesk session={session} />}
 
       {activeReportTab === 'certificates' && (
         <div className="space-y-4 pt-1">
@@ -430,25 +434,25 @@ export default function ReportDashboard({ session }) {
             </div>
 
             {/* A4 Document Printable Canvas */}
-            <div className="p-8 overflow-y-auto space-y-6 bg-white select-text">
+            <div className="p-8 overflow-y-auto space-y-6 bg-white select-text font-serif">
               
               {/* Church Letterhead */}
               <div className="border-b-2 border-slate-900 pb-4 text-center space-y-1">
                 <h2 className="text-xl font-black text-slate-900 tracking-wider uppercase">{churchName}</h2>
-                <p className="text-[11px] text-slate-600 font-bold uppercase tracking-widest">{branchType} • MINISTRY OF SACRAMENTS & AUDIT</p>
+                <p className="text-[11px] text-slate-600 font-bold uppercase tracking-widest font-sans">{branchType} • MINISTRY OF SACRAMENTS & AUDIT</p>
                 <p className="text-[10px] text-slate-500 font-mono">Ref No: {previewDocument.refNo} | Date: {previewDocument.date}</p>
               </div>
 
               {/* Title */}
               <div className="text-center py-2">
-                <h3 className="text-sm font-black text-slate-900 tracking-wider uppercase underline underline-offset-4">
+                <h3 className="text-sm font-black text-slate-900 tracking-wider uppercase underline underline-offset-4 font-sans">
                   {previewDocument.title}
                 </h3>
               </div>
 
               {/* Content Body Based on Type */}
               {previewDocument.type === 'attendance' && (
-                <div className="space-y-4 text-xs text-slate-700 leading-relaxed">
+                <div className="space-y-4 text-xs text-slate-700 leading-relaxed font-sans">
                   <p>This is to officially certify that the congregation attendance records for the term <strong>{dateRange}</strong> have been audited under pastoral oversight.</p>
                   <table className="w-full border-collapse border border-slate-300 text-left text-xs my-3">
                     <thead>
@@ -480,35 +484,41 @@ export default function ReportDashboard({ session }) {
                 </div>
               )}
 
-              {previewDocument.type === 'finance' && (
-                <div className="space-y-4 text-xs text-slate-700 leading-relaxed">
-                  <p>Audited statement of kingdom tithes, offerings, and operational expenses for <strong>{dateRange}</strong>.</p>
-                  <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Kingdom Inflow</span>
-                      <strong className="text-base text-emerald-700 font-mono">{currencySymbol} {Number(totalGivingAmount).toLocaleString()}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-500 block">Disbursed Expenses</span>
-                      <strong className="text-base text-rose-700 font-mono">{currencySymbol} 63,000</strong>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-500 italic">Audited and verified by Cathedral Treasury Board.</p>
-                </div>
-              )}
-
               {previewDocument.type === 'baptism' && (
                 <div className="space-y-4 text-center py-4 text-xs text-slate-700 leading-relaxed">
                   <p className="italic">"Therefore go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit." — Matthew 28:19</p>
                   <p className="pt-2">This is to certify that the believer has been publicly baptized by water immersion in confession of faith in the Lord Jesus Christ.</p>
-                  <div className="my-4 p-4 border border-dashed border-slate-400 rounded-xl inline-block w-full text-slate-900 font-bold">
+                  <div className="my-4 p-4 border border-dashed border-slate-400 rounded-xl inline-block w-full text-slate-900 font-bold font-sans">
                     Official Cathedral Baptism Registry Entry
                   </div>
                 </div>
               )}
 
+              {/* Child Dedication Template */}
+              {previewDocument.type === 'dedication' && (
+                <div className="space-y-4 text-center py-4 text-xs text-slate-700 leading-relaxed">
+                  <p className="italic">"Start children off on the way they should go, and even when they are old they will not turn from it." — Proverbs 22:6</p>
+                  <p className="pt-2">This is to certify that the infant has been dedicated to Almighty God in prayer and parental commitment before the congregation.</p>
+                  <div className="my-4 p-4 border border-dashed border-slate-400 rounded-xl inline-block w-full text-slate-900 font-bold font-sans">
+                    Official Cathedral Dedication Registry Entry
+                  </div>
+                </div>
+              )}
+
+              {/* Pastoral Recommendation Template */}
+              {previewDocument.type === 'recommendation' && (
+                <div className="space-y-4 text-xs text-slate-700 leading-relaxed text-left font-sans">
+                  <p><strong>To Whom It May Concern,</strong></p>
+                  <p>This is to certify that the bearer is an active, regular, and bona fide member of our congregation, participating faithfully in fellowship and worship.</p>
+                  <p>We recommend them with confidence for educational admission, career pursuits, or fellowship verification, praying God's blessings upon their endeavors.</p>
+                  <div className="my-3 p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]">
+                    Verified Member of {churchName}
+                  </div>
+                </div>
+              )}
+
               {/* Document Signatures & Seal */}
-              <div className="pt-8 flex items-end justify-between border-t border-slate-200 text-xs">
+              <div className="pt-8 flex items-end justify-between border-t border-slate-200 text-xs font-sans">
                 <div className="text-center space-y-1">
                   <div className="w-20 h-20 border-2 border-slate-900 rounded-full mx-auto flex items-center justify-center font-serif font-black text-[9px] text-slate-800 uppercase tracking-tighter">
                     Official<br/>Cathedral<br/>Seal

@@ -7,6 +7,7 @@ import {
 import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
 import FinanceAnalyticsTab from './FinanceAnalyticsTab';
 import Annual80GCertificateModal from './Annual80GCertificateModal';
+import StaffPayrollDesk from './StaffPayrollDesk';
 
 export const DEFAULT_GIVING_CATEGORIES = [
   'Sunday Tithes (10%)',
@@ -29,7 +30,7 @@ const SEED_EXPENSES = [
 ];
 
 export default function FinanceDesk({ session }) {
-  const [activeTab, setActiveTab] = useState('income'); // 'income' | 'expenses' | 'receipts_80g' | 'analytics'
+  const [activeFinanceSubTab, setActiveFinanceSubTab] = useState('income'); // 'income' | 'expenses' | 'receipts_80g' | 'analytics' | 'payroll'
   const [toastMessage, setToastMessage] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
@@ -178,27 +179,27 @@ export default function FinanceDesk({ session }) {
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/10 shrink-0">
             <button
-              onClick={() => setActiveTab('income')}
+              onClick={() => setActiveFinanceSubTab('income')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'income' ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+                activeFinanceSubTab === 'income' ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
               }`}
             >
               <TrendingUp size={14} />
               <span>Income & Tithes</span>
             </button>
             <button
-              onClick={() => setActiveTab('expenses')}
+              onClick={() => setActiveFinanceSubTab('expenses')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'expenses' ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                activeFinanceSubTab === 'expenses' ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Receipt size={14} />
               <span>Expense Vouchers</span>
             </button>
             <button
-              onClick={() => setActiveTab('receipts_80g')}
+              onClick={() => setActiveFinanceSubTab('receipts_80g')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                activeFinanceSubTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
               <FileText size={14} />
@@ -206,12 +207,22 @@ export default function FinanceDesk({ session }) {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('analytics')}
+              onClick={() => setActiveFinanceSubTab('analytics')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'analytics' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                activeFinanceSubTab === 'analytics' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
               <span>📊 Audit &amp; Analytics</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('payroll')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'payroll' ? 'bg-sky-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ShieldCheck size={14} />
+              <span>Staff Payroll</span>
             </button>
           </div>
           <button
@@ -225,7 +236,9 @@ export default function FinanceDesk({ session }) {
         </div>
       </div>
 
-      {activeTab === 'analytics' && <FinanceAnalyticsTab />}
+      {activeFinanceSubTab === 'analytics' && <FinanceAnalyticsTab />}
+
+      {activeFinanceSubTab === 'payroll' && <StaffPayrollDesk session={session} />}
 
       {/* 3 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -273,7 +286,7 @@ export default function FinanceDesk({ session }) {
       </div>
 
       {/* TAB 1: INCOME & TITHES */}
-      {activeTab === 'income' && (
+      {activeFinanceSubTab === 'income' && (
         <div className="space-y-6">
           {/* Add Form */}
           <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
@@ -414,7 +427,7 @@ export default function FinanceDesk({ session }) {
       )}
 
       {/* TAB 2: EXPENSES */}
-      {activeTab === 'expenses' && (
+      {activeFinanceSubTab === 'expenses' && (
         <div className="space-y-6">
           <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
             <h3 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2 font-mono">
@@ -529,7 +542,7 @@ export default function FinanceDesk({ session }) {
       )}
 
       {/* TAB 3: 80G RECEIPT GENERATOR SEARCH */}
-      {activeTab === 'receipts_80g' && (
+      {activeFinanceSubTab === 'receipts_80g' && (
         <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
           <div className="border-b border-white/10 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">

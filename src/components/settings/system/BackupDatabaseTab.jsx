@@ -81,8 +81,15 @@ export default function BackupDatabaseTab() {
       visitors: JSON.parse(localStorage.getItem('app_visitors_database') || '[]'),
       finance: JSON.parse(localStorage.getItem('app_finance_transactions_ledger') || '[]'),
       expenses: JSON.parse(localStorage.getItem('app_expenses_ledger') || '[]'),
-      prayers: JSON.parse(localStorage.getItem('app_prayer_requests_db') || '[]'),
-      events: JSON.parse(localStorage.getItem('app_events_database') || '[]'),
+      prayers: JSON.parse(localStorage.getItem('graceos_prayer_wall_db') || localStorage.getItem('app_prayer_requests_db') || '[]'),
+      events: JSON.parse(localStorage.getItem('graceos_church_events_db') || localStorage.getItem('app_events_database') || '[]'),
+      properties: JSON.parse(localStorage.getItem('graceos_church_properties_db') || '[]'),
+      assets: JSON.parse(localStorage.getItem('graceos_church_assets_db') || '[]'),
+      payroll: JSON.parse(localStorage.getItem('graceos_staff_payroll_db') || '[]'),
+      sundaySchool: JSON.parse(localStorage.getItem('graceos_sundayschool_kids_db') || '[]'),
+      youth: JSON.parse(localStorage.getItem('graceos_youth_fellowship_db') || '[]'),
+      women: JSON.parse(localStorage.getItem('graceos_women_fellowship_db') || '[]'),
+      men: JSON.parse(localStorage.getItem('graceos_men_fellowship_db') || '[]'),
       engine: 'GraceOS Dual-Tree Vault FS'
     };
 
@@ -132,8 +139,15 @@ export default function BackupDatabaseTab() {
         visitors: JSON.parse(localStorage.getItem('app_visitors_database') || '[]'),
         finance: JSON.parse(localStorage.getItem('app_finance_transactions_ledger') || '[]'),
         expenses: JSON.parse(localStorage.getItem('app_expenses_ledger') || '[]'),
-        prayers: JSON.parse(localStorage.getItem('app_prayer_requests_db') || '[]'),
-        events: JSON.parse(localStorage.getItem('app_events_database') || '[]')
+        prayers: JSON.parse(localStorage.getItem('graceos_prayer_wall_db') || localStorage.getItem('app_prayer_requests_db') || '[]'),
+        events: JSON.parse(localStorage.getItem('graceos_church_events_db') || localStorage.getItem('app_events_database') || '[]'),
+        properties: JSON.parse(localStorage.getItem('graceos_church_properties_db') || '[]'),
+        assets: JSON.parse(localStorage.getItem('graceos_church_assets_db') || '[]'),
+        payroll: JSON.parse(localStorage.getItem('graceos_staff_payroll_db') || '[]'),
+        sundaySchool: JSON.parse(localStorage.getItem('graceos_sundayschool_kids_db') || '[]'),
+        youth: JSON.parse(localStorage.getItem('graceos_youth_fellowship_db') || '[]'),
+        women: JSON.parse(localStorage.getItem('graceos_women_fellowship_db') || '[]'),
+        men: JSON.parse(localStorage.getItem('graceos_men_fellowship_db') || '[]')
       };
       const encryptedString = await encryptDataPayload(fullData, password);
       const blob = new Blob([encryptedString], { type: 'application/octet-stream' });
@@ -189,8 +203,21 @@ export default function BackupDatabaseTab() {
           if (parsed.visitors) localStorage.setItem('app_visitors_database', JSON.stringify(parsed.visitors));
           if (parsed.finance) localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(parsed.finance));
           if (parsed.expenses) localStorage.setItem('app_expenses_ledger', JSON.stringify(parsed.expenses));
-          if (parsed.prayers) localStorage.setItem('app_prayer_requests_db', JSON.stringify(parsed.prayers));
-          if (parsed.events) localStorage.setItem('app_events_database', JSON.stringify(parsed.events));
+          if (parsed.prayers) {
+            localStorage.setItem('graceos_prayer_wall_db', JSON.stringify(parsed.prayers));
+            localStorage.setItem('app_prayer_requests_db', JSON.stringify(parsed.prayers));
+          }
+          if (parsed.events) {
+            localStorage.setItem('graceos_church_events_db', JSON.stringify(parsed.events));
+            localStorage.setItem('app_events_database', JSON.stringify(parsed.events));
+          }
+          if (parsed.properties) localStorage.setItem('graceos_church_properties_db', JSON.stringify(parsed.properties));
+          if (parsed.assets) localStorage.setItem('graceos_church_assets_db', JSON.stringify(parsed.assets));
+          if (parsed.payroll) localStorage.setItem('graceos_staff_payroll_db', JSON.stringify(parsed.payroll));
+          if (parsed.sundaySchool) localStorage.setItem('graceos_sundayschool_kids_db', JSON.stringify(parsed.sundaySchool));
+          if (parsed.youth) localStorage.setItem('graceos_youth_fellowship_db', JSON.stringify(parsed.youth));
+          if (parsed.women) localStorage.setItem('graceos_women_fellowship_db', JSON.stringify(parsed.women));
+          if (parsed.men) localStorage.setItem('graceos_men_fellowship_db', JSON.stringify(parsed.men));
 
           soundFX.playSuccessChime();
           showToast(`Database restored from "${file.name}" successfully! ✓`);
