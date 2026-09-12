@@ -256,7 +256,7 @@ export default function App() {
                   {(activeTab === 'events_hub' || activeTab === 'events') && <EventsHub session={session} />}
                   {(activeTab === 'live_desk' || activeTab === 'live') && <LiveDesk session={session} />}
                   {(activeTab === 'reports' || activeTab === 'report_hub') && <ReportDashboard session={session} />}
-                  {activeTab === 'settings' && <SettingsHub />}
+                  {activeTab === 'settings' && <SettingsHub session={session} />}
                 </div>
               )}
 

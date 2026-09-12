@@ -4,8 +4,10 @@ import {
   CheckCircle2, AlertCircle, Copy, ExternalLink, Filter 
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import WeeklyBroadcastDispatchDesk from './WeeklyBroadcastDispatchDesk';
 
 export default function BulkBroadcastMessenger() {
+  const [activeSubTab, setActiveSubTab] = useState('bulk_broadcast');
   const [selectedTarget, setSelectedTarget] = useState('ALL'); // 'ALL' | 'HEADS' | 'YOUTH'
   const [broadcastType, setBroadcastType] = useState('FESTIVAL'); // 'FESTIVAL' | 'MEETING' | 'URGENT'
   const [customMessage, setCustomMessage] = useState('');
@@ -85,6 +87,35 @@ export default function BulkBroadcastMessenger() {
 
   return (
     <div className="space-y-6 max-w-5xl select-none text-slate-200 animate-in fade-in pb-12">
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-black/30 rounded-2xl border border-white/10 w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('bulk_broadcast')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+            activeSubTab === 'bulk_broadcast'
+              ? 'bg-emerald-500 text-slate-950 shadow-md'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          Bulk Broadcast Messenger
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('weekly_dispatch')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+            activeSubTab === 'weekly_dispatch'
+              ? 'bg-cyan-500 text-slate-950 shadow-md'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          Weekly WhatsApp Dispatch
+        </button>
+      </div>
+
+      {activeSubTab === 'weekly_dispatch' && <WeeklyBroadcastDispatchDesk />}
+
+      {activeSubTab === 'bulk_broadcast' && (
+        <>
       
       {/* Toast Alert */}
       {toast && (
@@ -212,6 +243,9 @@ export default function BulkBroadcastMessenger() {
         </div>
 
       </div>
+
+        </>
+      )}
 
     </div>
   );

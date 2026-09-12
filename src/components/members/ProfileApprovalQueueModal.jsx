@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   UserCheck, Check, X, Clock, AlertCircle, 
-  ArrowRight, Shield, RefreshCw 
+  ArrowRight, Shield, RefreshCw, MapPin, ExternalLink, Navigation
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
 
@@ -22,15 +22,25 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
     if (isOpen) loadRequests();
   }, [isOpen]);
 
-  // கோரிக்கையை ஏற்றுக்கொண்டு முதன்மை டேட்டாபேஸில் புதுப்பித்தல்
+  // கோரிக்கையை ஏற்றுக்கொண்டு குடும்பம் & உறுப்பினர் டேட்டாபேஸில் புதுப்பித்தல்
   const handleApprove = (req) => {
     soundFX?.playSuccessChime?.();
     const families = JSON.parse(localStorage.getItem('app_members_family_database') || '[]');
 
     let updated = false;
     const modifiedFamilies = families.map(fam => {
-      if (fam.headMember && (fam.headMember.memberId === req.memberId || fam.headMember.phone === req.phone)) {
-        fam.headMember = { ...fam.headMember, ...req.updatedFields };
+      const isHeadMatch = fam.headMember && (
+        fam.headMember.memberId === req.memberId || fam.headMember.phone === req.phone
+      );
+
+      if (isHeadMatch) {
+        fam.headMember = {
+          ...fam.headMember,
+          ...req.updatedFields,
+          mapLink: req.updatedFields?.mapLink || fam.headMember.mapLink
+        };
+        if (req.updatedFields?.address) fam.address = req.updatedFields.address;
+        if (req.updatedFields?.mapLink) fam.mapLink = req.updatedFields.mapLink;
         updated = true;
       }
       if (fam.members) {
@@ -102,7 +112,14 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-bold text-white">{req.memberName}</h4>
+                    <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                      <span>{req.memberName}</span>
+                      {req.updatedFields?.mapLink && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-mono flex items-center gap-1 font-bold">
+                          <MapPin size={9} /> GPS Attached
+                        </span>
+                      )}
+                    </h4>
                     <span className="text-[10px] text-slate-400 font-mono">{req.memberId || req.phone}</span>
                   </div>
                   <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
@@ -121,6 +138,24 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
                     <div className="text-white font-bold">{req.newValue}</div>
                   </div>
                 </div>
+
+                {req.updatedFields?.mapLink && (
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                    <span className="text-emerald-300 font-medium flex items-center gap-1.5">
+                      <Navigation size={13} className="text-emerald-400 shrink-0" />
+                      <span>விசுவாசி அனுப்பிய கூகுள் மேப் இருப்பிடம்:</span>
+                    </span>
+                    <a
+                      href={req.updatedFields.mapLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition"
+                    >
+                      <ExternalLink size={11} />
+                      <span>View on Google Maps</span>
+                    </a>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex items-center justify-end gap-2 pt-1">

@@ -8,6 +8,7 @@ import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
 import FinanceAnalyticsTab from './FinanceAnalyticsTab';
 import Annual80GCertificateModal from './Annual80GCertificateModal';
 import StaffPayrollDesk from './StaffPayrollDesk';
+import AnnualAuditAGMDesk from './AnnualAuditAGMDesk';
 
 export const DEFAULT_GIVING_CATEGORIES = [
   'Sunday Tithes (10%)',
@@ -30,7 +31,7 @@ const SEED_EXPENSES = [
 ];
 
 export default function FinanceDesk({ session }) {
-  const [activeFinanceSubTab, setActiveFinanceSubTab] = useState('income'); // 'income' | 'expenses' | 'receipts_80g' | 'analytics' | 'payroll'
+  const [activeFinanceSubTab, setActiveFinanceSubTab] = useState('income'); // 'income' | 'expenses' | 'receipts_80g' | 'analytics' | 'payroll' | 'agm_audit'
   const [toastMessage, setToastMessage] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
@@ -224,6 +225,16 @@ export default function FinanceDesk({ session }) {
               <ShieldCheck size={14} />
               <span>Staff Payroll</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('agm_audit')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'agm_audit' ? 'bg-amber-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileCheck2 size={14} />
+              <span>AGM Annual Audit Report</span>
+            </button>
           </div>
           <button
             type="button"
@@ -239,6 +250,8 @@ export default function FinanceDesk({ session }) {
       {activeFinanceSubTab === 'analytics' && <FinanceAnalyticsTab />}
 
       {activeFinanceSubTab === 'payroll' && <StaffPayrollDesk session={session} />}
+
+      {activeFinanceSubTab === 'agm_audit' && <AnnualAuditAGMDesk session={session} />}
 
       {/* 3 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

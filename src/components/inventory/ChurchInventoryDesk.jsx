@@ -3,12 +3,12 @@ import {
   Package, Wrench, AlertTriangle, CheckCircle2, 
   Plus, Search, Shield, DollarSign, Calendar, 
   Building2, FileText, KeyRound, Clock, MapPin, 
-  Landmark, AlertCircle, Phone, ArrowUpRight
+  Landmark, AlertCircle, Phone, ArrowUpRight, Heart, Gift, Utensils, Trash2, Sparkles
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
 
 export default function ChurchInventoryDesk() {
-  const [activeSubTab, setActiveSubTab] = useState('EQUIPMENT'); // 'EQUIPMENT' | 'PROPERTIES'
+  const [activeSubTab, setActiveSubTab] = useState('EQUIPMENT'); // 'EQUIPMENT' | 'PROPERTIES' | 'FELLOWSHIP_GIFTS'
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -129,6 +129,29 @@ export default function ChurchInventoryDesk() {
     ebConsumerNo: ''
   });
 
+  // -------------------------------------------------------------
+  // 3. FELLOWSHIP, GIFTS & SPONSORSHIPS STATE
+  // -------------------------------------------------------------
+  const [sponsorships, setSponsorships] = useState(() => {
+    try {
+      const raw = localStorage.getItem('graceos_fellowship_sponsorships_db');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [sponsorForm, setSponsorForm] = useState({
+    cause: 'FELLOWSHIP_MEALS',
+    sponsorName: '',
+    phone: '',
+    frequency: 'ONE_TIME',
+    mode: 'IN_KIND',
+    targetDate: '',
+    amountEstimate: '',
+    occasion: ''
+  });
+
   // LocalStorage Helpers
   const saveAssets = (updated) => {
     setAssets(updated);
@@ -138,6 +161,11 @@ export default function ChurchInventoryDesk() {
   const saveProperties = (updated) => {
     setProperties(updated);
     localStorage.setItem('graceos_church_properties_db', JSON.stringify(updated));
+  };
+
+  const saveSponsorships = (updated) => {
+    setSponsorships(updated);
+    localStorage.setItem('graceos_fellowship_sponsorships_db', JSON.stringify(updated));
   };
 
   // Add Equipment Handler
@@ -183,6 +211,48 @@ export default function ChurchInventoryDesk() {
       docNo: '', surveyNo: '', pattaNo: '', trustName: 'Grace Cathedral Charitable Trust',
       landlordName: '', landlordPhone: '', monthlyRent: '', advanceDeposit: '', leaseExpiryDate: '', ebConsumerNo: ''
     });
+  };
+
+  const handleAddSponsorship = (e) => {
+    e.preventDefault();
+    if (!sponsorForm.sponsorName.trim() || !sponsorForm.targetDate) return;
+    soundFX?.playSuccessChime?.();
+
+    const newSponsor = {
+      id: `FSP-${Date.now().toString().slice(-3)}`,
+      ...sponsorForm,
+      sponsorName: sponsorForm.sponsorName.trim(),
+      amountEstimate: Number(sponsorForm.amountEstimate) || 0,
+      status: 'CONFIRMED'
+    };
+
+    if (newSponsor.mode === 'DIRECT_FUND' && newSponsor.amountEstimate > 0) {
+      try {
+        const raw = localStorage.getItem('app_finance_transactions_ledger');
+        const ledger = raw ? JSON.parse(raw) : [];
+        const newReceipt = {
+          id: `REC-SPON-${Date.now().toString().slice(-4)}`,
+          date: newSponsor.targetDate,
+          category: `Sponsorship (${newSponsor.cause})`,
+          amount: newSponsor.amountEstimate,
+          donor: `${newSponsor.sponsorName} (${newSponsor.occasion || 'Thanksgiving'})`
+        };
+        localStorage.setItem('app_finance_transactions_ledger', JSON.stringify([newReceipt, ...ledger]));
+      } catch (error) {
+        console.error('Error auto-syncing sponsorship with Finance Desk:', error);
+      }
+    }
+
+    saveSponsorships([newSponsor, ...sponsorships]);
+    setSponsorForm({
+      cause: 'FELLOWSHIP_MEALS', sponsorName: '', phone: '', frequency: 'ONE_TIME',
+      mode: 'IN_KIND', targetDate: '', amountEstimate: '', occasion: ''
+    });
+  };
+
+  const handleDeleteSponsorship = (id) => {
+    soundFX?.playClickPop?.();
+    saveSponsorships(sponsorships.filter((sponsorship) => sponsorship.id !== id));
   };
 
   // Service Log Action
@@ -232,6 +302,13 @@ export default function ChurchInventoryDesk() {
     REPAIRING: 'bg-rose-500/15 text-rose-300 border-rose-500/30'
   };
 
+  const causeLabels = {
+    FELLOWSHIP_MEALS: { title: 'Fellowship Meal', icon: Utensils, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+    TRUST_KIDS: { title: 'Trust Kids Gift', icon: Gift, color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' },
+    ALTAR_FLOWERS: { title: 'Altar Flowers', icon: Sparkles, color: 'text-rose-400 bg-rose-500/10 border-rose-500/20' },
+    BENEVOLENCE: { title: 'Benevolence Aid', icon: Heart, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' }
+  };
+
   return (
     <div className="space-y-6 max-w-5xl select-none text-slate-200 animate-in fade-in pb-12">
       
@@ -249,8 +326,8 @@ export default function ChurchInventoryDesk() {
           </p>
         </div>
 
-        {/* Top 2 Desk Tabs */}
-        <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-2xl border border-white/10 text-xs">
+        {/* Desk Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-900 p-1 rounded-2xl border border-white/10 text-xs">
           <button
             type="button"
             onClick={() => setActiveSubTab('EQUIPMENT')}
@@ -272,8 +349,75 @@ export default function ChurchInventoryDesk() {
             <Building2 size={14} />
             <span>Land, Lease & Trust Vault</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('FELLOWSHIP_GIFTS')}
+            className={`px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              activeSubTab === 'FELLOWSHIP_GIFTS' ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Heart size={14} />
+            <span>Fellowship, Gifts & Sponsorships</span>
+          </button>
         </div>
       </div>
+
+      {activeSubTab === 'FELLOWSHIP_GIFTS' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+              <span className="text-[10px] text-amber-300 block uppercase">Fellowship Meals</span>
+              <span className="text-xl font-black text-amber-400 font-sans mt-0.5">{sponsorships.filter((s) => s.cause === 'FELLOWSHIP_MEALS').length} Booked</span>
+            </div>
+            <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
+              <span className="text-[10px] text-cyan-300 block uppercase">Trust Kids Support</span>
+              <span className="text-xl font-black text-cyan-400 font-sans mt-0.5">{sponsorships.filter((s) => s.cause === 'TRUST_KIDS').length} Active</span>
+            </div>
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+              <span className="text-[10px] text-emerald-300 block uppercase">Contribution Mode</span>
+              <span className="text-xs font-bold text-slate-200 block mt-2">In-Kind: {sponsorships.filter((s) => s.mode === 'IN_KIND').length} | Fund: {sponsorships.filter((s) => s.mode === 'DIRECT_FUND').length}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
+              <h4 className="text-xs font-bold text-white flex items-center gap-2"><Plus size={15} className="text-rose-400" /><span>Register Sponsorship</span></h4>
+              <form onSubmit={handleAddSponsorship} className="space-y-3">
+                <select value={sponsorForm.cause} onChange={(e) => setSponsorForm({ ...sponsorForm, cause: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-amber-300 font-bold focus:outline-none">
+                  <option value="FELLOWSHIP_MEALS">Fellowship Meal</option>
+                  <option value="TRUST_KIDS">Trust Kids Gift</option>
+                  <option value="ALTAR_FLOWERS">Altar Flowers</option>
+                  <option value="BENEVOLENCE">Benevolence Aid</option>
+                </select>
+                <input type="text" value={sponsorForm.sponsorName} onChange={(e) => setSponsorForm({ ...sponsorForm, sponsorName: e.target.value })} placeholder="Sponsor / family name" className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-400" required />
+                <input type="text" value={sponsorForm.phone} onChange={(e) => setSponsorForm({ ...sponsorForm, phone: e.target.value })} placeholder="WhatsApp number" className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-rose-400" />
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={sponsorForm.mode} onChange={(e) => setSponsorForm({ ...sponsorForm, mode: e.target.value })} className="bg-slate-950 border border-white/10 rounded-xl px-2 py-2 text-xs text-white focus:outline-none"><option value="IN_KIND">In-Kind</option><option value="DIRECT_FUND">Direct Fund</option></select>
+                  <select value={sponsorForm.frequency} onChange={(e) => setSponsorForm({ ...sponsorForm, frequency: e.target.value })} className="bg-slate-950 border border-white/10 rounded-xl px-2 py-2 text-xs text-white focus:outline-none"><option value="ONE_TIME">One-Time</option><option value="MONTHLY_RECURRING">Monthly</option></select>
+                </div>
+                <div className="grid grid-cols-2 gap-2"><input type="date" value={sponsorForm.targetDate} onChange={(e) => setSponsorForm({ ...sponsorForm, targetDate: e.target.value })} className="bg-slate-950 border border-white/10 rounded-xl px-2 py-2 text-xs text-rose-300 font-mono focus:outline-none" required /><input type="number" min="0" value={sponsorForm.amountEstimate} onChange={(e) => setSponsorForm({ ...sponsorForm, amountEstimate: e.target.value })} placeholder="₹ Estimate" className="bg-slate-950 border border-white/10 rounded-xl px-2 py-2 text-xs text-white font-mono focus:outline-none" /></div>
+                <input type="text" value={sponsorForm.occasion} onChange={(e) => setSponsorForm({ ...sponsorForm, occasion: e.target.value })} placeholder="Occasion / notes" className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none" />
+                <button type="submit" className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer">Confirm Sponsorship</button>
+              </form>
+            </div>
+
+            <div className="lg:col-span-2 space-y-3">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 text-xs font-mono"><span className="font-bold text-white uppercase">Upcoming Sponsorships ({sponsorships.length})</span><span className="text-emerald-400 font-bold">Community Active ✓</span></div>
+              <div className="space-y-3 max-h-[550px] overflow-y-auto pr-1">
+                {sponsorships.length === 0 ? <div className="p-8 rounded-3xl bg-slate-900 border border-white/10 text-center text-xs text-slate-500">No sponsorships registered yet.</div> : sponsorships.map((sponsorship) => {
+                  const meta = causeLabels[sponsorship.cause] || causeLabels.FELLOWSHIP_MEALS;
+                  const Icon = meta.icon;
+                  return <div key={sponsorship.id} className="p-4 rounded-3xl bg-slate-900 border border-white/10 space-y-3 hover:border-rose-500/20 transition">
+                    <div className="flex items-start justify-between gap-3"><div className="flex items-start gap-3"><div className={`p-2.5 rounded-2xl border ${meta.color}`}><Icon size={18} /></div><div><span className="text-[10px] font-mono text-slate-400 block uppercase">{meta.title}</span><h5 className="text-sm font-black text-white mt-0.5">{sponsorship.sponsorName}</h5><p className="text-xs text-slate-300 mt-0.5">{sponsorship.occasion || 'Thanksgiving'}</p></div></div><span className="text-sm font-black text-emerald-400 font-mono shrink-0">{sponsorship.amountEstimate ? `₹ ${Number(sponsorship.amountEstimate).toLocaleString()}` : 'In-Kind'}</span></div>
+                    <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs font-mono text-slate-400"><span className="text-rose-300 font-bold flex items-center gap-1"><Calendar size={12} /> {sponsorship.targetDate} • {sponsorship.frequency === 'MONTHLY_RECURRING' ? 'Monthly' : 'One-Time'}</span><button type="button" onClick={() => handleDeleteSponsorship(sponsorship.id)} className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer" title="Delete sponsorship"><Trash2 size={14} /></button></div>
+                  </div>;
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ============================================================= */}
       {/* 🌟 TAB 1: PROPERTIES, LEASE & REAL ESTATE VAULT */}

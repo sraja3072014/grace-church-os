@@ -69,12 +69,22 @@ export default function StaffPayrollDesk({ session }) {
     }
   });
 
+  const [payrollLedger, setPayrollLedger] = useState(() => {
+    try {
+      const raw = localStorage.getItem('graceos_disbursed_payroll_ledger');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [form, setForm] = useState({
     name: '',
     role: '',
     category: 'PASTORAL',
     basicSalary: '',
     allowances: '',
+    deductions: '',
     paymentMode: 'BANK_TRANSFER',
     accountNo: ''
   });
@@ -82,6 +92,11 @@ export default function StaffPayrollDesk({ session }) {
   const saveStaffList = (updated) => {
     setStaffList(updated);
     localStorage.setItem('graceos_staff_payroll_db', JSON.stringify(updated));
+  };
+
+  const savePayroll = (updated) => {
+    setPayrollLedger(updated);
+    localStorage.setItem('graceos_disbursed_payroll_ledger', JSON.stringify(updated));
   };
 
   const handleAddStaff = (e) => {
@@ -96,6 +111,7 @@ export default function StaffPayrollDesk({ session }) {
       category: form.category,
       basicSalary: Number(form.basicSalary) || 0,
       allowances: Number(form.allowances) || 0,
+      deductions: Number(form.deductions) || 0,
       paymentMode: form.paymentMode,
       accountNo: form.accountNo || 'N/A',
       status: 'PENDING',
@@ -103,13 +119,33 @@ export default function StaffPayrollDesk({ session }) {
     };
 
     saveStaffList([...staffList, newStaff]);
-    setForm({ name: '', role: '', category: 'PASTORAL', basicSalary: '', allowances: '', paymentMode: 'BANK_TRANSFER', accountNo: '' });
+    setForm({ name: '', role: '', category: 'PASTORAL', basicSalary: '', allowances: '', deductions: '', paymentMode: 'BANK_TRANSFER', accountNo: '' });
   };
 
   // சம்பளம் பட்டுவாடா & நிதி லெட்ஜரில் பதிவு செய்தல்
   const handleDisburseSalary = (staff) => {
     soundFX?.playSuccessChime?.();
-    const totalAmount = staff.basicSalary + staff.allowances;
+    const totalAmount = staff.basicSalary + staff.allowances - (staff.deductions || 0);
+    const paidDate = new Date().toISOString().slice(0, 10);
+    const payrollEntry = {
+      id: `PAY-${selectedMonth}-${staff.id}`,
+      month: selectedMonth,
+      staffId: staff.id,
+      staffName: staff.name,
+      role: staff.role,
+      basicSalary: staff.basicSalary,
+      allowances: staff.allowances,
+      deductions: staff.deductions || 0,
+      netAmount: totalAmount,
+      paidDate,
+      paymentMode: staff.paymentMode,
+      accountNo: staff.accountNo,
+      status: 'PAID'
+    };
+    savePayroll([
+      payrollEntry,
+      ...payrollLedger.filter((entry) => !(entry.month === selectedMonth && entry.staffId === staff.id))
+    ]);
 
     // நிதி லெட்ஜருக்கு அனுப்புதல்
     try {
@@ -120,7 +156,8 @@ export default function StaffPayrollDesk({ session }) {
         date: new Date().toISOString().slice(0, 10),
         category: `ஊழியர் சம்பளம் (${staff.name} - ${staff.role})`,
         amount: totalAmount,
-        donor: 'Church Treasury (Payroll)'
+        donor: 'Church Treasury (Payroll)',
+        recordedBy: session?.username || 'Finance Admin'
       };
       localStorage.setItem('app_finance_transactions_ledger', JSON.stringify([newExpense, ...ledger]));
     } catch (e) {
@@ -128,7 +165,7 @@ export default function StaffPayrollDesk({ session }) {
     }
 
     const updated = staffList.map(s => 
-      s.id === staff.id ? { ...s, status: 'PAID', paidDate: new Date().toISOString().slice(0, 10) } : s
+      s.id === staff.id ? { ...s, status: 'PAID', paidDate } : s
     );
     saveStaffList(updated);
     alert(`₹ ${totalAmount.toLocaleString()} ஊதியம் வழங்கப்பட்டு, Finance லெட்ஜரில் பதிவு செய்யப்பட்டது!`);
@@ -136,14 +173,20 @@ export default function StaffPayrollDesk({ session }) {
 
   // புள்ளிவிவரங்கள்
   const totalPayrollExpenditure = useMemo(() => {
-    return staffList.reduce((acc, s) => acc + (s.basicSalary + s.allowances), 0);
+    return staffList.reduce((acc, s) => acc + s.basicSalary + s.allowances - (s.deductions || 0), 0);
   }, [staffList]);
 
   const paidPayrollAmount = useMemo(() => {
     return staffList
       .filter(s => s.status === 'PAID')
-      .reduce((acc, s) => acc + (s.basicSalary + s.allowances), 0);
+      .reduce((acc, s) => acc + s.basicSalary + s.allowances - (s.deductions || 0), 0);
   }, [staffList]);
+
+  const monthlyPayout = useMemo(() => (
+    payrollLedger
+      .filter((entry) => entry.month === selectedMonth)
+      .reduce((total, entry) => total + Number(entry.netAmount || 0), 0)
+  ), [payrollLedger, selectedMonth]);
 
   const filteredStaff = staffList.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -185,12 +228,12 @@ export default function StaffPayrollDesk({ session }) {
         </div>
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
           <span className="text-[10px] text-emerald-300 block uppercase">வழங்கப்பட்ட ஊதியம் (Disbursed)</span>
-          <span className="text-xl font-black text-emerald-400 mt-0.5">₹ {paidPayrollAmount.toLocaleString()}</span>
+          <span className="text-xl font-black text-emerald-400 mt-0.5">₹ {monthlyPayout.toLocaleString()}</span>
         </div>
         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
           <span className="text-[10px] text-amber-300 block uppercase">நிலுவை ஊழியர்கள் (Pending)</span>
           <span className="text-xl font-black text-amber-400 mt-0.5">
-            {staffList.filter(s => s.status === 'PENDING').length} Staffs
+            {staffList.filter(s => !payrollLedger.some((entry) => entry.month === selectedMonth && entry.staffId === s.id)).length} Staffs
           </span>
         </div>
       </div>
@@ -253,6 +296,18 @@ export default function StaffPayrollDesk({ session }) {
               </div>
             </div>
 
+            <div>
+              <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">பிடித்தங்கள் (₹ Deductions)</label>
+              <input
+                type="number"
+                min="0"
+                value={form.deductions}
+                onChange={(e) => setForm({ ...form, deductions: e.target.value })}
+                placeholder="0"
+                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-400"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">பிரிவு</label>
@@ -309,7 +364,9 @@ export default function StaffPayrollDesk({ session }) {
 
           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
             {filteredStaff.map((staff) => {
-              const netPay = staff.basicSalary + staff.allowances;
+              const paidRecord = payrollLedger.find((entry) => entry.month === selectedMonth && entry.staffId === staff.id);
+              const isPaid = Boolean(paidRecord);
+              const netPay = staff.basicSalary + staff.allowances - (staff.deductions || 0);
               return (
                 <div key={staff.id} className="p-4 rounded-2xl bg-slate-950/80 border border-white/5 space-y-3 hover:border-white/10 transition">
                   <div className="flex items-start justify-between gap-3">
@@ -324,9 +381,9 @@ export default function StaffPayrollDesk({ session }) {
                     <div className="text-right">
                       <span className="text-sm font-black text-white font-mono block">₹ {netPay.toLocaleString()}</span>
                       <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full border ${
-                        staff.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        isPaid ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                       }`}>
-                        {staff.status === 'PAID' ? `வழங்கப்பட்டது (${staff.paidDate})` : 'நிலுவையில் (Pending)'}
+                        {isPaid ? `வழங்கப்பட்டது (${paidRecord.paidDate})` : 'நிலுவையில் (Pending)'}
                       </span>
                     </div>
                   </div>
@@ -339,14 +396,14 @@ export default function StaffPayrollDesk({ session }) {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setSelectedStaffPayslip(staff)}
+                        onClick={() => setSelectedStaffPayslip(paidRecord || staff)}
                         className="px-2.5 py-1 bg-white/10 hover:bg-white/15 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition cursor-pointer"
                       >
                         <Printer size={12} />
                         <span>Payslip</span>
                       </button>
 
-                      {staff.status === 'PENDING' && (
+                      {!isPaid && (
                         <button
                           type="button"
                           onClick={() => handleDisburseSalary(staff)}
@@ -379,8 +436,8 @@ export default function StaffPayrollDesk({ session }) {
 
             {/* Employee Details Grid */}
             <div className="grid grid-cols-2 gap-2 text-xs border-b border-slate-200 pb-3">
-              <div>Staff Name: <strong className="text-slate-900">{selectedStaffPayslip.name}</strong></div>
-              <div>Staff ID: <strong className="text-slate-900 font-mono">{selectedStaffPayslip.id}</strong></div>
+              <div>Staff Name: <strong className="text-slate-900">{selectedStaffPayslip.staffName || selectedStaffPayslip.name}</strong></div>
+              <div>Staff ID: <strong className="text-slate-900 font-mono">{selectedStaffPayslip.staffId || selectedStaffPayslip.id}</strong></div>
               <div>Designation: <strong className="text-slate-900">{selectedStaffPayslip.role}</strong></div>
               <div>Pay Mode: <strong className="text-slate-900">{selectedStaffPayslip.paymentMode}</strong></div>
             </div>
@@ -400,14 +457,18 @@ export default function StaffPayrollDesk({ session }) {
                 </tr>
                 <tr>
                   <td className="p-2 border-r border-slate-200">Ministry Travel & Housing Allowance</td>
-                  <td className="p-2 text-right">{selectedStaffPayslip.allowances.toLocaleString()}</td>
+                  <td className="p-2 text-right">{(selectedStaffPayslip.allowances || 0).toLocaleString()}</td>
                 </tr>
+                  <tr>
+                    <td className="p-2 border-r border-slate-200">Deductions</td>
+                    <td className="p-2 text-right">- {(selectedStaffPayslip.deductions || 0).toLocaleString()}</td>
+                  </tr>
               </tbody>
               <tfoot className="border-t-2 border-slate-900 bg-slate-50 font-bold text-xs">
                 <tr>
                   <td className="p-2 text-right uppercase">Net Disbursed:</td>
                   <td className="p-2 text-right font-mono font-black text-sm">
-                    ₹ {(selectedStaffPayslip.basicSalary + selectedStaffPayslip.allowances).toLocaleString()}
+                    ₹ {(selectedStaffPayslip.netAmount || (selectedStaffPayslip.basicSalary + selectedStaffPayslip.allowances - (selectedStaffPayslip.deductions || 0))).toLocaleString()}
                   </td>
                 </tr>
               </tfoot>

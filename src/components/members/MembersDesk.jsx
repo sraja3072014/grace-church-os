@@ -5,7 +5,7 @@ import ProfileApprovalQueueModal from './ProfileApprovalQueueModal';
 import { soundFX } from '../../utils/audioEngine';
 import { 
   Users, UserPlus, Search, Layers, Plus, Trash2, Edit2, 
-  Phone, Mail, MapPin, Heart, Sparkles, Calendar, ShieldCheck, 
+  Phone, Mail, MapPin, Navigation, Heart, Sparkles, Calendar, ShieldCheck, 
   QrCode, X, CheckCircle2, AlertCircle, HeartHandshake, Printer, FileSpreadsheet, UserCheck
 } from 'lucide-react';
 
@@ -487,6 +487,17 @@ export default function MembersDesk({ session }) {
                           <MapPin size={11} className="text-rose-400 shrink-0" />
                           <span className="truncate max-w-[140px]">{fam.area}</span>
                         </div>
+                      )}
+                      {fam.headMember?.mapLink && (
+                        <a
+                          href={fam.headMember.mapLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 hover:text-emerald-300 mt-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20"
+                        >
+                          <Navigation size={9} />
+                          <span>Navigate Home</span>
+                        </a>
                       )}
                     </td>
 

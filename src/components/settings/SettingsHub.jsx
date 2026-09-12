@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { 
   Building2, GitBranch, Users, UserPlus, ClipboardCheck, ShieldCheck, ShieldAlert,
   CreditCard, HeartHandshake, Receipt, BarChart3,
-  Palette, Smartphone, MessageSquare, BookOpen, Database, Wrench, Sliders, 
-  Globe, Save, CheckCircle2 
+  Palette, Smartphone, MessageSquare, BookOpen, Wrench, Sliders, 
+  Globe, HardDrive, Save, CheckCircle2 
 } from 'lucide-react';
 
 // 1. Church Setup
 import MainChurchTab from './church/MainChurchTab';
 import BranchesTab from './church/BranchesTab';
+import MultiCampusHQDesk from '../campus/MultiCampusHQDesk';
 
 // 2. People & Access
 import UsersStaffTab from './people/UsersStaffTab';
@@ -33,9 +34,13 @@ import ServiceRequestsTab from './system/ServiceRequestsTab';
 import AdvancedSettingsTab from './system/AdvancedSettingsTab';
 import LanguageRegionTab from './system/LanguageRegionTab';
 
-export default function SettingsHub() {
-  const [activeTab, setActiveTab] = useState('main_church');
+export default function SettingsHub({ session }) {
+  const [activeTab, setActiveTab] = useState('local_vault');
   const [savedStatus, setSavedStatus] = useState(false);
+  const isSeniorPastorOrAdmin = 
+    session?.role === 'ADMIN' || 
+    session?.role === 'PASTOR' || 
+    session?.username?.toLowerCase().includes('pastor');
 
   const navigationGroups = [
     {
@@ -43,6 +48,7 @@ export default function SettingsHub() {
       items: [
         { id: 'main_church', label: 'Main Church Profile', icon: Building2 },
         { id: 'branches', label: 'Branches Management', icon: GitBranch },
+        ...(isSeniorPastorOrAdmin ? [{ id: 'campus_hq', label: 'Multi-Campus Network HQ', icon: Globe }] : []),
       ]
     },
     {
@@ -67,12 +73,12 @@ export default function SettingsHub() {
     {
       group: 'System & Hardware',
       items: [
+        { id: 'local_vault', label: 'Local Vault & Disk Node', icon: HardDrive },
         { id: 'theme_display', label: 'Theme & Glass Polish', icon: Palette },
         { id: 'language_region', label: 'Language & Region', icon: Globe },
         { id: 'mobile_sync', label: 'Mobile App Node', icon: Smartphone },
         { id: 'whatsapp_hub', label: 'WhatsApp Messenger Hub', icon: MessageSquare },
         { id: 'bible_hub', label: 'Bible Display Engine', icon: BookOpen },
-        { id: 'backup_db', label: 'Database & Backup', icon: Database },
         { id: 'service_req', label: 'Hardware Maintenance', icon: Wrench },
         { id: 'advanced_cfg', label: 'Advanced Settings', icon: Sliders },
       ]
@@ -119,6 +125,7 @@ export default function SettingsHub() {
           {/* Church Setup */}
           {activeTab === 'main_church' && <MainChurchTab />}
           {activeTab === 'branches' && <BranchesTab />}
+          {activeTab === 'campus_hq' && <MultiCampusHQDesk session={session} />}
 
           {/* People & Access */}
           {activeTab === 'users_staff' && <UsersStaffTab />}
@@ -134,12 +141,12 @@ export default function SettingsHub() {
           {activeTab === 'fin_reports' && <FinanceReportsTab />}
 
           {/* System & Hardware */}
+          {activeTab === 'local_vault' && <BackupDatabaseTab />}
           {activeTab === 'theme_display' && <ThemeDisplayTab />}
           {activeTab === 'language_region' && <LanguageRegionTab />}
           {activeTab === 'mobile_sync' && <MobileSyncTab />}
           {activeTab === 'whatsapp_hub' && <WhatsappHubTab />}
           {activeTab === 'bible_hub' && <BibleHubTab />}
-          {activeTab === 'backup_db' && <BackupDatabaseTab />}
           {activeTab === 'service_req' && <ServiceRequestsTab />}
           {activeTab === 'advanced_cfg' && <AdvancedSettingsTab />}
         </div>
