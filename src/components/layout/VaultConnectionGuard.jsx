@@ -34,7 +34,7 @@ export default function VaultConnectionGuard() {
   };
 
   if (isChecking || isConnected) {
-    return null; // டிரைவ் சரியாக மவுண்ட் ஆகியிருந்தால் பேனர் தோன்றாது
+    return null; // Banner remains hidden when local drive is properly mounted
   }
 
   return (
@@ -43,9 +43,9 @@ export default function VaultConnectionGuard() {
         <div className="flex items-center gap-2.5">
           <AlertTriangle size={18} className="text-amber-400 shrink-0" />
           <div className="text-xs">
-            <strong className="font-bold text-amber-300">லோக்கல் ஹார்ட் டிஸ்க் வால்ட் இணைக்கப்படவில்லை:</strong>
+            <strong className="font-bold text-amber-300">Local Hard Disk Vault Disconnected:</strong>
             <span className="text-slate-300 ml-1.5">
-              தரவுகள் கணினியின் ஹார்ட் டிரைவில் (C/D/E Drive) நேரடியாக எழுதப்பட ரூட் கோப்பகத்தை இணைக்கவும்.
+              Data must persist directly to your local computer drive (C/D/E:). Please connect your root database folder.
             </span>
           </div>
         </div>

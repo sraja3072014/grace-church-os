@@ -13,7 +13,7 @@ import LeaderPortalView from './components/portal/LeaderPortalView';
 import RainCanvas from './components/layout/RainCanvas';
 import TaskbarDock from './components/layout/TaskbarDock';
 import { getLargeWallpaper } from './utils/storageDB';
-import VisitorsHub from "./components/visitors/VisitorsDashboard";
+import VisitorsHub from './components/visitors/VisitorsDashboard';
 import PrayerWall from './components/prayer/PrayerWall';
 import EventsHub from './components/events/EventsHub';
 import LiveDesk from './components/live/LiveDesk';
@@ -22,13 +22,13 @@ import BulkBroadcastMessenger from './components/broadcast/BulkBroadcastMessenge
 import QuickWidgetBar from './components/widgets/QuickWidgetBar';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import VaultConnectionGuard from './components/layout/VaultConnectionGuard';
-import MinistriesHubDesk from './components/fellowships/MinistriesHubDesk';
+import MinistriesHubDesk from './components/ministry/MinistriesHubDesk';
 import ChurchInventoryDesk from './components/inventory/ChurchInventoryDesk';
+import { LayoutDashboard } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [wallpaperData, setWallpaperData] = useState(null);
-
 
   // 1. Session State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -39,10 +39,9 @@ export default function App() {
       return null;
     }
   });
-  // Keep the existing admin dashboard components compatible with the unified session.
   const session = currentUser;
 
-  // 2. Theme Configuration State (எந்த மாறியும் இதற்கு முன் theme-ஐ அழைக்கக்கூடாது)
+  // 2. Theme Configuration State
   const [theme, setTheme] = useState(() => {
     try {
       const local = localStorage.getItem('graceos_theme_config');
@@ -57,7 +56,7 @@ export default function App() {
         wallpaperBrightness: parsed.wallpaperBrightness ?? 100,
         glassGlowColor: parsed.glassGlowColor || '#06b6d4',
         shadowIntensity: parsed.shadowIntensity ?? 40,
-        layoutStyle: parsed.layoutStyle || 'sidebar', // 'sidebar' | 'windows_dock'
+        layoutStyle: parsed.layoutStyle || 'sidebar',
         enableRainFX: parsed.enableRainFX || false,
         enableThunderPulse: parsed.enableThunderPulse || false,
         enableHolyDustFX: parsed.enableHolyDustFX || false
@@ -81,7 +80,6 @@ export default function App() {
     }
   });
 
-  // 3. Theme & Wallpaper Synchronization
   const syncThemeAndWallpaper = async () => {
     try {
       const local = localStorage.getItem('graceos_theme_config');
@@ -99,7 +97,6 @@ export default function App() {
     return () => window.removeEventListener('graceos_theme_updated', syncThemeAndWallpaper);
   }, []);
 
-  // 4. Safe Variables (theme அறிவிக்கப்பட்டதற்குப் பின்னரே கணக்கிட வேண்டும்)
   const dynamicTextColor = theme?.activeTextColor || '#ffffff';
   const wallpaperDim = theme?.wallpaperDim ?? 20;
   const wallpaperBrightness = theme?.wallpaperBrightness ?? 100;
@@ -118,21 +115,11 @@ export default function App() {
   };
 
   if (currentUser?.role === 'MEMBER') {
-    return (
-      <MemberPortalView
-        userSession={currentUser}
-        onLogout={handleLogout}
-      />
-    );
+    return <MemberPortalView userSession={currentUser} onLogout={handleLogout} />;
   }
 
   if (currentUser?.role === 'LEADER') {
-    return (
-      <LeaderPortalView
-        userSession={currentUser}
-        onLogout={handleLogout}
-      />
-    );
+    return <LeaderPortalView userSession={currentUser} onLogout={handleLogout} />;
   }
 
   return (
@@ -145,21 +132,21 @@ export default function App() {
       }}
       className="relative flex h-screen w-screen overflow-hidden select-none font-sans bg-[#07050d]"
     >
-      {/* Atmospheric Weather Canvas */}
+      {/* Weather Canvas */}
       <RainCanvas 
         enableRain={theme?.enableRainFX} 
         enableThunder={theme?.enableThunderPulse} 
         enableHolyDust={theme?.enableHolyDustFX} 
       />
 
-      {/* 100% Native Sharp Resolution Wallpaper Layer */}
+      {/* Wallpaper Layer */}
       {wallpaperData && (
         <div 
           className="fixed inset-0 bg-cover bg-center pointer-events-none z-[0] transition-all duration-300"
           style={{ 
-            backgroundImage: `url(${wallpaperData})`,
-            filter: `brightness(${wallpaperBrightness}%)`,
-            imageRendering: '-webkit-optimize-contrast'
+          backgroundImage: `url(${wallpaperData})`,
+          filter: `brightness(${wallpaperBrightness}%)`,
+          imageRendering: 'auto'
           }}
         >
           <div 
@@ -169,7 +156,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Custom Glow Aura */}
+      {/* Glow Aura */}
       {theme?.useCustomColor && !wallpaperData && (
         <div 
           className="fixed top-[-15%] left-[-10%] w-[65vw] h-[65vw] rounded-full blur-[170px] pointer-events-none opacity-25 transition-all duration-700 z-[0]"
@@ -177,7 +164,7 @@ export default function App() {
         />
       )}
 
-      {/* Fluid Mesh Waves (Wallpaper இல்லாத போது) */}
+      {/* Fluid Mesh Waves */}
       {!wallpaperData && !theme?.useCustomColor && (
         <>
           {theme?.preset === 'fluid_aurora_mesh' && (
@@ -213,38 +200,42 @@ export default function App() {
         <UnifiedLoginModal onLoginSuccess={handleLoginSuccess} />
       ) : (
         <>
-          {/* 1. Classic Sidebar: Windows Dock பயன்முறையில் இல்லாதபோது மட்டும் தோன்றும் */}
+          {/* Classic Sidebar */}
           {!isDockLayout && (
             <FusionSidebar 
-              activeTab={activeTab} 
+              activeTab={activeTab || 'dashboard'} 
               setActiveTab={setActiveTab} 
               session={session} 
               onLogout={handleLogout} 
             />
           )}
 
-          {/* 2. Primary Screen Container */}
+          {/* Primary Screen Container */}
           <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
             <VaultConnectionGuard />
             <Header />
 
             <main className={`flex-1 overflow-y-auto ${isDockLayout ? 'pb-24' : 'p-5'}`}>
-              {/* activeTab மதிப்பு இருக்கும் போது மட்டுமே கார்டு ஓபன் ஆகும் */}
+              {/* Active Workspace View */}
               {activeTab && (
-                <div className="relative p-5 animate-in fade-in zoom-in-95 duration-200">
-                  {/* 🌟 விண்டோவை மூடி டெஸ்க்டாப்பிற்குச் செல்ல Close Button */}
-                  <div className="flex justify-end mb-2">
+                <div className="relative p-2 sm:p-4 animate-in fade-in zoom-in-95 duration-200">
+                  {/* Window Controls */}
+                  <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
+                    <span className="text-[11px] font-mono uppercase tracking-widest text-slate-400">
+                      Module: <strong className="text-cyan-400">{activeTab.replace('_', ' ')}</strong>
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setActiveTab(null)}
-                      className="px-3 py-1 bg-black/40 hover:bg-rose-500/30 text-slate-300 hover:text-rose-300 border border-white/10 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer backdrop-blur-md"
-                      title="Close to Desktop"
+                      onClick={() => setActiveTab('dashboard')}
+                      className="px-3 py-1 bg-black/40 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer backdrop-blur-md"
+                      title="Return to Home Dashboard"
                     >
-                      <span>✕ Close Window</span>
+                      <LayoutDashboard size={12} />
+                      <span>Home Dashboard</span>
                     </button>
                   </div>
 
-                  {/* தொடர்புடைய டேஷ்போர்டுகள் */}
+                  {/* Render Core Dashboards */}
                   {activeTab === 'dashboard' && <MainDashboard setActiveTab={setActiveTab} session={session} />}
                   {activeTab === 'attendance' && <AttendanceDesk session={session} />}
                   {activeTab === 'members' && <MembersDesk session={session} />}
@@ -262,33 +253,35 @@ export default function App() {
                 </div>
               )}
 
-              {/* activeTab ஏதுமில்லை என்றால் விண்டோஸ் 11 டெஸ்க்டாப் போல சுத்தமான பின்னணி மட்டும் தெரியும் */}
+              {/* Desktop Empty State Fallback (Never leaves user stranded) */}
               {!activeTab && (
-                <div
-                  onClick={() => {}}
-                  className="w-full h-full flex flex-col items-center justify-center select-none pointer-events-none"
-                >
-                  {/* விருப்பப்பட்டால் டெஸ்க்டாப்பில் ஒரு லேசான வாசகம் வைக்கலாம் */}
-                  <div className="text-center opacity-30">
-                    <h1 className="text-4xl font-black text-white tracking-widest uppercase">GraceOS</h1>
-                    <p className="text-xs text-slate-300 mt-1">Click taskbar icons below to open modules</p>
+                <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center select-none text-center space-y-4">
+                  <div className="p-4 rounded-3xl bg-black/40 border border-white/10 backdrop-blur-md space-y-2">
+                    <h1 className="text-3xl font-black text-white tracking-widest uppercase">GraceOS Desktop</h1>
+                    <p className="text-xs text-slate-400">All windows minimized. Click below to reopen your dashboard.</p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('dashboard')}
+                      className="mt-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition cursor-pointer"
+                    >
+                      Open Main Dashboard
+                    </button>
                   </div>
                 </div>
               )}
             </main>
           </div>
 
-          {/* 3. Windows 11 Centered Dock: டாஸ்க்பார் மோட் ஆக்டிவ்வாக இருக்கும்போது மிதக்கும் */}
+          {/* Windows 11 Dock Mode */}
           {isDockLayout && (
-            <TaskbarDock activeTab={activeTab} setActiveTab={setActiveTab} />
+            <TaskbarDock activeTab={activeTab || 'dashboard'} setActiveTab={setActiveTab} />
           )}
         </>
       )}
 
-      {/* 🌟 Windows 11 Slide-out Quick Widget Bar */}
+      {/* Widgets & Install Prompts */}
       <QuickWidgetBar />
       <PWAInstallPrompt />
-
-      </div>
+    </div>
   );
 }

@@ -27,17 +27,16 @@ const SEED_INCOME = [
 ];
 
 const SEED_EXPENSES = [
-  { id: 'EXP-101', date: '2026-08-27', category: 'Electricity & Utility Bills', amount: 3450, paymentMode: 'Bank Transfer', notes: 'TNEB Main Hall' },
+  { id: 'EXP-101', date: '2026-08-27', category: 'Electricity & Utility Bills', amount: 3450, paymentMode: 'Bank Transfer', notes: 'Main Sanctuary Grid' },
   { id: 'EXP-102', date: '2026-08-25', category: 'Sound, Media & Instruments', amount: 12000, paymentMode: 'UPI / GPay', notes: 'Wireless Mic System' }
 ];
 
 export default function FinanceDesk({ session }) {
-  const [activeFinanceSubTab, setActiveFinanceSubTab] = useState('income'); // 'income' | 'expenses' | 'receipts_80g' | 'analytics' | 'payroll' | 'agm_audit'
+  const [activeFinanceSubTab, setActiveFinanceSubTab] = useState('income');
   const [toastMessage, setToastMessage] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
-  // Settings-ல் இருந்து கரன்சி சிம்பலை எடுத்தல்
   const currencySymbol = useMemo(() => {
     try {
       const cfg = JSON.parse(localStorage.getItem('graceos_locale_config') || '{}');
@@ -47,49 +46,17 @@ export default function FinanceDesk({ session }) {
     }
   }, []);
 
-  // Income Ledger State
-  const [incomeList, setIncomeList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('app_finance_transactions_ledger');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-      localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(SEED_INCOME));
-      return SEED_INCOME;
-    } catch {
-      return SEED_INCOME;
-    }
-  });
-
-  // Expenses Ledger State
-  const [expensesList, setExpensesList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('app_expenses_ledger');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-      localStorage.setItem('app_expenses_ledger', JSON.stringify(SEED_EXPENSES));
-      return SEED_EXPENSES;
-    } catch {
-      return SEED_EXPENSES;
-    }
-  });
+  const [incomeList, setIncomeList] = useState(SEED_INCOME);
+  const [expensesList, setExpensesList] = useState(SEED_EXPENSES);
 
   useEffect(() => {
     let isMounted = true;
-
     const loadFinanceData = async () => {
-      const legacyIncome = JSON.parse(localStorage.getItem('app_finance_transactions_ledger') || '[]');
-      const legacyExpenses = JSON.parse(localStorage.getItem('app_expenses_ledger') || '[]');
-
-      const storedIncome = await getVaultData('finance', legacyIncome.length > 0 ? legacyIncome : SEED_INCOME);
-      const storedExpenses = await getVaultData('expenses', legacyExpenses.length > 0 ? legacyExpenses : SEED_EXPENSES);
+      const storedIncome = await getVaultData('finance', SEED_INCOME);
+      const storedExpenses = await getVaultData('expenses', SEED_EXPENSES);
 
       if (!isMounted) return;
 
-      // Accept both the current ledger shape and the vault receipt shape.
       const normalizedIncome = (Array.isArray(storedIncome) ? storedIncome : []).map((item) => ({
         ...item,
         member: item.member || item.donor || 'Anonymous Believer',
@@ -107,16 +74,10 @@ export default function FinanceDesk({ session }) {
       setExpensesList(normalizedExpenses);
     };
 
-    loadFinanceData().catch((error) => {
-      console.error('[FinanceDesk] Failed to load vault data:', error);
-    });
-
-    return () => {
-      isMounted = false;
-    };
+    loadFinanceData();
+    return () => { isMounted = false; };
   }, []);
 
-  // New Income Form
   const [incomeForm, setIncomeForm] = useState({
     member: '',
     panNumber: '',
@@ -125,7 +86,6 @@ export default function FinanceDesk({ session }) {
     mode: 'UPI / GPay'
   });
 
-  // New Expense Form
   const [expenseForm, setExpenseForm] = useState({
     category: 'Electricity & Utility Bills',
     amount: '',
@@ -138,7 +98,6 @@ export default function FinanceDesk({ session }) {
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  // Aggregate Calculations
   const totalIncome = incomeList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
   const totalExpenses = expensesList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
   const netBalance = totalIncome - totalExpenses;
@@ -157,7 +116,6 @@ export default function FinanceDesk({ session }) {
     const updated = [newIncome, ...incomeList];
     setIncomeList(updated);
     await setVaultData('finance', updated, true);
-    localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(updated));
     setIncomeForm({ member: '', panNumber: '', category: DEFAULT_GIVING_CATEGORIES[0], amount: '', mode: 'UPI / GPay' });
     showToast('Tithe / Offering collection recorded successfully!');
   };
@@ -176,16 +134,14 @@ export default function FinanceDesk({ session }) {
     const updated = [newExp, ...expensesList];
     setExpensesList(updated);
     await setVaultData('expenses', updated, true);
-    localStorage.setItem('app_expenses_ledger', JSON.stringify(updated));
     setExpenseForm({ category: 'Electricity & Utility Bills', amount: '', paymentMode: 'Bank Transfer', notes: '' });
-    showToast('Expense voucher added to records!');
+    showToast('Expense voucher recorded successfully!');
   };
 
   const handleDeleteIncome = async (id) => {
     const updated = incomeList.filter(item => item.id !== id);
     setIncomeList(updated);
     await setVaultData('finance', updated, true);
-    localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(updated));
     showToast('Income receipt removed.');
   };
 
@@ -193,14 +149,11 @@ export default function FinanceDesk({ session }) {
     const updated = expensesList.filter(item => item.id !== id);
     setExpensesList(updated);
     await setVaultData('expenses', updated, true);
-    localStorage.setItem('app_expenses_ledger', JSON.stringify(updated));
     showToast('Expense record removed.');
   };
 
   return (
     <div className="flex flex-col gap-6 select-none animate-in fade-in duration-200 pb-16 text-slate-100">
-      
-      {/* Toast */}
       {toastMessage && (
         <div className="fixed top-5 right-5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 backdrop-blur-md shadow-2xl z-50 animate-in fade-in">
           <CheckCircle2 size={15} />
@@ -213,10 +166,10 @@ export default function FinanceDesk({ session }) {
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
             <Receipt className="text-emerald-400" size={24} />
-            <span>Finance Desk & 80G Tax Accounting</span>
+            <span>Finance Desk &amp; 80G Tax Accounting</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Real-time tithe ledger, operational expense vouchers, and automatic 80G charitable tax exemption receipts.
+            Real-time tithe ledger, operational expense vouchers, and automatic 80G tax exemption receipts.
           </p>
         </div>
 
@@ -224,24 +177,27 @@ export default function FinanceDesk({ session }) {
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/10 shrink-0">
             <button
+              type="button"
               onClick={() => setActiveFinanceSubTab('income')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 activeFinanceSubTab === 'income' ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
               }`}
             >
               <TrendingUp size={14} />
-              <span>Income & Tithes</span>
+              <span>Income &amp; Tithes</span>
             </button>
             <button
+              type="button"
               onClick={() => setActiveFinanceSubTab('expenses')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'expenses' ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                activeFinanceSubTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Receipt size={14} />
               <span>Expense Vouchers</span>
             </button>
             <button
+              type="button"
               onClick={() => setActiveFinanceSubTab('receipts_80g')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 activeFinanceSubTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
@@ -257,7 +213,7 @@ export default function FinanceDesk({ session }) {
                 activeFinanceSubTab === 'analytics' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span>📊 Audit &amp; Analytics</span>
+              <span>Audit &amp; Analytics</span>
             </button>
             <button
               type="button"
@@ -283,8 +239,10 @@ export default function FinanceDesk({ session }) {
           <button
             type="button"
             onClick={() => setIsCertificateOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-md"
-          >
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+              >
             <FileCheck2 size={15} />
             <span>Annual 80G Certificate</span>
           </button>
@@ -292,17 +250,14 @@ export default function FinanceDesk({ session }) {
       </div>
 
       {activeFinanceSubTab === 'analytics' && <FinanceAnalyticsTab />}
-
       {activeFinanceSubTab === 'payroll' && <StaffPayrollDesk session={session} />}
-
       {activeFinanceSubTab === 'agm_audit' && <AnnualAuditAGMDesk session={session} />}
 
-      {/* 3 Metric Cards */}
+      {/* 3 Metric Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Total Income */}
         <div className="win11-card p-5 rounded-3xl border border-white/10 space-y-2">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-mono uppercase">Total Giving & Tithes</span>
+            <span className="text-[10px] font-mono uppercase">Total Giving &amp; Tithes</span>
             <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
               <ArrowDownLeft size={16} />
             </span>
@@ -313,7 +268,6 @@ export default function FinanceDesk({ session }) {
           <span className="text-[10px] text-slate-400 block">{incomeList.length} total tithe receipts issued</span>
         </div>
 
-        {/* Total Expenses */}
         <div className="win11-card p-5 rounded-3xl border border-white/10 space-y-2">
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-[10px] font-mono uppercase">Total Expense Outflow</span>
@@ -327,7 +281,6 @@ export default function FinanceDesk({ session }) {
           <span className="text-[10px] text-slate-400 block">{expensesList.length} vouchers recorded</span>
         </div>
 
-        {/* Net Balance */}
         <div className="win11-card p-5 rounded-3xl border border-white/10 space-y-2">
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-[10px] font-mono uppercase">Net Operating Liquidity</span>
@@ -338,150 +291,148 @@ export default function FinanceDesk({ session }) {
           <div className={`text-2xl font-black font-mono ${netBalance >= 0 ? 'text-sky-400' : 'text-rose-400'}`}>
             {currencySymbol} {netBalance.toLocaleString()}
           </div>
-          <span className="text-[10px] text-slate-400 block">Available in bank & cash accounts</span>
+          <span className="text-[10px] text-slate-400 block">Available in bank &amp; cash accounts</span>
         </div>
       </div>
 
       {/* TAB 1: INCOME & TITHES */}
-      {activeFinanceSubTab === 'income' && (
-        <div className="space-y-6">
-          {/* Add Form */}
-          <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
-            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2 font-mono">
-              <Plus size={16} />
-              <span>Record New Tithe / Offering Inflow</span>
-            </h3>
+{activeFinanceSubTab === 'income' && (
+  <div className="space-y-6">
+    <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
+      <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2 font-mono">
+        <Plus size={16} />
+        <span>Record New Tithe / Offering Inflow</span>
+      </h3>
 
-            <form onSubmit={handleAddIncome} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div>
-                <label className="text-xs text-slate-300 font-medium">Contributor Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Bro. David Miller"
-                  value={incomeForm.member}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, member: e.target.value })}
-                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none focus:border-emerald-500 font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-300 font-medium">Giving Category *</label>
-                <select
-                  value={incomeForm.category}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })}
-                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
-                >
-                  {DEFAULT_GIVING_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-300 font-medium">Amount ({currencySymbol}) *</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  placeholder="e.g. 10000"
-                  value={incomeForm.amount}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
-                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono font-bold mt-1 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-300 font-medium">Payment Mode</label>
-                <select
-                  value={incomeForm.mode}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, mode: e.target.value })}
-                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
-                >
-                  <option value="UPI / GPay">UPI / GPay / QR</option>
-                  <option value="Bank Transfer">Bank Transfer (NEFT)</option>
-                  <option value="Cash">Cash Offering</option>
-                  <option value="Cheque">Cheque</option>
-                </select>
-              </div>
-
-              <div className="sm:col-span-4 flex justify-between items-center pt-2">
-                <input
-                  type="text"
-                  placeholder="PAN / Tax Identification Number (Optional for 80G Receipt)"
-                  value={incomeForm.panNumber}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, panNumber: e.target.value.toUpperCase() })}
-                  className="w-72 bg-slate-950/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none"
-                />
-
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition text-xs"
-                >
-                  <Plus size={15} />
-                  <span>Save Tithe Record</span>
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Income Table */}
-          <div className="win11-card rounded-3xl overflow-hidden border border-white/10">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-white/10 text-slate-400 text-[10px] uppercase font-mono bg-white/[0.02]">
-                  <tr>
-                    <th className="py-3 px-3.5">Receipt ID</th>
-                    <th className="py-3 px-3.5">Date</th>
-                    <th className="py-3 px-3.5">Contributor</th>
-                    <th className="py-3 px-3.5">Category</th>
-                    <th className="py-3 px-3.5">Payment Channel</th>
-                    <th className="py-3 px-3.5 text-right">Amount</th>
-                    <th className="py-3 px-3.5 text-center">80G / Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {incomeList.map((item) => (
-                    <tr key={item.id} className="hover:bg-white/[0.02] transition">
-                      <td className="py-3 px-3.5 font-mono font-bold text-amber-400">{item.id}</td>
-                      <td className="py-3 px-3.5 text-slate-300 font-mono text-[11px]">{item.date}</td>
-                      <td className="py-3 px-3.5 font-semibold text-white">
-                        <div>{item.member}</div>
-                        {item.panNumber && <div className="text-[10px] text-slate-400 font-mono">PAN: {item.panNumber}</div>}
-                      </td>
-                      <td className="py-3 px-3.5 text-emerald-400 font-medium">{item.category}</td>
-                      <td className="py-3 px-3.5 text-slate-400 font-mono text-[11px]">{item.mode}</td>
-                      <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-400">
-                        + {currencySymbol} {Number(item.amount).toLocaleString()}
-                      </td>
-                      <td className="py-3 px-3.5 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedReceipt(item)}
-                            className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
-                            title="Generate 80G Print Receipt"
-                          >
-                            <Printer size={12} />
-                            <span>80G Receipt</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteIncome(item.id)}
-                            className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <form onSubmit={handleAddIncome} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div>
+          <label className="text-xs text-slate-300 font-medium">Contributor Name *</label>
+          <input
+            type="text"
+            required
+            placeholder="e.g. Bro. David Miller"
+            value={incomeForm.member}
+            onChange={(e) => setIncomeForm({ ...incomeForm, member: e.target.value })}
+            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none focus:border-rose-500 font-bold"
+          />
         </div>
-      )}
+
+        <div>
+          <label className="text-xs text-slate-300 font-medium">Giving Category *</label>
+          <select
+            value={incomeForm.category}
+            onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })}
+            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
+          >
+            {DEFAULT_GIVING_CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-xs text-slate-300 font-medium">Amount ({currencySymbol}) *</label>
+          <input
+            type="number"
+            required
+            min="1"
+            placeholder="e.g. 10000"
+            value={incomeForm.amount}
+            onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono font-bold mt-1 focus:outline-none focus:border-rose-500"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs text-slate-300 font-medium">Payment Mode</label>
+          <select
+            value={incomeForm.mode}
+            onChange={(e) => setIncomeForm({ ...incomeForm, mode: e.target.value })}
+            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
+          >
+            <option value="UPI / GPay">UPI / GPay / QR</option>
+            <option value="Bank Transfer">Bank Transfer (NEFT)</option>
+            <option value="Cash">Cash Offering</option>
+            <option value="Cheque">Cheque</option>
+          </select>
+        </div>
+
+        <div className="sm:col-span-4 flex justify-between items-center pt-2">
+          <input
+            type="text"
+            placeholder="PAN / Tax Identification Number (Optional for 80G Receipt)"
+            value={incomeForm.panNumber}
+            onChange={(e) => setIncomeForm({ ...incomeForm, panNumber: e.target.value.toUpperCase() })}
+            className="w-72 bg-slate-950/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none"
+          />
+
+          <button
+            type="submit"
+            className="px-6 py-2.5 bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition text-xs"
+          >
+            <Plus size={15} />
+            <span>Save Tithe Record</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    {/* Income Table */}
+    <div className="win11-card rounded-3xl overflow-hidden border border-white/10">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className="border-b border-white/10 text-slate-400 text-[10px] uppercase font-mono bg-white/[0.02]">
+            <tr>
+              <th className="py-3 px-3.5">Receipt ID</th>
+              <th className="py-3 px-3.5">Date</th>
+              <th className="py-3 px-3.5">Contributor</th>
+              <th className="py-3 px-3.5">Category</th>
+              <th className="py-3 px-3.5">Payment Channel</th>
+              <th className="py-3 px-3.5 text-right">Amount</th>
+              <th className="py-3 px-3.5 text-center">80G / Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {incomeList.map((item) => (
+              <tr key={item.id} className="hover:bg-white/[0.02] transition">
+                <td className="py-3 px-3.5 font-mono font-bold text-amber-400">{item.id}</td>
+                <td className="py-3 px-3.5 text-slate-300 font-mono text-[11px]">{item.date}</td>
+                <td className="py-3 px-3.5 font-semibold text-white">
+                  <div>{item.member}</div>
+                  {item.panNumber && <div className="text-[10px] text-slate-400 font-mono">PAN: {item.panNumber}</div>}
+                </td>
+                <td className="py-3 px-3.5 text-emerald-400 font-medium">{item.category}</td>
+                <td className="py-3 px-3.5 text-slate-400 font-mono text-[11px]">{item.mode}</td>
+                <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-400">
+                  + {currencySymbol} {Number(item.amount).toLocaleString()}
+                </td>
+                <td className="py-3 px-3.5 text-center">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedReceipt(item)}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                    >
+                      <Printer size={12} />
+                      <span>80G Receipt</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteIncome(item.id)}
+                      className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* TAB 2: EXPENSES */}
       {activeFinanceSubTab === 'expenses' && (
@@ -500,10 +451,10 @@ export default function FinanceDesk({ session }) {
                   onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
                   className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
                 >
-                  <option value="Electricity & Utility Bills">Electricity & Utility Bills</option>
-                  <option value="Sound, Media & Instruments">Sound, Media & Instruments</option>
-                  <option value="Pastoral Honorarium & Staff">Pastoral Honorarium & Staff</option>
-                  <option value="Charity, Food & Benevolence">Charity, Food & Benevolence</option>
+                  <option value="Electricity & Utility Bills">Electricity &amp; Utility Bills</option>
+                  <option value="Sound, Media & Instruments">Sound, Media &amp; Instruments</option>
+                  <option value="Pastoral Honorarium & Staff">Pastoral Honorarium &amp; Staff</option>
+                  <option value="Charity, Food & Benevolence">Charity, Food &amp; Benevolence</option>
                   <option value="Church Building Maintenance">Church Building Maintenance</option>
                 </select>
               </div>
@@ -538,7 +489,7 @@ export default function FinanceDesk({ session }) {
               <div className="sm:col-span-3 flex justify-between items-center gap-4 pt-1">
                 <input
                   type="text"
-                  placeholder="Description / Bill Invoice Notes (e.g. Hall AC repair bill)"
+                  placeholder="Description / Bill Invoice Notes (e.g. Main Hall AC Repair)"
                   value={expenseForm.notes}
                   onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })}
                   className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none"
@@ -598,7 +549,7 @@ export default function FinanceDesk({ session }) {
         </div>
       )}
 
-      {/* TAB 3: 80G RECEIPT GENERATOR SEARCH */}
+      {/* TAB 3: 80G RECEIPT DIRECTORY */}
       {activeFinanceSubTab === 'receipts_80g' && (
         <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
           <div className="border-b border-white/10 pb-3">
@@ -606,7 +557,7 @@ export default function FinanceDesk({ session }) {
               <FileText className="text-amber-400" size={18} />
               <span>Direct 80G Tax Exemption Certificate Directory</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">Click any record below to print a formal 80G receipt for tax deduction purposes.</p>
+            <p className="text-xs text-slate-400 mt-0.5">Click any contribution record below to view and print formal 80G receipts.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -637,20 +588,18 @@ export default function FinanceDesk({ session }) {
         </div>
       )}
 
-      {/* 🌟 80G PRINTABLE MODAL POPUP */}
+      {/* 80G PRINTABLE MODAL */}
       {selectedReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
           <div className="w-full max-w-xl bg-white text-slate-900 rounded-3xl p-8 shadow-2xl space-y-6 relative select-text">
-            
-            {/* Close Button */}
             <button 
+              type="button"
               onClick={() => setSelectedReceipt(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 cursor-pointer print:hidden"
             >
               <X size={20} />
             </button>
 
-            {/* Receipt Letterhead */}
             <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
               <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-700 bg-emerald-100 px-3 py-0.5 rounded-full">
                 80G Official Tax Exemption Donation Receipt
@@ -658,11 +607,10 @@ export default function FinanceDesk({ session }) {
               <h2 className="text-xl font-black uppercase tracking-wider text-slate-900 pt-1">
                 Grace Cathedral Church Trust
               </h2>
-              <p className="text-xs text-slate-600 font-medium">Registered Public Charitable Trust • IT Act Sec 80G Valid</p>
+              <p className="text-xs text-slate-600 font-medium">Registered Public Religious &amp; Charitable Trust • IT Act Sec 80G Valid</p>
               <p className="text-[11px] font-mono text-slate-500">80G Reg No: AABTG4902RF20214 • 12A Unique ID: DEL-TRUST-2018</p>
             </div>
 
-            {/* Receipt Particulars */}
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
                 <span className="text-slate-500 font-medium">Receipt Voucher No:</span>
@@ -696,17 +644,16 @@ export default function FinanceDesk({ session }) {
             </div>
 
             <p className="text-[10px] text-slate-500 text-center italic">
-              "Contributions to this trust are eligible for tax deduction under Section 80G of the Income Tax Act."
+              "Contributions to this trust are eligible for tax deduction under Section 80G of the Income Tax Act, 1961."
             </p>
 
-            {/* Signatures & Print */}
             <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
               <div className="text-center text-[10px]">
-                <div className="w-24 border-b border-slate-400 mb-1"></div>
+                <div className="w-24 border-b border-slate-400 mb-1" />
                 <span>Authorized Treasurer</span>
               </div>
               <div className="text-center text-[10px]">
-                <div className="w-24 border-b border-slate-400 mb-1"></div>
+                <div className="w-24 border-b border-slate-400 mb-1" />
                 <span>Senior Pastor / Trustee</span>
               </div>
               <div className="flex items-center gap-2 print:hidden">
@@ -715,13 +662,13 @@ export default function FinanceDesk({ session }) {
                   onClick={() => sendReceiptViaWhatsApp(selectedReceipt)}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer transition active:scale-95"
                 >
-                  <span>WhatsApp ரசீது அனுப்புக</span>
+                  <span>Send WhatsApp Receipt</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-slate-800"
                 >
                   <Printer size={14} />
                   <span>Print Receipt</span>
@@ -737,7 +684,6 @@ export default function FinanceDesk({ session }) {
         isOpen={isCertificateOpen}
         onClose={() => setIsCertificateOpen(false)}
       />
-
     </div>
   );
 }

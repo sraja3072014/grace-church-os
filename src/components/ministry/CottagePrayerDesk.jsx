@@ -1,38 +1,27 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Home, MapPin, Navigation, Calendar, 
-  CheckCircle2, Clock, Users, Search, Phone, ExternalLink, Plus, Trash2
+  CheckCircle2, Clock, Users, Search, Phone, ExternalLink, Plus, Trash2 
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import { getVaultData, setVaultData } from '../../utils/vaultStore';
 
 export default function CottagePrayerDesk({ session }) {
   const [selectedArea, setSelectedArea] = useState('ALL');
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [families, setFamilies] = useState([]);
+  const [visitationList, setVisitationList] = useState([]);
 
-  // 1. விசுவாசிகள் டேட்டாபேஸிலிருந்து முகவரி மற்றும் ஜிபிஎஸ் மேப் விவரங்களை எடுத்தல்
-  const families = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('app_members_family_database');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  }, []);
+  const [scheduleForm, setScheduleForm] = useState({
+    familyId: '',
+    timeSlot: '07:00 PM',
+    leadPastor: session?.username || 'Senior Pastor'
+  });
 
-  // அனைத்து பகுதிகளின் பட்டியல் (Unique Areas)
-  const areasList = useMemo(() => {
-    const set = new Set();
-    families.forEach(f => {
-      if (f.area) set.add(f.area);
-    });
-    return Array.from(set);
-  }, [families]);
-
-  // 2. திட்டமிடப்பட்ட குடும்ப ஜெபப் பட்டியல் (Cottage Prayer Schedule)
-  const [visitationList, setVisitationList] = useState(() => {
-    try {
-      const raw = localStorage.getItem('graceos_cottage_prayer_db');
-      return raw ? JSON.parse(raw) : [
+  useEffect(() => {
+    async function loadData() {
+      const dbFamilies = await getVaultData('members', []);
+      const dbVisits = await getVaultData('cottage_prayers', [
         {
           id: 'CP-101',
           date: '2026-09-18',
@@ -44,26 +33,30 @@ export default function CottagePrayerDesk({ session }) {
           phone: '+91 98765 43210',
           mapLink: 'https://maps.google.com/?q=10.9822,77.3411',
           leadPastor: 'Senior Pastor',
-          status: 'SCHEDULED' // 'SCHEDULED' | 'COMPLETED'
+          status: 'SCHEDULED'
         }
-      ];
-    } catch {
-      return [];
+      ]);
+      setFamilies(dbFamilies);
+      setVisitationList(dbVisits);
     }
-  });
+    loadData();
+  }, []);
 
-  const [scheduleForm, setScheduleForm] = useState({
-    familyId: '',
-    timeSlot: '07:00 PM',
-    leadPastor: session?.username || 'Senior Pastor'
-  });
+  const areasList = useMemo(() => {
+    const set = new Set();
+    families.forEach(f => {
+      if (f.area) set.add(f.area);
+    });
+    return Array.from(set);
+  }, [families]);
 
-  const saveVisitations = (updated) => {
+  const saveVisitations = async (updated) => {
     setVisitationList(updated);
+    await setVaultData('cottage_prayers', updated, true);
     localStorage.setItem('graceos_cottage_prayer_db', JSON.stringify(updated));
   };
 
-  const handleAddVisit = (e) => {
+  const handleAddVisit = async (e) => {
     e.preventDefault();
     if (!scheduleForm.familyId) return;
 
@@ -78,7 +71,7 @@ export default function CottagePrayerDesk({ session }) {
       timeSlot: scheduleForm.timeSlot,
       familyId: targetFamily.familyId,
       familyName: targetFamily.familyName,
-      area: targetFamily.area || 'General',
+      area: targetFamily.area || 'General Locality',
       address: targetFamily.address || 'Address not listed',
       phone: targetFamily.headMember?.phone || 'No phone',
       mapLink: targetFamily.mapLink || targetFamily.headMember?.mapLink || '',
@@ -86,23 +79,24 @@ export default function CottagePrayerDesk({ session }) {
       status: 'SCHEDULED'
     };
 
-    saveVisitations([newVisit, ...visitationList]);
+    const updated = [newVisit, ...visitationList];
+    await saveVisitations(updated);
     setScheduleForm({ familyId: '', timeSlot: '07:00 PM', leadPastor: scheduleForm.leadPastor });
   };
 
-  const markVisitCompleted = (id) => {
+  const markVisitCompleted = async (id) => {
     soundFX?.playClickPop?.();
     const updated = visitationList.map(v => v.id === id ? { ...v, status: 'COMPLETED' } : v);
-    saveVisitations(updated);
+    await saveVisitations(updated);
   };
 
-  const handleDeleteVisit = (id) => {
+  const handleDeleteVisit = async (id) => {
+    if (!window.confirm('Delete this scheduled cottage prayer visit?')) return;
     soundFX?.playClickPop?.();
     const updated = visitationList.filter(v => v.id !== id);
-    saveVisitations(updated);
+    await saveVisitations(updated);
   };
 
-  // தேர்ந்தெடுக்கப்பட்ட தேதி மற்றும் பகுதிக்குரிய பட்டியல்
   const filteredVisits = visitationList.filter(v => {
     const matchDate = v.date === selectedDate;
     const matchArea = selectedArea === 'ALL' || v.area === selectedArea;
@@ -116,13 +110,13 @@ export default function CottagePrayerDesk({ session }) {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
         <div>
           <h3 className="text-xl font-black text-white flex items-center gap-2">
-            <span>Pastoral Cottage Prayer & Visitation Desk</span>
+            <span>Pastoral Cottage Prayer &amp; Visitation Desk</span>
             <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30">
               GPS Routed
             </span>
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            வாராந்திர விசுவாசிகள் இல்ல ஜெபக்கூடுகை மற்றும் கூகுள் மேப் வழித்தட மேலாண்மை பலகை.
+            Coordinate weekly family cottage fellowships and navigate directly to believer residences.
           </p>
         </div>
 
@@ -138,23 +132,23 @@ export default function CottagePrayerDesk({ session }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* இடதுபுறம்: புதிய ஜெப சந்திப்பு முன்பதிவு */}
+        {/* Left Form: Schedule Visit */}
         <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
           <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
             <Plus size={15} className="text-emerald-400" />
-            <span>இல்ல ஜெபத்தை திட்டமிடுக</span>
+            <span>Schedule Cottage Prayer</span>
           </h4>
 
           <form onSubmit={handleAddVisit} className="space-y-3">
             <div>
-              <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">விசுவாசி குடும்பம்</label>
+              <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Host Household *</label>
               <select
                 value={scheduleForm.familyId}
                 onChange={(e) => setScheduleForm({ ...scheduleForm, familyId: e.target.value })}
                 className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400 cursor-pointer"
                 required
               >
-                <option value="">-- குடும்பத்தைத் தேர்ந்தெடுக்கவும் --</option>
+                <option value="">-- Select Congregation Family --</option>
                 {families.map((fam) => (
                   <option key={fam.familyId} value={fam.familyId}>
                     {fam.familyName} ({fam.area || 'Main Area'})
@@ -164,7 +158,7 @@ export default function CottagePrayerDesk({ session }) {
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">ஜெப நேரம்</label>
+              <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Prayer Time Slot *</label>
               <input
                 type="text"
                 value={scheduleForm.timeSlot}
@@ -176,7 +170,7 @@ export default function CottagePrayerDesk({ session }) {
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">தலைமை போதகர் / ஊழியர்</label>
+              <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Presiding Pastor / Leader</label>
               <input
                 type="text"
                 value={scheduleForm.leadPastor}
@@ -190,25 +184,24 @@ export default function CottagePrayerDesk({ session }) {
               type="submit"
               className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer shadow-lg shadow-emerald-500/20"
             >
-              அட்டவணையில் சேர்
+              Add to Itinerary
             </button>
           </form>
         </div>
 
-        {/* வலதுபுறம்: அன்றைய தின குடும்ப சந்திப்பு வழித்தடம் */}
+        {/* Right Stream: Daily Visit Route */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between border-b border-white/10 pb-2 text-xs">
             <span className="font-bold text-white uppercase tracking-wider">
-              {selectedDate} இல்ல ஜெப அட்டவணை ({filteredVisits.length})
+              {selectedDate} Visitation Schedule ({filteredVisits.length})
             </span>
             
-            {/* பகுதி வாரியான வடிகட்டல் */}
             <select
               value={selectedArea}
               onChange={(e) => setSelectedArea(e.target.value)}
               className="bg-slate-950 border border-white/10 rounded-lg px-2 py-1 text-[11px] text-cyan-300 font-mono focus:outline-none"
             >
-              <option value="ALL">அனைத்து பகுதிகள்</option>
+              <option value="ALL">All Areas</option>
               {areasList.map((a, idx) => (
                 <option key={idx} value={a}>{a}</option>
               ))}
@@ -218,7 +211,7 @@ export default function CottagePrayerDesk({ session }) {
           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
             {filteredVisits.length === 0 ? (
               <div className="p-8 text-center text-slate-500 font-mono text-xs">
-                இந்த தேதியில் குடும்ப ஜெபங்கள் எதுவும் திட்டமிடப்படவில்லை.
+                No cottage prayers scheduled for this date.
               </div>
             ) : (
               filteredVisits.map((visit) => (
@@ -255,10 +248,9 @@ export default function CottagePrayerDesk({ session }) {
                     </div>
                   </div>
 
-                  {/* தொடர்பு மற்றும் கூகுள் மேப்ஸ் வழித்தட வழிகாட்டல் */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5 text-xs font-mono">
                     <span className="text-slate-400">
-                      பொறுப்பாளர்: <strong className="text-slate-200">{visit.leadPastor}</strong>
+                      Assigned Shepherd: <strong className="text-slate-200">{visit.leadPastor}</strong>
                     </span>
 
                     <div className="flex items-center gap-2">
@@ -273,18 +265,20 @@ export default function CottagePrayerDesk({ session }) {
                           <span>Google Maps Navigate</span>
                         </a>
                       ) : (
-                        <span className="text-[10px] text-slate-500 italic">No GPS attached</span>
+                        <span className="text-[10px] text-slate-500 italic">No GPS coordinates</span>
                       )}
 
-                      {visit.status === 'SCHEDULED' && (
+                      {visit.status === 'SCHEDULED' ? (
                         <button
                           type="button"
                           onClick={() => markVisitCompleted(visit.id)}
                           className="px-3 py-1 bg-white/10 hover:bg-white/15 text-white rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
                         >
                           <CheckCircle2 size={12} />
-                          <span>ஜெபம் முடிந்தது</span>
+                          <span>Mark Completed</span>
                         </button>
+                      ) : (
+                        <span className="text-[10px] text-emerald-400 font-bold">Completed ✓</span>
                       )}
                     </div>
                   </div>

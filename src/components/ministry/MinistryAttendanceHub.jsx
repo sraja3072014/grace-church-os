@@ -1,40 +1,40 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Baby, Flame, Heart, UserCheck, 
   CheckCircle2, XCircle, Search, Calendar, ShieldCheck, Printer, QrCode 
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import { getVaultData, setVaultData } from '../../utils/vaultStore';
 
 export default function MinistryAttendanceHub({ session }) {
-  const [activeMinistry, setActiveMinistry] = useState('SUNDAY_SCHOOL'); // 'SUNDAY_SCHOOL' | 'YOUTH' | 'WOMEN' | 'MEN'
+  const [activeMinistry, setActiveMinistry] = useState('SUNDAY_SCHOOL');
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTokenModal, setActiveTokenModal] = useState(null);
+  const [families, setFamilies] = useState([]);
+  const [attendanceLedger, setAttendanceLedger] = useState({});
 
-  // 1. மாஸ்டர் மெம்பர் டேட்டாபேஸிலிருந்து தரவுகளை எடுத்தல்
-  const families = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('app_members_family_database');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
+  useEffect(() => {
+    async function loadData() {
+      const dbFamilies = await getVaultData('members', []);
+      const dbAttendance = await getVaultData('ministry_attendance', {});
+      setFamilies(dbFamilies);
+      setAttendanceLedger(dbAttendance);
     }
+    loadData();
   }, []);
 
-  // 2. ஐக்கியத்திற்கு ஏற்ப நபர்களைத் தானாகப் பிரிக்கும் லாஜிக்
   const ministryMembers = useMemo(() => {
     const list = [];
 
     families.forEach(fam => {
-      // குடும்பத் தலைவரை சரிபார்த்தல்
       if (fam.headMember) {
         const h = fam.headMember;
         if (activeMinistry === 'MEN' && (h.gender === 'Male' || !h.gender)) {
-          list.push({ id: h.memberId, name: h.name, phone: h.phone, familyName: fam.familyName, role: 'Head' });
+          list.push({ id: h.memberId, name: h.name, phone: h.phone, familyName: fam.familyName, role: 'Head of Family' });
         }
       }
 
-      // குடும்ப உறுப்பினர்களை சரிபார்த்தல்
       (fam.members || []).forEach(m => {
         const role = m.roleInFamily?.toLowerCase() || '';
         const status = m.status?.toLowerCase() || '';
@@ -62,34 +62,22 @@ export default function MinistryAttendanceHub({ session }) {
     return list;
   }, [families, activeMinistry]);
 
-  // 3. வருகைப் பதிவு லெட்ஜர் (Attendance Ledger)
-  const [attendanceLedger, setAttendanceLedger] = useState(() => {
-    try {
-      const raw = localStorage.getItem('graceos_ministry_attendance_db');
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const saveLedger = (updated) => {
+  const saveLedger = async (updated) => {
     setAttendanceLedger(updated);
+    await setVaultData('ministry_attendance', updated, true);
     localStorage.setItem('graceos_ministry_attendance_db', JSON.stringify(updated));
   };
 
-  // வருகை குறித்தல் (Toggle Present / Absent / Token)
-  const toggleAttendance = (person) => {
+  const toggleAttendance = async (person) => {
     soundFX?.playClickPop?.();
     const key = `${selectedDate}_${activeMinistry}_${person.id}`;
     const exists = attendanceLedger[key];
 
     let updated;
     if (exists?.status === 'PRESENT') {
-      // ஆப்சென்ட் என மாற்றுதல்
       updated = { ...attendanceLedger, [key]: { ...exists, status: 'ABSENT' } };
     } else {
-      // பிரசன்ட் என மாற்றுதல் (சண்டே ஸ்கூலாக இருந்தால் செக்யூரிட்டி டோக்கனுடன்)
-      const token = activeMinistry === 'SUNDAY_SCHOOL' ? `SEC-${Math.floor(1000 + Math.random() * 9000)}` : null;
+      const token = activeMinistry === 'SUNDAY_SCHOOL' ? `PASS-${Math.floor(1000 + Math.random() * 9000)}` : null;
       updated = {
         ...attendanceLedger,
         [key]: {
@@ -108,10 +96,9 @@ export default function MinistryAttendanceHub({ session }) {
       }
     }
 
-    saveLedger(updated);
+    await saveLedger(updated);
   };
 
-  // புள்ளிவிவரங்கள் (Metrics)
   const stats = useMemo(() => {
     let present = 0;
     ministryMembers.forEach(m => {
@@ -127,10 +114,10 @@ export default function MinistryAttendanceHub({ session }) {
   }, [ministryMembers, attendanceLedger, selectedDate, activeMinistry]);
 
   const ministryTabs = [
-    { id: 'SUNDAY_SCHOOL', label: 'சண்டே ஸ்கூல் (Kids)', icon: Baby, color: 'text-amber-400' },
-    { id: 'YOUTH', label: 'வாலிபர் ஐக்கியம் (Youth)', icon: Flame, color: 'text-rose-400' },
-    { id: 'WOMEN', label: 'சகோதரிகள் கூடுகை (Women)', icon: Heart, color: 'text-pink-400' },
-    { id: 'MEN', label: 'சகோதரர்கள் கூடுகை (Men)', icon: Users, color: 'text-cyan-400' }
+    { id: 'SUNDAY_SCHOOL', label: 'Sunday School (Kids)', icon: Baby, color: 'text-amber-400' },
+    { id: 'YOUTH', label: 'Youth Fellowship', icon: Flame, color: 'text-rose-400' },
+    { id: 'WOMEN', label: 'Women\'s Fellowship', icon: Heart, color: 'text-pink-400' },
+    { id: 'MEN', label: 'Men\'s Fellowship', icon: Users, color: 'text-cyan-400' }
   ];
 
   const filteredMembers = ministryMembers.filter(m => 
@@ -150,7 +137,7 @@ export default function MinistryAttendanceHub({ session }) {
             <span>Ministry Fellowship Attendance Hub</span>
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            சண்டே ஸ்கூல், இளைஞர், பெண்கள் மற்றும் ஆண்கள் ஐக்கியங்களுக்கான ஒருங்கிணைந்த வருகைப் பதிவு பலகை.
+            Track Sunday School check-ins, safety tokens, and fellowship attendance rosters.
           </p>
         </div>
 
@@ -164,7 +151,7 @@ export default function MinistryAttendanceHub({ session }) {
         </div>
       </div>
 
-      {/* 🌟 4 ஐக்கியங்களுக்கான Sub-Tabs */}
+      {/* 4 Ministry Sub-Tabs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900 p-1.5 rounded-2xl border border-white/10">
         {ministryTabs.map(tab => {
           const Icon = tab.icon;
@@ -187,22 +174,22 @@ export default function MinistryAttendanceHub({ session }) {
         })}
       </div>
 
-      {/* Metrics Strip */}
+      {/* Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
         <div className="p-3.5 rounded-2xl bg-slate-900 border border-white/5">
-          <span className="text-[10px] text-slate-400 uppercase">மொத்த உறுப்பினர்கள்</span>
+          <span className="text-[10px] text-slate-400 uppercase">Enrolled Members</span>
           <div className="text-lg font-black text-white mt-0.5">{stats.total}</div>
         </div>
         <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-          <span className="text-[10px] uppercase">வந்தவர்கள் (Present)</span>
+          <span className="text-[10px] uppercase">Present Today</span>
           <div className="text-lg font-black mt-0.5">{stats.present}</div>
         </div>
         <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
-          <span className="text-[10px] uppercase">வராதவர்கள் (Absent)</span>
+          <span className="text-[10px] uppercase">Absent Today</span>
           <div className="text-lg font-black mt-0.5">{stats.absent}</div>
         </div>
         <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">
-          <span className="text-[10px] uppercase">வருகை சதவீதம்</span>
+          <span className="text-[10px] uppercase">Attendance Rate</span>
           <div className="text-lg font-black mt-0.5">{stats.rate}%</div>
         </div>
       </div>
@@ -212,14 +199,14 @@ export default function MinistryAttendanceHub({ session }) {
         <Search size={16} className="text-slate-400" />
         <input
           type="text"
-          placeholder="பெயர் அல்லது தொலைபேசி எண் மூலம் தேடுக..."
+          placeholder="Search by member name, family, or phone number..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
         />
       </div>
 
-      {/* உறுப்பினர்கள் வருகைப் பட்டியல் */}
+      {/* Grid of Members */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredMembers.map(person => {
           const key = `${selectedDate}_${activeMinistry}_${person.id}`;
@@ -243,7 +230,7 @@ export default function MinistryAttendanceHub({ session }) {
                 </span>
                 {token && (
                   <span className="text-[9px] font-mono text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-md mt-1 inline-block">
-                    Pass: {token}
+                    Security Pass: {token}
                   </span>
                 )}
               </div>
@@ -260,7 +247,7 @@ export default function MinistryAttendanceHub({ session }) {
         })}
       </div>
 
-      {/* சண்டே ஸ்கூல் பாதுகாப்பு டோக்கன் மாடல் */}
+      {/* Sunday School Safety Modal */}
       {activeTokenModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-sm bg-slate-900 border border-amber-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-center animate-in zoom-in-95">
@@ -270,11 +257,11 @@ export default function MinistryAttendanceHub({ session }) {
             </span>
             <div className="p-4 bg-slate-950 rounded-2xl border border-white/10">
               <span className="text-3xl font-black font-mono text-amber-400">{activeTokenModal.tokenCode}</span>
-              <p className="text-[10px] text-slate-400 mt-1">பெற்றோர் குழந்தையை அழைத்துச் செல்லும்போது இந்த எண்ணைக் காட்டவும்.</p>
+              <p className="text-[10px] text-slate-400 mt-1">Parents must present this security pass at classroom dismissal.</p>
             </div>
             <div className="text-xs text-left bg-white/5 p-3 rounded-xl space-y-1">
-              <div>குழந்தை: <strong className="text-white">{activeTokenModal.name}</strong></div>
-              <div>பெற்றோர்: <strong className="text-slate-300">{activeTokenModal.parentName}</strong></div>
+              <div>Child: <strong className="text-white">{activeTokenModal.name}</strong></div>
+              <div>Parent/Guardian: <strong className="text-slate-300">{activeTokenModal.parentName}</strong></div>
             </div>
             <div className="flex gap-2">
               <button
@@ -282,14 +269,14 @@ export default function MinistryAttendanceHub({ session }) {
                 onClick={() => setActiveTokenModal(null)}
                 className="flex-1 py-2 bg-white/10 text-xs font-bold rounded-xl text-white cursor-pointer"
               >
-                சரி (Done)
+                Dismiss
               </button>
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex-1 py-2 bg-amber-500 text-xs font-bold rounded-xl text-slate-950 flex items-center justify-center gap-1 cursor-pointer"
+                className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 text-xs font-bold rounded-xl text-slate-950 flex items-center justify-center gap-1 cursor-pointer transition shadow-md"
               >
-                <Printer size={13} /> Print
+                <Printer size={13} /> Print Pass
               </button>
             </div>
           </div>

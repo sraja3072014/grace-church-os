@@ -162,7 +162,7 @@ export default function BackupDatabaseTab() {
       URL.revokeObjectURL(url);
 
       const newEntry = {
-        id: Date.now(), name: fileName, path: 'USB / Pen Drive Storage',
+        id: Date.now(), name: fileName, path: 'USB / External Storage',
         size: `${(encryptedString.length / 1024).toFixed(1)} KB`,
         date: 'Today, Just now', type: 'AES-256 .godb'
       };
@@ -272,7 +272,7 @@ export default function BackupDatabaseTab() {
             <Clock size={20} className="text-amber-400 shrink-0" />
             <div>
               <h5 className="text-xs font-bold">Backup reminder: {daysSinceBackup} days since the last backup.</h5>
-              <p className="text-[11px] text-slate-400 mt-0.5">Save the church&apos;s latest records to your connected storage.</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Save the church's latest records to your connected storage partition.</p>
             </div>
           </div>
           <button
@@ -285,6 +285,7 @@ export default function BackupDatabaseTab() {
         </div>
       )}
 
+      {/* Cloud Sync Status */}
       <div className="p-5 rounded-2xl win11-card border border-white/10 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
@@ -298,13 +299,14 @@ export default function BackupDatabaseTab() {
               </span>
             </h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              இணைய இணைப்பு இருக்கும்போது லோக்கல் வால்ட் தரவுகளை கிளவுடுடன் முரண்பாடுகள் இன்றி ஒத்திசைக்கும்.
+              Automatically syncs local disk vault tables to cloud endpoints with conflict resolution when online.
             </p>
           </div>
         </div>
         <CloudSyncStatusWidget />
       </div>
 
+      {/* Local Storage Engine */}
       <div className="p-5 rounded-2xl win11-card border border-white/[0.08] flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
@@ -318,7 +320,7 @@ export default function BackupDatabaseTab() {
               </span>
             </h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              Primary live tables stay in <strong className="text-amber-400 font-mono">/database</strong> and complete snapshots archive into <strong className="text-sky-400 font-mono">/backup</strong>.
+              Live operational tables stay in <strong className="text-amber-400 font-mono">/database</strong> and disaster recovery dumps archive into <strong className="text-sky-400 font-mono">/backup</strong>.
             </p>
           </div>
         </div>
@@ -345,6 +347,7 @@ export default function BackupDatabaseTab() {
         </div>
       </div>
 
+      {/* Directory Mounting & Schedule */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-4 rounded-xl win11-card border border-white/[0.06] flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
@@ -410,6 +413,7 @@ export default function BackupDatabaseTab() {
         </div>
       </div>
 
+      {/* AES Encrypted Vault Export */}
       <div className="p-6 rounded-3xl win11-card border border-white/10 space-y-5">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
@@ -448,6 +452,7 @@ export default function BackupDatabaseTab() {
         </form>
       </div>
 
+      {/* Excel / CSV Data Hub */}
       <div className="p-5 rounded-2xl win11-card border border-white/10 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -461,7 +466,7 @@ export default function BackupDatabaseTab() {
               </span>
             </h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              சபை விசுவாசிகள் பட்டியல் மற்றும் 80G தணிக்கை லெட்ஜரை எக்செல் வழியாக ஏற்றுமதி/இறக்குமதி செய்தல்.
+              Export and import church membership rosters and financial audit books directly via Excel/CSV spreadsheets.
             </p>
           </div>
         </div>
@@ -476,6 +481,7 @@ export default function BackupDatabaseTab() {
         </button>
       </div>
 
+      {/* Available Snapshot Archives */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h5 className="text-xs font-bold uppercase tracking-wider text-slate-300">

@@ -1,47 +1,77 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, Printer, Calendar, Heart, 
   Utensils, Gift, MessageSquare, CheckCircle2, Share2 
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import { getVaultData } from '../../utils/vaultStore';
 
 export default function AltarThanksgivingDesk({ session }) {
   const [targetSunday, setTargetSunday] = useState(() => {
     return new Date().toISOString().slice(0, 10);
   });
+  const [allSponsorships, setAllSponsorships] = useState([]);
 
-  // ஸ்பான்சர்ஷிப் மற்றும் ஸ்தோத்திரத் தரவுகள்
-  const thanksgivingItems = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('graceos_fellowship_sponsorships_db');
-      const list = raw ? JSON.parse(raw) : [];
-      // குறிப்பிட்ட ஞாயிறு அல்லது அதற்கு முந்தைய வாரத்தில் பதிவு செய்யப்பட்டவை
-      return list.filter(item => item.targetDate === targetSunday || !targetSunday);
-    } catch {
-      return [];
+  useEffect(() => {
+    async function loadSponsorships() {
+      const data = await getVaultData('sponsorships', [
+        {
+          id: 'SPON-101',
+          sponsorName: 'Bro. Stephen Victor & Family',
+          occasion: 'Wedding Anniversary & Child Birthday Thanksgiving',
+          cause: 'FELLOWSHIP_MEALS',
+          mode: 'IN_KIND',
+          targetDate: new Date().toISOString().slice(0, 10),
+          phone: '+91 98765 43210'
+        },
+        {
+          id: 'SPON-102',
+          sponsorName: 'Sis. Mary Stella',
+          occasion: 'Complete Medical Recovery & Restoration Praise',
+          cause: 'ALTAR_FLOWERS',
+          mode: 'CHURCH_OFFERING',
+          targetDate: new Date().toISOString().slice(0, 10),
+          phone: '+91 98401 22334'
+        }
+      ]);
+      setAllSponsorships(data);
     }
-  }, [targetSunday]);
+    loadSponsorships();
+  }, []);
 
-  // வாட்ஸ்அப் வழியாக போதகரின் அறிவிப்பு பட்டியலை அனுப்புதல்
+  const thanksgivingItems = useMemo(() => {
+    return allSponsorships.filter(
+      (item) => item.targetDate === targetSunday || !targetSunday
+    );
+  }, [allSponsorships, targetSunday]);
+
   const handleShareToPastor = () => {
     soundFX?.playClickPop?.();
     let text = `🕊️ *GRACE CATHEDRAL - SUNDAY ALTAR THANKSGIVING LIST*\n`;
-    text += `📅 *ஆராதனைத் தேதி:* ${targetSunday}\n`;
+    text += `📅 *Lord's Day Date:* ${targetSunday}\n`;
     text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     if (thanksgivingItems.length === 0) {
-      text += `இன்றைய தேதியில் சிறப்பு ஸ்தோத்திரப் பதிவுகள் ஏதுமில்லை.\n`;
+      text += `No special thanksgiving petitions or altar sponsorships recorded for this date.\n`;
     } else {
       thanksgivingItems.forEach((item, index) => {
         text += `${index + 1}. *${item.sponsorName}*\n`;
-        text += `   • நோக்கம்: ${item.occasion || 'Thanksgiving Offering'}\n`;
-        text += `   • பிரிவு: ${item.cause === 'FELLOWSHIP_MEALS' ? 'அன்பு விருந்து (Love Feast)' : item.cause === 'TRUST_KIDS' ? 'டிரஸ்ட் குழந்தைகள் உதவி' : 'பலிபீட மலர் அலங்காரம்'}\n`;
-        text += `   • வகை: ${item.mode === 'IN_KIND' ? 'உணவாக / பொருளாக' : 'சபைக் காணிக்கை'}\n\n`;
+        text += `   • Reason: ${item.occasion || 'General Altar Thanksgiving'}\n`;
+        text += `   • Category: ${
+          item.cause === 'FELLOWSHIP_MEALS'
+            ? 'Fellowship Love Feast'
+            : item.cause === 'TRUST_KIDS'
+            ? 'Orphanage Child Care Aid'
+            : 'Sanctuary Floral Decoration'
+        }\n`;
+        text += `   • Offering Mode: ${
+          item.mode === 'IN_KIND' ? 'In-Kind Provision' : 'Direct Church Treasury Offering'
+        }\n\n`;
       });
     }
 
     text += `━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `_போதகரின் மேடை விசேஷ ஆசீர்வாத ஜெபத்திற்காக சமர்ப்பிக்கப்படுகிறது._`;
+    text += `_Submitted for Senior Pastor's Pulpit Blessing & Altar Prayer._`;
 
     window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -53,13 +83,13 @@ export default function AltarThanksgivingDesk({ session }) {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4 print:hidden">
         <div>
           <h3 className="text-xl font-black text-white flex items-center gap-2">
-            <span>Altar Thanksgiving & Sponsorship Podium Slip</span>
+            <span>Altar Thanksgiving &amp; Sponsorship Reading Slip</span>
             <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-mono border border-rose-500/30">
               Podium Prompt
             </span>
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            ஞாயிறு ஆராதனையில் போதகர் மேடையில் வாசித்து ஆசீர்வதிப்பதற்கான ஸ்தோத்திர & அன்புவிருந்து விபரங்கள்.
+            Congregational thanksgiving offerings and fellowship sponsorships for pastoral pulpit announcements.
           </p>
         </div>
 
@@ -91,28 +121,28 @@ export default function AltarThanksgivingDesk({ session }) {
         </div>
       </div>
 
-      {/* 🌟 Printable Altar Podium Reading Slip */}
+      {/* Printable Podium Sheet */}
       <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl print:bg-white print:text-slate-950 print:border-none print:shadow-none">
         
         {/* Title Header */}
         <div className="border-b-2 border-amber-500/40 print:border-slate-900 pb-3 flex items-center justify-between">
           <div>
             <h2 className="text-base sm:text-lg font-black text-white print:text-slate-950 uppercase tracking-wide">
-              Grace Cathedral - Altar Announcements
+              Grace Central Cathedral - Altar Announcements
             </h2>
             <p className="text-xs text-amber-400 print:text-slate-700 font-semibold">
-              விசேஷ ஸ்தோத்திரக் காணிக்கையாளர்கள் & அன்பு விருந்து ஸ்பான்சர்ஷிப் பட்டியல்
+              Special Altar Thanksgiving Offerings &amp; Fellowship Sponsorships
             </p>
           </div>
           <span className="text-xs font-mono font-bold text-slate-300 print:text-slate-800 bg-slate-950 print:bg-slate-100 px-3 py-1 rounded-xl border border-white/10">
-            தேதி: {targetSunday}
+            Date: {targetSunday}
           </span>
         </div>
 
-        {/* Thanksgiving Family Cards */}
+        {/* List of Thanksgiving Families */}
         {thanksgivingItems.length === 0 ? (
           <div className="p-8 text-center text-slate-500 print:text-slate-400 font-mono text-xs">
-            தேர்வு செய்யப்பட்ட தேதியில் விசேஷ ஸ்தோத்திரப் பதிவுகள் எதுவும் இல்லை.
+            No special thanksgiving offerings or love feast sponsorships recorded for this date.
           </div>
         ) : (
           <div className="space-y-4">
@@ -129,32 +159,41 @@ export default function AltarThanksgivingDesk({ session }) {
                     <div>
                       <h4 className="text-sm font-black text-white print:text-slate-950">{item.sponsorName}</h4>
                       <p className="text-xs font-semibold text-amber-400 print:text-amber-800 mt-0.5">
-                        {item.occasion || 'குடும்ப ஸ்தோத்திரம்'}
+                        {item.occasion || 'Family Thanksgiving & Praise'}
                       </p>
                     </div>
                   </div>
 
                   <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full border border-white/10 print:border-slate-400 text-slate-300 print:text-slate-800 uppercase font-bold shrink-0">
-                    {item.cause === 'FELLOWSHIP_MEALS' ? 'அன்பு விருந்து' : item.cause === 'TRUST_KIDS' ? 'டிரஸ்ட் உதவி' : 'பலிபீட அலங்காரம்'}
+                    {item.cause === 'FELLOWSHIP_MEALS'
+                      ? 'Love Feast'
+                      : item.cause === 'TRUST_KIDS'
+                      ? 'Child Care Aid'
+                      : 'Altar Flowers'}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 print:text-slate-600 pt-2 border-t border-white/5 print:border-slate-200">
-                  <span>வழங்கும் முறை: <strong className="text-slate-200 print:text-slate-900">{item.mode === 'IN_KIND' ? 'உணவாக / பொருட்களாக வழங்கப்படுகிறது' : 'சபைக் கணக்கில் செலுத்தப்பட்டது'}</strong></span>
-                  {item.phone && <span>தொடர்பு: {item.phone}</span>}
+                  <span>
+                    Provision Mode:{' '}
+                    <strong className="text-slate-200 print:text-slate-900">
+                      {item.mode === 'IN_KIND' ? 'In-Kind Food & Provisions' : 'Paid to Church Account'}
+                    </strong>
+                  </span>
+                  {item.phone && <span>Contact: {item.phone}</span>}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Blessing Footer for Pulpit */}
+        {/* Pulpit Scriptural Benediction */}
         <div className="pt-6 border-t border-white/10 print:border-slate-300 text-center space-y-1">
           <p className="text-xs font-bold text-slate-300 print:text-slate-800 italic">
-            &ldquo;உற்சாகமாய்க் கொடுக்கிறவனிடத்தில் தேவன் பிரியமாயிருக்கிறார்.&rdquo; — 2 கொரிந்தியர் 9:7
+            &ldquo;God loves a cheerful giver.&rdquo; — 2 Corinthians 9:7
           </p>
           <span className="text-[10px] text-slate-500 print:text-slate-600 font-mono block">
-            Certified & Verified by Church Office
+            Certified &amp; Verified by Church Administration Office
           </span>
         </div>
 

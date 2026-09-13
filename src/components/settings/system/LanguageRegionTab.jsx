@@ -10,7 +10,7 @@ export default function LanguageRegionTab() {
       const parsed = saved ? JSON.parse(saved) : {};
       return {
         country: parsed.country || 'IN',
-        language: parsed.language || 'ta',
+        language: parsed.language || 'en',
         currency: parsed.currency || 'INR (₹)',
         currencySymbol: parsed.currencySymbol || '₹',
         taxComplianceType: parsed.taxComplianceType || '80G (India)',
@@ -20,7 +20,7 @@ export default function LanguageRegionTab() {
     } catch {
       return {
         country: 'IN',
-        language: 'ta',
+        language: 'en',
         currency: 'INR (₹)',
         currencySymbol: '₹',
         taxComplianceType: '80G (India)',
@@ -33,29 +33,29 @@ export default function LanguageRegionTab() {
   const regions = [
     {
       code: 'IN',
-      country: 'India (இந்தியா)',
+      country: 'India',
       flag: '🇮🇳',
       defaultCurrency: 'INR (₹)',
       symbol: '₹',
       defaultTax: '80G / 12A (IT Act)',
       languages: [
-        { code: 'ta', name: 'தமிழ் (Tamil)' },
         { code: 'en', name: 'English' },
-        { code: 'hi', name: 'हिन्दी (Hindi)' },
-        { code: 'ml', name: 'മലയാളം (Malayalam)' }
+        { code: 'ta', name: 'Tamil' },
+        { code: 'hi', name: 'Hindi' },
+        { code: 'ml', name: 'Malayalam' }
       ]
     },
     {
       code: 'LK',
-      country: 'Sri Lanka (இலங்கை)',
+      country: 'Sri Lanka',
       flag: '🇱🇰',
       defaultCurrency: 'LKR (Rs)',
       symbol: 'Rs.',
       defaultTax: 'Ministry of Religious Affairs Trust',
       languages: [
-        { code: 'ta', name: 'தமிழ் (Tamil)' },
-        { code: 'si', name: 'සිංහල (Sinhala)' },
-        { code: 'en', name: 'English' }
+        { code: 'en', name: 'English' },
+        { code: 'ta', name: 'Tamil' },
+        { code: 'si', name: 'Sinhala' }
       ]
     },
     {
@@ -76,11 +76,11 @@ export default function LanguageRegionTab() {
       flag: '🇦🇪',
       defaultCurrency: 'AED (د.إ)',
       symbol: 'AED',
-      defaultTax: 'Awqaf & Islamic Affairs / Community Trust',
+      defaultTax: 'Community Religious Trust',
       languages: [
-        { code: 'ar', name: 'العربية (Arabic - RTL)' },
         { code: 'en', name: 'English' },
-        { code: 'ta', name: 'தமிழ்' }
+        { code: 'ar', name: 'Arabic' },
+        { code: 'ta', name: 'Tamil' }
       ]
     },
     {
@@ -92,7 +92,7 @@ export default function LanguageRegionTab() {
       defaultTax: 'Charities Act Reg / IPC Status',
       languages: [
         { code: 'en', name: 'English' },
-        { code: 'ta', name: 'தமிழ்' },
+        { code: 'ta', name: 'Tamil' },
         { code: 'ms', name: 'Bahasa Melayu' }
       ]
     }
@@ -137,22 +137,22 @@ export default function LanguageRegionTab() {
           </div>
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              Global Language & Regional Localization Hub
+              Global Language &amp; Regional Localization Hub
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono">
                 Multi-Nation i18n
               </span>
             </h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              Select church territorial country, local language dialect, and currency formatting standards.
+              Select church territorial country, primary application language, and localized currency standards.
             </p>
           </div>
         </div>
       </div>
 
-      {/* 1. Country / Region Selector Grid */}
+      {/* Country Selection */}
       <div className="flex flex-col gap-3">
         <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-          Church Operational Territory (நாடு தேர்வு)
+          Church Operational Territory
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {regions.map((reg) => {
@@ -181,10 +181,10 @@ export default function LanguageRegionTab() {
         </div>
       </div>
 
-      {/* 2. Language Selection for Chosen Territory */}
+      {/* Language Selection */}
       <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] flex flex-col gap-3">
         <span className="text-xs font-bold uppercase tracking-wider text-white">
-          Active Interface Language (பயன்பாட்டு மொழி)
+          Active Interface Language
         </span>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
           {currentRegionData.languages.map((lang) => {
@@ -208,14 +208,12 @@ export default function LanguageRegionTab() {
         </div>
       </div>
 
-      {/* 3. Currency & Legal Tax Compliance Customizer */}
+      {/* Currency & Tax Exemption */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        {/* Currency Formatting */}
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.08] flex flex-col gap-3">
           <span className="text-xs font-bold text-white flex items-center gap-2">
             <DollarSign size={16} className="text-emerald-400" />
-            Active Currency Symbol & Standard
+            Active Currency Symbol &amp; Formatting
           </span>
           <div className="flex items-center gap-3">
             <input 
@@ -225,12 +223,11 @@ export default function LanguageRegionTab() {
               className="w-16 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-center text-emerald-400 font-black font-mono text-base focus:outline-none"
             />
             <div className="text-[11px] text-slate-400">
-              Used in Finance Desk, Dashboard, and 80G Receipts (e.g. ₹, $, AED, Rs.)
+              Configures currency indicators across Finance Desk, Dashboard, and 80G Receipts.
             </div>
           </div>
         </div>
 
-        {/* Tax Exemption Standards */}
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.08] flex flex-col gap-2">
           <span className="text-xs font-bold text-white flex items-center gap-2">
             <FileText size={16} className="text-amber-400" />
@@ -244,7 +241,6 @@ export default function LanguageRegionTab() {
             placeholder="e.g. 80G Tax Exemption (India) / 501(c)(3)"
           />
         </div>
-
       </div>
 
     </div>

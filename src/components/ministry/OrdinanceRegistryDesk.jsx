@@ -8,7 +8,7 @@ import { getVaultData, setVaultData } from '../../utils/vaultStore';
 import { logAuditEvent } from '../../utils/auditLogger';
 
 export default function OrdinanceRegistryDesk({ session }) {
-  const [activeTab, setActiveTab] = useState('BAPTISM'); // 'BAPTISM' | 'MATRIMONY'
+  const [activeTab, setActiveTab] = useState('BAPTISM');
   const [toast, setToast] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [printableCertificate, setPrintableCertificate] = useState(null);
@@ -16,7 +16,6 @@ export default function OrdinanceRegistryDesk({ session }) {
   const [baptisms, setBaptisms] = useState([]);
   const [marriages, setMarriages] = useState([]);
 
-  // படிவ நிலைகள்
   const [baptismForm, setBaptismForm] = useState({
     candidateName: '',
     dob: '',
@@ -44,7 +43,6 @@ export default function OrdinanceRegistryDesk({ session }) {
     setTimeout(() => setToast(''), 3000);
   };
 
-  // 🌟 லோக்கல் ஹார்ட் டிஸ்க் வால்ட்டிலிருந்து தரவுகளை ஏற்றுதல் (/database/ordinances.json)
   useEffect(() => {
     async function loadOrdinances() {
       const stored = await getVaultData('ordinances', { baptisms: [], marriages: [] });
@@ -86,10 +84,9 @@ export default function OrdinanceRegistryDesk({ session }) {
     await setVaultData('ordinances', { baptisms: newBaptisms, marriages: newMarriages }, true);
   };
 
-  // புதிய ஞானஸ்நானப் பதிவு
   const handleSaveBaptism = async (e) => {
     e.preventDefault();
-    if (!baptismForm.candidateName) return;
+    if (!baptismForm.candidateName.trim()) return;
     soundFX?.playSuccessChime?.();
 
     const newRecord = {
@@ -100,7 +97,7 @@ export default function OrdinanceRegistryDesk({ session }) {
 
     const updated = [newRecord, ...baptisms];
     await syncOrdinances(updated, marriages);
-    await logAuditEvent('BAPTISM_REGISTERED', `${newRecord.candidateName} - ஞானஸ்நானப் பதிவு செய்யப்பட்டது.`, session?.username);
+    await logAuditEvent('BAPTISM_REGISTERED', `${newRecord.candidateName} recorded in Holy Baptism registry.`, session?.username);
 
     setBaptismForm({
       candidateName: '',
@@ -111,13 +108,12 @@ export default function OrdinanceRegistryDesk({ session }) {
       campus: session?.activeCampus || 'Headquarters',
       witnessName: ''
     });
-    showToast('ஞானஸ்நானப் பதிவு லோக்கல் டிஸ்கில் சேமிக்கப்பட்டது! ✓');
+    showToast('Baptism record saved to physical disk vault.');
   };
 
-  // புதிய திருமணப் பதிவு
   const handleSaveMatrimony = async (e) => {
     e.preventDefault();
-    if (!matrimonyForm.groomName || !matrimonyForm.brideName) return;
+    if (!matrimonyForm.groomName.trim() || !matrimonyForm.brideName.trim()) return;
     soundFX?.playSuccessChime?.();
 
     const newRecord = {
@@ -128,7 +124,7 @@ export default function OrdinanceRegistryDesk({ session }) {
 
     const updated = [newRecord, ...marriages];
     await syncOrdinances(baptisms, updated);
-    await logAuditEvent('MATRIMONY_REGISTERED', `${newRecord.groomName} & ${newRecord.brideName} - திருமணப் பதிவு செய்யப்பட்டது.`, session?.username);
+    await logAuditEvent('MATRIMONY_REGISTERED', `${newRecord.groomName} & ${newRecord.brideName} matrimony registered.`, session?.username);
 
     setMatrimonyForm({
       groomName: '',
@@ -141,7 +137,7 @@ export default function OrdinanceRegistryDesk({ session }) {
       witnessOne: '',
       witnessTwo: ''
     });
-    showToast('திருமணப் பதிவு லோக்கல் டிஸ்கில் சேமிக்கப்பட்டது! ✓');
+    showToast('Holy Matrimony record saved to physical disk vault.');
   };
 
   const filteredBaptisms = useMemo(() => {
@@ -162,7 +158,6 @@ export default function OrdinanceRegistryDesk({ session }) {
   return (
     <div className="space-y-6 max-w-5xl select-none text-slate-200 animate-in fade-in pb-12">
       
-      {/* Toast Alert */}
       {toast && (
         <div className="fixed top-5 right-5 z-50 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-4 py-2.5 rounded-xl shadow-2xl backdrop-blur-md text-xs font-bold flex items-center gap-2">
           <CheckCircle2 size={16} />
@@ -175,13 +170,13 @@ export default function OrdinanceRegistryDesk({ session }) {
         <div>
           <h3 className="text-xl font-black text-white flex items-center gap-2">
             <Award className="text-cyan-400" size={24} />
-            <span>Holy Baptism & Matrimony Sacred Registry Desk</span>
+            <span>Holy Baptism &amp; Matrimony Sacred Registry Desk</span>
             <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono border border-cyan-500/30">
               Sacred Ordinances
             </span>
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            சபையின் ஞானஸ்நானம் மற்றும் திருமணப் பதிவுகள், மற்றும் சான்றிதழ் அச்சிடும் பலகை.
+            Record sacramental ordinances and generate official printable church certificates.
           </p>
         </div>
 
@@ -194,7 +189,7 @@ export default function OrdinanceRegistryDesk({ session }) {
             }`}
           >
             <Droplets size={14} />
-            <span>ஞானஸ்நானப் பதிவேடு ({baptisms.length})</span>
+            <span>Baptism Registry ({baptisms.length})</span>
           </button>
           <button
             type="button"
@@ -204,37 +199,37 @@ export default function OrdinanceRegistryDesk({ session }) {
             }`}
           >
             <Heart size={14} />
-            <span>திருமணப் பதிவேடு ({marriages.length})</span>
+            <span>Matrimony Registry ({marriages.length})</span>
           </button>
         </div>
       </div>
 
-      {/* 🌟 1. BAPTISM REGISTRY */}
+      {/* BAPTISM REGISTRY */}
       {activeTab === 'BAPTISM' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
           
           <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <Plus size={15} className="text-cyan-400" />
-              <span>புதிய ஞானஸ்நானப் பதிவு</span>
+              <span>Record Holy Baptism</span>
             </h4>
 
             <form onSubmit={handleSaveBaptism} className="space-y-3">
               <div>
-                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">ஞானஸ்நானம் பெற்றவர் பெயர்</label>
+                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Candidate Full Name *</label>
                 <input
                   type="text"
                   value={baptismForm.candidateName}
                   onChange={(e) => setBaptismForm({ ...baptismForm, candidateName: e.target.value })}
-                  placeholder="முழு பெயர்..."
-                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+                  placeholder="e.g. Joshua Stephen"
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 font-bold"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">பிறந்த தேதி</label>
+                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Date of Birth</label>
                   <input
                     type="date"
                     value={baptismForm.dob}
@@ -243,7 +238,7 @@ export default function OrdinanceRegistryDesk({ session }) {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">ஞானஸ்நான நாள்</label>
+                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Baptism Date *</label>
                   <input
                     type="date"
                     value={baptismForm.baptismDate}
@@ -255,18 +250,18 @@ export default function OrdinanceRegistryDesk({ session }) {
               </div>
 
               <div>
-                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">பெற்றோர் / பாதுகாவலர் பெயர்</label>
+                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Parents / Guardian Name</label>
                 <input
                   type="text"
                   value={baptismForm.parentName}
                   onChange={(e) => setBaptismForm({ ...baptismForm, parentName: e.target.value })}
-                  placeholder="தந்தை / தாய் பெயர்..."
+                  placeholder="Father & Mother name"
                   className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">ஞானஸ்நானம் கொடுத்த போதகர்</label>
+                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Officiating Minister</label>
                 <input
                   type="text"
                   value={baptismForm.ministerName}
@@ -279,7 +274,7 @@ export default function OrdinanceRegistryDesk({ session }) {
                 type="submit"
                 className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-lg shadow-cyan-500/20"
               >
-                பதிவேட்டில் பதிவு செய்
+                Save to Ordinance Ledger
               </button>
             </form>
           </div>
@@ -290,13 +285,13 @@ export default function OrdinanceRegistryDesk({ session }) {
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="பெயர் அல்லது பதிவு எண் தேடுக..."
+                  placeholder="Search by candidate name or register number..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-slate-900 border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none"
                 />
               </div>
-              <span className="text-xs font-mono text-slate-400">{filteredBaptisms.length} நபர்கள்</span>
+              <span className="text-xs font-mono text-slate-400">{filteredBaptisms.length} records</span>
             </div>
 
             <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
@@ -313,7 +308,7 @@ export default function OrdinanceRegistryDesk({ session }) {
                       </span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-                      நாள்: {rec.baptismDate} • போதகர்: {rec.ministerName}
+                      Baptized on: {rec.baptismDate} • Minister: {rec.ministerName}
                     </span>
                   </div>
 
@@ -323,7 +318,7 @@ export default function OrdinanceRegistryDesk({ session }) {
                     className="px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition"
                   >
                     <Printer size={12} />
-                    <span>சான்றிதழ்</span>
+                    <span>View Certificate</span>
                   </button>
                 </div>
               ))}
@@ -333,36 +328,36 @@ export default function OrdinanceRegistryDesk({ session }) {
         </div>
       )}
 
-      {/* 🌟 2. MATRIMONY REGISTRY */}
+      {/* MATRIMONY REGISTRY */}
       {activeTab === 'MATRIMONY' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
           
           <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <Plus size={15} className="text-rose-400" />
-              <span>புதிய திருமணப் பதிவு</span>
+              <span>Record Holy Matrimony</span>
             </h4>
 
             <form onSubmit={handleSaveMatrimony} className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">மணமகன் (Groom)</label>
+                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Groom Name *</label>
                   <input
                     type="text"
                     value={matrimonyForm.groomName}
                     onChange={(e) => setMatrimonyForm({ ...matrimonyForm, groomName: e.target.value })}
-                    placeholder="மணமகன் பெயர்..."
+                    placeholder="Groom full name"
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">மணமகள் (Bride)</label>
+                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Bride Name *</label>
                   <input
                     type="text"
                     value={matrimonyForm.brideName}
                     onChange={(e) => setMatrimonyForm({ ...matrimonyForm, brideName: e.target.value })}
-                    placeholder="மணமகள் பெயர்..."
+                    placeholder="Bride full name"
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
                     required
                   />
@@ -370,7 +365,7 @@ export default function OrdinanceRegistryDesk({ session }) {
               </div>
 
               <div>
-                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">திருமண நாள்</label>
+                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Marriage Date *</label>
                 <input
                   type="date"
                   value={matrimonyForm.marriageDate}
@@ -381,7 +376,7 @@ export default function OrdinanceRegistryDesk({ session }) {
               </div>
 
               <div>
-                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">நடத்திய போதகர்</label>
+                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Solemnizing Minister</label>
                 <input
                   type="text"
                   value={matrimonyForm.ministerName}
@@ -394,7 +389,7 @@ export default function OrdinanceRegistryDesk({ session }) {
                 type="submit"
                 className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-lg shadow-rose-500/20"
               >
-                திருமணத்தை ஆவணப்படுத்து
+                Record Marriage Covenant
               </button>
             </form>
           </div>
@@ -408,13 +403,13 @@ export default function OrdinanceRegistryDesk({ session }) {
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <h5 className="text-xs font-bold text-white">{rec.groomName} & {rec.brideName}</h5>
+                      <h5 className="text-xs font-bold text-white">{rec.groomName} &amp; {rec.brideName}</h5>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-rose-300">
                         {rec.regNo}
                       </span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-                      நாள்: {rec.marriageDate} • போதகர்: {rec.ministerName}
+                      Date: {rec.marriageDate} • Minister: {rec.ministerName}
                     </span>
                   </div>
 
@@ -424,7 +419,7 @@ export default function OrdinanceRegistryDesk({ session }) {
                     className="px-3 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition"
                   >
                     <Printer size={12} />
-                    <span>சான்றிதழ்</span>
+                    <span>View Certificate</span>
                   </button>
                 </div>
               ))}
@@ -434,7 +429,7 @@ export default function OrdinanceRegistryDesk({ session }) {
         </div>
       )}
 
-      {/* 🌟 A4 PRINTABLE CERTIFICATE MODAL */}
+      {/* A4 PRINTABLE CERTIFICATE MODAL */}
       {printableCertificate && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-xl bg-white text-slate-950 p-8 rounded-3xl shadow-2xl space-y-6 border-8 border-slate-100 print:m-0 print:border-none">
@@ -480,7 +475,7 @@ export default function OrdinanceRegistryDesk({ session }) {
                 <span>Ministering Pastor</span>
               </div>
               <div className="border-t border-dashed border-slate-400 pt-2">
-                <span>Church Seal & Secretary</span>
+                <span>Church Seal &amp; Secretary</span>
               </div>
             </div>
 

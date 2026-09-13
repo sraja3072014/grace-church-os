@@ -14,9 +14,9 @@ export default function AttendanceConfigTab() {
       sundaySchoolAutoLink: true,
       soundChimeOnScan: true,
       services: [
-        { id: 1, name: '1st Service (Tamil)', startTime: '06:00 AM', endTime: '08:30 AM', target: 800 },
-        { id: 2, name: '2nd Service (English / Multi)', startTime: '09:00 AM', endTime: '11:30 AM', target: 1200 },
-        { id: 3, name: 'Evening Service', startTime: '06:00 PM', endTime: '08:00 PM', target: 400 },
+        { id: 1, name: '1st Morning Divine Service', startTime: '06:00 AM', endTime: '08:30 AM', target: 800 },
+        { id: 2, name: '2nd English & Contemporary Service', startTime: '09:00 AM', endTime: '11:30 AM', target: 1200 },
+        { id: 3, name: 'Evening Revival Service', startTime: '06:00 PM', endTime: '08:00 PM', target: 400 },
       ]
     };
   });
@@ -55,7 +55,7 @@ export default function AttendanceConfigTab() {
 
         <button 
           type="submit"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition cursor-pointer"
         >
           <Save size={14} /> Save Setup
         </button>

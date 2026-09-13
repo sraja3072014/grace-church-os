@@ -143,3 +143,41 @@
   color: inherit !important;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.4);
 }
+/* =========================================================
+   Universal Print Isolation Engine (Pure Document Output)
+   ========================================================= */
+@media print {
+  /* 1. பிரவுசரின் விண்டோ அளவை அச்சுத் தாளுக்கு ஏற்றவாறு சரிசெய்தல் */
+  html, body, #root {
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 2. அச்சிடப்படும் தாள்களைத் தவிர மற்ற அத்தனை திரைப் பலகைகளையும் மறைத்தல் */
+  header,
+  aside,
+  nav,
+  canvas,
+  button,
+  input,
+  select,
+  .print\:hidden,
+  [role="dialog"] > div:first-child:not(.bg-white) {
+    display: none !important;
+  }
+
+  /* 3. அச்சிடும் பகுதி முழு A4 தாளாக விரிவடைவதை உறுதிசெய்தல் */
+  .print\:border-none {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 8mm;
+  }
+}
