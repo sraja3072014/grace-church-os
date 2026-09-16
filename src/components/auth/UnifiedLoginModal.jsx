@@ -16,10 +16,10 @@ export default function UnifiedLoginModal({ onLoginSuccess }) {
     soundFX?.playClickPop?.();
 
     const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
+    const staffUsers = JSON.parse(localStorage.getItem('graceos_staff_users') || '[]');
     const families = JSON.parse(localStorage.getItem('app_members_family_database') || '[]');
-    const leaders = JSON.parse(localStorage.getItem('graceos_church_leaders') || '[]');
 
-    // 1. Root Senior Pastor / Administrator Authentication (Default PIN: 1234)
+    // 1. Root Senior Pastor / Super Admin (Default PIN: 1234)
     if (cleanPhone === '9999999999' || cleanPhone === '9840000000') {
       if (pin === '1234') {
         soundFX?.playSuccessChime?.();
@@ -31,20 +31,21 @@ export default function UnifiedLoginModal({ onLoginSuccess }) {
       }
     }
 
-    // 2. Area Coordinator / Assistant Minister Verification
-    const matchedLeader = leaders.find(l => l.phone?.replace(/[^0-9]/g, '').endsWith(cleanPhone.slice(-10)));
-    if (matchedLeader) {
+    // 2. Departmental Leaders (Sunday School, Youth, Women, Men Fellowships)
+    const matchedStaff = staffUsers.find(u => u.phone?.replace(/[^0-9]/g, '').endsWith(cleanPhone.slice(-10)));
+    if (matchedStaff) {
       soundFX?.playSuccessChime?.();
       onLoginSuccess({ 
-        role: 'LEADER', 
-        name: matchedLeader.name, 
-        area: matchedLeader.assignedArea || 'Central Campus',
+        role: 'DEPARTMENT_LEAD',
+        departmentRole: matchedStaff.role,
+        name: matchedStaff.name, 
+        campus: matchedStaff.campus || 'Headquarters',
         phone: cleanPhone 
       });
       return;
     }
 
-    // 3. Member Directory Verification
+    // 3. Regular Believer / Member Verification
     let foundMember = null;
     let memberFamily = null;
 
@@ -71,12 +72,12 @@ export default function UnifiedLoginModal({ onLoginSuccess }) {
         phone: cleanPhone 
       });
     } else {
-      // Guest / New Believer Demo Entry
+      // Guest Believer Auto-Entry
       soundFX?.playSuccessChime?.();
       onLoginSuccess({ 
         role: 'MEMBER', 
         member: { name: 'Believer Guest', phone: cleanPhone, memberId: 'MBR-GUEST' }, 
-        family: { familyName: 'Visiting Believer Household', area: 'Main City Sanctuary' },
+        family: { familyName: 'Visiting Believer Household', area: 'Main Sanctuary' },
         phone: cleanPhone 
       });
     }
@@ -87,7 +88,7 @@ export default function UnifiedLoginModal({ onLoginSuccess }) {
       <div className="w-full max-w-md p-6 rounded-3xl bg-slate-900 border border-white/10 shadow-2xl space-y-6">
         
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center mx-auto">
             <Church size={24} />
           </div>
           <h3 className="text-lg font-black text-white">GraceOS Portal Authentication</h3>
@@ -105,7 +106,7 @@ export default function UnifiedLoginModal({ onLoginSuccess }) {
                 placeholder="e.g. 9840123456"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-amber-400"
+                className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-400"
               />
             </div>
           </div>
@@ -121,7 +122,7 @@ export default function UnifiedLoginModal({ onLoginSuccess }) {
                   placeholder="4-Digit Security PIN (Default: 1234)"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
-                  className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-amber-300 font-mono focus:outline-none focus:border-amber-400"
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-amber-300 font-mono focus:outline-none focus:border-cyan-400"
                 />
               </div>
             </div>
@@ -136,7 +137,7 @@ export default function UnifiedLoginModal({ onLoginSuccess }) {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition cursor-pointer active:scale-95"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition cursor-pointer active:scale-95"
           >
             <span>Sign In to Workspace</span>
             <ArrowRight size={15} />
@@ -145,7 +146,8 @@ export default function UnifiedLoginModal({ onLoginSuccess }) {
 
         <div className="p-3 rounded-2xl bg-black/40 border border-white/5 text-[11px] text-slate-400 text-center space-y-1">
           <div>👑 <strong>Pastor:</strong> 9999999999 (PIN: 1234)</div>
-          <div>👤 <strong>Member:</strong> Registered Member Phone Number</div>
+          <div>👥 <strong>Department Lead:</strong> Sunday School / Youth / Fellowship Phone</div>
+          <div>👤 <strong>Member:</strong> Registered Believer Mobile Number[cite: 38]</div>
         </div>
 
       </div>

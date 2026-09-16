@@ -23,6 +23,7 @@ import BankAccountsTab from './finance/BankAccountsTab';
 import GivingCategoriesTab from './finance/GivingCategoriesTab';
 import Tax80GReceiptsTab from './finance/Tax80GReceiptsTab';
 import FinanceReportsTab from './finance/FinanceReportsTab';
+import PaymentGatewayConfigTab from './finance/PaymentGatewayConfigTab';
 
 // 4. System & Hardware
 import ThemeDisplayTab from './system/ThemeDisplayTab';
@@ -34,6 +35,7 @@ import ServiceRequestsTab from './system/ServiceRequestsTab';
 import AdvancedSettingsTab from './system/AdvancedSettingsTab';
 import LanguageRegionTab from './system/LanguageRegionTab';
 import AuditTrailViewerDesk from './AuditTrailViewerDesk';
+import CloudSyncConfigTab from './system/CloudSyncConfigTab';
 
 export default function SettingsHub({ session }) {
   const [activeTab, setActiveTab] = useState('main_church');
@@ -52,7 +54,7 @@ export default function SettingsHub({ session }) {
       ]
     },
     {
-      group: 'Congregation & Access',
+      group: 'People & Access',
       items: [
         { id: 'users_staff', label: 'Staff Credentials', icon: Users },
         { id: 'registration_cfg', label: 'Member Registration Intake', icon: UserPlus },
@@ -68,6 +70,7 @@ export default function SettingsHub({ session }) {
         { id: 'giving_cat', label: 'Tithe & Giving Categories', icon: HeartHandshake },
         { id: 'tax_80g', label: '80G Tax Engine Setup', icon: Receipt },
         { id: 'fin_reports', label: 'Financial Audit Exports', icon: BarChart3 },
+        { id: 'payment_gw', label: 'Payment Gateway & UPI', icon: CreditCard },
       ]
     },
     {
@@ -82,6 +85,7 @@ export default function SettingsHub({ session }) {
         { id: 'audit', label: 'Audit Trail & Security Logs', icon: ShieldAlert },
         { id: 'service_req', label: 'Hardware Maintenance', icon: Wrench },
         { id: 'advanced_cfg', label: 'Advanced Engine Setup', icon: Sliders },
+        { id: 'supabase_cloud', label: 'Supabase Cloud Gateway', icon: Globe },
       ]
     }
   ];
@@ -129,7 +133,7 @@ export default function SettingsHub({ session }) {
           {activeTab === 'branches' && <BranchesTab />}
           {activeTab === 'campus_hq' && <MultiCampusHQDesk session={session} />}
 
-          {/* Congregation & Access */}
+          {/* People & Access */}
           {activeTab === 'users_staff' && <UsersStaffTab />}
           {activeTab === 'registration_cfg' && <RegistrationTab />}
           {activeTab === 'attendance_cfg' && <AttendanceConfigTab />}
@@ -141,6 +145,7 @@ export default function SettingsHub({ session }) {
           {activeTab === 'giving_cat' && <GivingCategoriesTab />}
           {activeTab === 'tax_80g' && <Tax80GReceiptsTab />}
           {activeTab === 'fin_reports' && <FinanceReportsTab />}
+          {activeTab === 'payment_gw' && <PaymentGatewayConfigTab />}
 
           {/* System & Vault Node */}
           {activeTab === 'local_vault' && <BackupDatabaseTab />}
@@ -152,6 +157,7 @@ export default function SettingsHub({ session }) {
           {activeTab === 'audit' && <AuditTrailViewerDesk />}
           {activeTab === 'service_req' && <ServiceRequestsTab />}
           {activeTab === 'advanced_cfg' && <AdvancedSettingsTab />}
+          {activeTab === 'supabase_cloud' && <CloudSyncConfigTab />}
         </div>
       </div>
 
