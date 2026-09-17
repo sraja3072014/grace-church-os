@@ -1,7 +1,8 @@
 {
   "name": "grace-os",
   "version": "0.1.0",
-  "description": "Grace Church OS Desktop Suite",
+  "type": "module",
+   "description": "Grace Church OS Desktop Suite",
   "author": "Raja",
   "main": "electron/main.js",
   "scripts": {
