@@ -117,9 +117,9 @@ export default function MainChurchTab() {
     if (success) {
       localStorage.setItem('graceos_main_church', JSON.stringify(profileData));
       window.dispatchEvent(new Event('storage'));
-      showToast('சபை மற்றும் வங்கி விவரங்கள் ஹார்ட் டிரைவில் வெற்றிகரமாகச் சேமிக்கப்பட்டன! ✓');
+      showToast('Church and treasury profiles successfully committed to local disk vault!');
     } else {
-      showToast('சேமிப்பதில் பிழை ஏற்பட்டது.');
+      showToast('Failed to save profile changes to disk.');
     }
   };
 
@@ -141,7 +141,7 @@ export default function MainChurchTab() {
     setLogoPreview(null);
     localStorage.setItem('graceos_main_church', JSON.stringify(initialData));
     localStorage.removeItem('graceos_church_logo');
-    showToast('Default parameters restored');
+    showToast('Default parameters restored.');
   };
 
   const tabs = [
@@ -151,7 +151,7 @@ export default function MainChurchTab() {
   ];
 
   return (
-    <form className="flex flex-col gap-6 max-w-4xl relative select-none">
+    <form onSubmit={handleSaveProfile} className="flex flex-col gap-6 max-w-4xl relative select-none">
       
       {/* Toast Alert */}
       {toastMsg && (
@@ -172,7 +172,7 @@ export default function MainChurchTab() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveSubSection(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                   isActive
                     ? 'bg-gradient-to-r from-cyan-500/30 to-blue-600/30 text-cyan-200 border border-cyan-500/40 shadow-md'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
@@ -189,17 +189,17 @@ export default function MainChurchTab() {
           <button 
             type="button"
             onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 text-xs font-medium border border-white/5 transition"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 text-xs font-medium border border-white/5 transition cursor-pointer"
           >
             <RotateCcw size={13} /> Reset
           </button>
           
           <button
             type="submit"
-            onClick={handleSaveProfile}
-            className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-amber-600 text-white rounded-xl text-xs font-bold cursor-pointer"
+            className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 hover:to-amber-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-rose-500/20 cursor-pointer transition active:scale-95 flex items-center gap-1.5"
           >
-            Save Church Profile
+            <Save size={14} />
+            <span>Save Church Profile</span>
           </button>
         </div>
       </div>
@@ -219,7 +219,7 @@ export default function MainChurchTab() {
           <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center gap-5">
             <div 
               onClick={() => fileInputRef.current.click()}
-              className="w-20 h-20 rounded-2xl bg-slate-900 border border-white/10 flex flex-col items-center justify-center text-slate-400 gap-1 cursor-pointer hover:border-cyan-500/50 hover:bg-slate-800 transition shrink-0 relative overflow-hidden group"
+              className="w-20 h-20 rounded-2xl bg-slate-900 border border-white/10 flex flex-col items-center justify-center text-slate-400 gap-1 cursor-pointer hover:border-cyan-500/50 hover:bg-slate-800 transition shrink-0 relative overflow-hidden group shadow-inner"
             >
               {logoPreview ? (
                 <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
@@ -238,7 +238,7 @@ export default function MainChurchTab() {
                 {formData.churchName}
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono">Verified Headquarters</span>
               </h4>
-              <p className="text-xs text-slate-400 mt-0.5">Click the seal box to upload the official logo used on receipts, cards, and reports.</p>
+              <p className="text-xs text-slate-400 mt-0.5">Click the seal box to upload the official logo used on receipts, badges, and financial reports.</p>
             </div>
           </div>
 
@@ -269,7 +269,7 @@ export default function MainChurchTab() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-300">Senior Pastor / President</label>
+              <label className="text-xs font-semibold text-slate-300">Senior Pastor / Presiding Minister</label>
               <input 
                 type="text" 
                 value={formData.seniorPastor} 
@@ -294,7 +294,7 @@ export default function MainChurchTab() {
                 type="text" 
                 value={formData.currency} 
                 onChange={(e) => handleChange('currency', e.target.value)}
-                className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 transition"
+                className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 transition font-mono"
               />
             </div>
 
@@ -370,7 +370,7 @@ export default function MainChurchTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Phone size={13} className="text-emerald-400" /> Primary Phone
+                <Phone size={13} className="text-emerald-400" /> Primary Contact Line
               </label>
               <input 
                 type="text" 
@@ -382,7 +382,7 @@ export default function MainChurchTab() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Phone size={13} className="text-teal-400" /> Alternate Office Phone
+                <Phone size={13} className="text-teal-400" /> Alternate Office Contact
               </label>
               <input 
                 type="text" 
@@ -394,7 +394,7 @@ export default function MainChurchTab() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Mail size={13} className="text-rose-400" /> Official Email
+                <Mail size={13} className="text-rose-400" /> Official Pastoral Email
               </label>
               <input 
                 type="email" 
@@ -406,7 +406,7 @@ export default function MainChurchTab() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Globe size={13} className="text-cyan-400" /> Official Website
+                <Globe size={13} className="text-cyan-400" /> Official Web Portal
               </label>
               <input 
                 type="text" 
@@ -418,7 +418,7 @@ export default function MainChurchTab() {
 
             <div className="flex flex-col gap-1.5 md:col-span-2">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <MapPin size={13} className="text-amber-400" /> Full Campus Address
+                <MapPin size={13} className="text-amber-400" /> Cathedral Sanctuary Physical Address
               </label>
               <textarea 
                 rows="2"
@@ -430,11 +430,11 @@ export default function MainChurchTab() {
           </div>
 
           <div className="border-t border-white/10 pt-4 mt-2">
-            <h5 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Streaming & Communication Links</h5>
+            <h5 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3 font-mono">Live Broadcast &amp; Social Endpoints</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Video size={14} className="text-red-500" /> YouTube Channel Link
+                  <Video size={14} className="text-red-500" /> YouTube Live Broadcast URL
                 </label>
                 <input 
                   type="text" 
@@ -446,7 +446,7 @@ export default function MainChurchTab() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Globe size={14} className="text-blue-500" /> Facebook Page Link
+                  <Globe size={14} className="text-blue-500" /> Facebook Live Endpoint
                 </label>
                 <input 
                   type="text" 
@@ -458,7 +458,7 @@ export default function MainChurchTab() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Share2 size={14} className="text-pink-500" /> Instagram Link
+                  <Share2 size={14} className="text-pink-500" /> Instagram Feed Link
                 </label>
                 <input 
                   type="text" 
@@ -470,7 +470,7 @@ export default function MainChurchTab() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <MessageCircle size={14} className="text-emerald-400" /> WhatsApp Channel Link
+                  <MessageCircle size={14} className="text-emerald-400" /> Official WhatsApp Channel URL
                 </label>
                 <input 
                   type="text" 

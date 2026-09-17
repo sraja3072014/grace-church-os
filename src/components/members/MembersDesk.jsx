@@ -3,14 +3,15 @@ import MemberIdCardModal from './MemberIdCardModal';
 import ExcelDataEngineModal from '../tools/ExcelDataEngineModal';
 import ProfileApprovalQueueModal from './ProfileApprovalQueueModal';
 import { soundFX } from '../../utils/audioEngine';
+import { getVaultData, setVaultData } from '../../utils/vaultStore';
 import { 
   Users, UserPlus, Search, Layers, Plus, Trash2, Edit2, 
-  Phone, Mail, MapPin, Heart, Sparkles, Calendar, ShieldCheck, 
+  Phone, Mail, MapPin, Navigation, Heart, Sparkles, Calendar, ShieldCheck, 
   QrCode, X, CheckCircle2, AlertCircle, HeartHandshake, Printer, FileSpreadsheet, UserCheck
 } from 'lucide-react';
 
 export default function MembersDesk({ session }) {
-  // 1. Initial State Data & Safe LocalStorage Hydration
+  // 1. Initial State Data & Vault Hydration
   const defaultFamilies = [
     {
       familyId: 'FAM-101',
@@ -74,14 +75,8 @@ export default function MembersDesk({ session }) {
     'Ushering & Hospitality Desk'
   ];
 
-  const [families, setFamilies] = useState(() => {
-    try {
-      const saved = localStorage.getItem('app_members_family_database');
-      return saved ? JSON.parse(saved) : defaultFamilies;
-    } catch {
-      return defaultFamilies;
-    }
-  });
+  const [families, setFamilies] = useState(defaultFamilies);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFamilyId, setExpandedFamilyId] = useState(null);
@@ -92,15 +87,6 @@ export default function MembersDesk({ session }) {
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
-  const checkPending = () => {
-    const list = JSON.parse(localStorage.getItem('graceos_pending_profile_updates') || '[]');
-    setPendingCount(list.length);
-  };
-
-  useEffect(() => {
-    checkPending();
-  }, []);
-
   // Modals State
   const [isHeadModalOpen, setIsHeadModalOpen] = useState(false);
   const [editingFamilyId, setEditingFamilyId] = useState(null);
@@ -108,6 +94,40 @@ export default function MembersDesk({ session }) {
 
   const [isSubMemberModalOpen, setIsSubMemberModalOpen] = useState(false);
   const [targetFamilyForSubMember, setTargetFamilyForSubMember] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        const [data, pending] = await Promise.all([
+          getVaultData('members', defaultFamilies),
+          getVaultData('pending_profile_updates', [])
+        ]);
+
+        if (isMounted) {
+          if (Array.isArray(data)) setFamilies(data);
+          // Keep compatibility with the approval modal and member portal,
+          // which still publish pending requests through localStorage.
+          const legacyPending = JSON.parse(
+            localStorage.getItem('graceos_pending_profile_updates') || '[]'
+          );
+          setPendingCount(Array.isArray(pending) && pending.length > 0 ? pending.length : legacyPending.length);
+        }
+      } catch (error) {
+        console.error('[MembersDesk] Failed to load vault data:', error);
+        if (isMounted) setPendingCount(0);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Form State
   const [headForm, setHeadForm] = useState({
@@ -139,9 +159,18 @@ export default function MembersDesk({ session }) {
     ministryTalents: []
   });
 
-  const syncFamilies = (data) => {
+  const syncFamilies = async (data) => {
     setFamilies(data);
-    localStorage.setItem('app_members_family_database', JSON.stringify(data));
+    await setVaultData('members', data, true);
+  };
+
+  const checkPending = () => {
+    try {
+      const list = JSON.parse(localStorage.getItem('graceos_pending_profile_updates') || '[]');
+      setPendingCount(Array.isArray(list) ? list.length : 0);
+    } catch {
+      setPendingCount(0);
+    }
   };
 
   const showToast = (msg) => {
@@ -202,7 +231,7 @@ export default function MembersDesk({ session }) {
   };
 
   // Save Family Head & Unit
-  const handleSaveHead = (e) => {
+  const handleSaveHead = async (e) => {
     e.preventDefault();
     if (!headForm.name.trim() || !headForm.phone.trim()) return;
 
@@ -247,7 +276,7 @@ export default function MembersDesk({ session }) {
       showToast('New Believer Household registered!');
     }
 
-    syncFamilies(updatedFamilies);
+    await syncFamilies(updatedFamilies);
     setIsHeadModalOpen(false);
   };
 
@@ -268,7 +297,7 @@ export default function MembersDesk({ session }) {
     setIsSubMemberModalOpen(true);
   };
 
-  const handleSaveSubMember = (e) => {
+  const handleSaveSubMember = async (e) => {
     e.preventDefault();
     if (!subMemberForm.name.trim() || !targetFamilyForSubMember) return;
 
@@ -288,21 +317,21 @@ export default function MembersDesk({ session }) {
       return f;
     });
 
-    syncFamilies(updatedFamilies);
+    await syncFamilies(updatedFamilies);
     setExpandedFamilyId(targetFamilyForSubMember.familyId);
     setIsSubMemberModalOpen(false);
     showToast(`Added ${newSubMember.name} to family tree!`);
   };
 
-  const handleDeleteFamily = (familyId) => {
+  const handleDeleteFamily = async (familyId) => {
     if (window.confirm("Are you sure you want to remove this family record?")) {
       const updated = families.filter(f => f.familyId !== familyId);
-      syncFamilies(updated);
+      await syncFamilies(updated);
       showToast('Family record deleted.');
     }
   };
 
-  const handleDeleteSubMember = (familyId, memberId) => {
+  const handleDeleteSubMember = async (familyId, memberId) => {
     if (window.confirm("Remove member from family?")) {
       const updated = families.map(f => {
         if (f.familyId === familyId) {
@@ -313,7 +342,7 @@ export default function MembersDesk({ session }) {
         }
         return f;
       });
-      syncFamilies(updated);
+      await syncFamilies(updated);
       showToast('Member removed from family unit.');
     }
   };
@@ -338,6 +367,11 @@ export default function MembersDesk({ session }) {
 
   return (
     <div className="flex flex-col gap-6 select-none animate-in fade-in duration-200">
+      {isLoading && (
+        <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-xs text-cyan-300">
+          Loading member records from the local vault…
+        </div>
+      )}
       
       {/* Toast Notification */}
       {toastMessage && (
@@ -487,6 +521,17 @@ export default function MembersDesk({ session }) {
                           <MapPin size={11} className="text-rose-400 shrink-0" />
                           <span className="truncate max-w-[140px]">{fam.area}</span>
                         </div>
+                      )}
+                      {fam.headMember?.mapLink && (
+                        <a
+                          href={fam.headMember.mapLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 hover:text-emerald-300 mt-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20"
+                        >
+                          <Navigation size={9} />
+                          <span>Navigate Home</span>
+                        </a>
                       )}
                     </td>
 
@@ -958,9 +1003,10 @@ export default function MembersDesk({ session }) {
       <ProfileApprovalQueueModal
         isOpen={isApprovalModalOpen}
         onClose={() => setIsApprovalModalOpen(false)}
-        onUpdated={() => {
+        onUpdated={async () => {
           checkPending();
-          window.location.reload();
+          const fresh = await getVaultData('members', []);
+          if (Array.isArray(fresh)) setFamilies(fresh);
         }}
       />
 

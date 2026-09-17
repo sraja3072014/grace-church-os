@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Play, Pause, RotateCcw, Clock, Radio, 
-  Mic2, Music, BookOpen, Bell, AlertTriangle, Maximize2 
+  Mic2, Music, BookOpen, Bell, AlertTriangle, Maximize2, Plus 
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
 
@@ -10,7 +10,7 @@ export default function StageFlowControlDesk() {
     { id: 1, name: 'Opening Prayer & Welcome', durationMins: 10, icon: Bell, status: 'DONE' },
     { id: 2, name: 'Praise & Worship', durationMins: 35, icon: Music, status: 'ACTIVE' },
     { id: 3, name: 'Church Announcements & Tithe', durationMins: 10, icon: Radio, status: 'PENDING' },
-    { id: 4, name: 'Sermon / Message', durationMins: 45, icon: BookOpen, status: 'PENDING' },
+    { id: 4, name: 'Sermon / Preaching', durationMins: 45, icon: BookOpen, status: 'PENDING' },
     { id: 5, name: 'Benediction & Closing', durationMins: 5, icon: Mic2, status: 'PENDING' }
   ]);
 
@@ -18,7 +18,6 @@ export default function StageFlowControlDesk() {
   const [secondsRemaining, setSecondsRemaining] = useState(35 * 60);
   const [isRunning, setIsRunning] = useState(false);
 
-  // Countdown Timer Engine
   useEffect(() => {
     let timer = null;
     if (isRunning && secondsRemaining > 0) {
@@ -63,6 +62,11 @@ export default function StageFlowControlDesk() {
     setSecondsRemaining(segments[activeSegmentIndex].durationMins * 60);
   };
 
+  const addMinutes = (mins) => {
+    soundFX?.playClickPop?.();
+    setSecondsRemaining((prev) => prev + mins * 60);
+  };
+
   const activeSegment = segments[activeSegmentIndex];
   const isOvertime = secondsRemaining <= 120 && secondsRemaining > 0;
   const isTimeUp = secondsRemaining === 0;
@@ -74,13 +78,13 @@ export default function StageFlowControlDesk() {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
         <div>
           <h3 className="text-xl font-black text-white flex items-center gap-2">
-            <span>Sanctuary Stage Flow & Confidence Monitor</span>
+            <span>Sanctuary Stage Flow &amp; Confidence Monitor</span>
             <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono border border-cyan-500/30">
               Live Stage Director
             </span>
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            ஞாயிறு ஆராதனை நிகழ்வுகளின் நேரக்கட்டுப்பாடு மற்றும் மேடை மானிட்டர் டைமர் பலகை.
+            Real-time stage countdown timer, service rundown pacing, and pulpit confidence feedback.
           </p>
         </div>
 
@@ -93,10 +97,9 @@ export default function StageFlowControlDesk() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* இடதுபுறம்: நேரடி மேடை டைமர் (Confidence Display Card) */}
+        {/* Left Column: Big Stage Confidence Timer */}
         <div className="lg:col-span-2 p-8 rounded-3xl bg-slate-950 border border-white/10 flex flex-col items-center justify-center text-center space-y-6 shadow-2xl relative overflow-hidden">
           
-          {/* Background Warning Glow */}
           {isOvertime && (
             <div className="absolute inset-0 bg-amber-500/10 animate-pulse pointer-events-none" />
           )}
@@ -106,14 +109,14 @@ export default function StageFlowControlDesk() {
 
           <div className="space-y-1 relative z-10">
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400 font-mono">
-              Live Stage Segment
+              Current Stage Segment
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-white">
               {activeSegment.name}
             </h2>
           </div>
 
-          {/* Big Confidence Timer Numbers */}
+          {/* Large Countdown Clock */}
           <div className={`text-6xl sm:text-8xl font-black font-mono tracking-tight transition-colors relative z-10 ${
             isTimeUp 
               ? 'text-rose-500 animate-bounce' 
@@ -124,22 +127,23 @@ export default function StageFlowControlDesk() {
             {formatTime(secondsRemaining)}
           </div>
 
+          {/* Warnings */}
           {isOvertime && (
             <div className="text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 animate-pulse relative z-10">
               <AlertTriangle size={13} />
-              <span>2 நிமிடங்களுக்குள் முடிக்கவும் (Wrap-up Warning)</span>
+              <span>Wrap-up Warning: Under 2 minutes remaining</span>
             </div>
           )}
 
           {isTimeUp && (
             <div className="text-xs font-bold text-rose-300 bg-rose-500/20 border border-rose-500/40 px-4 py-1.5 rounded-full flex items-center gap-1.5 relative z-10">
               <AlertTriangle size={14} />
-              <span>நேரம் முடிந்தது (Time Over)</span>
+              <span>Time Allotment Concluded</span>
             </div>
           )}
 
-          {/* Timer Controls */}
-          <div className="flex items-center gap-3 pt-2 relative z-10">
+          {/* Action Triggers */}
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2 relative z-10">
             <button
               type="button"
               onClick={toggleTimer}
@@ -161,16 +165,33 @@ export default function StageFlowControlDesk() {
             >
               <RotateCcw size={18} />
             </button>
+
+            <button
+              type="button"
+              onClick={() => addMinutes(2)}
+              className="px-3.5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 transition text-xs font-mono font-bold cursor-pointer"
+              title="Add 2 minutes"
+            >
+              +2m
+            </button>
+            <button
+              type="button"
+              onClick={() => addMinutes(5)}
+              className="px-3.5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 transition text-xs font-mono font-bold cursor-pointer"
+              title="Add 5 minutes"
+            >
+              +5m
+            </button>
           </div>
 
         </div>
 
-        {/* வலதுபுறம்: ஆராதனை வரிசைப் பட்டியல் (Order of Service Timeline) */}
+        {/* Right Column: Order of Service Flow */}
         <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h4 className="text-xs font-bold text-white flex items-center gap-2">
               <Clock size={15} className="text-cyan-400" />
-              <span>Order of Service Flow</span>
+              <span>Service Rundown</span>
             </h4>
             <span className="text-[10px] font-mono text-slate-400">Total: 105 Mins</span>
           </div>

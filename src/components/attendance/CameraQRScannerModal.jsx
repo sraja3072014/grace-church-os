@@ -20,18 +20,16 @@ export default function CameraQRScannerModal({ isOpen, onClose, onScanSuccess })
       { facingMode: 'environment' },
       qrConfig,
       (decodedText) => {
-        // வெற்றிகரமாக ஸ்கேன் செய்யப்பட்டதும்
         soundFX?.playSuccessChime?.();
         onScanSuccess(decodedText);
-        // தொடர் ஸ்கேன்களுக்காக உடனடியாக மூடாமல் ஒரு சிறிய இடைவெளி தரலாம் அல்லது க்ளோஸ் செய்யலாம்
       },
       () => {
-        // ஸ்கேன் தேடலின் இடைப்பட்ட ஃப்ரேம்கள் (忽略)
+        // Scanning in progress
       }
     ).then(() => {
       setIsScanning(true);
     }).catch((err) => {
-      setCameraError('கேமராவை அணுக முடியவில்லை. அனுமதி (Permission) வழங்கப்பட்டுள்ளதா எனப் பார்க்கவும்.');
+      setCameraError('Unable to access video camera. Please verify device permissions and hardware connection.');
       console.error(err);
     });
 
@@ -40,7 +38,7 @@ export default function CameraQRScannerModal({ isOpen, onClose, onScanSuccess })
         scannerRef.current.stop().then(() => scannerRef.current.clear()).catch(console.error);
       }
     };
-  }, [isOpen]);
+  }, [isOpen, onScanSuccess]);
 
   if (!isOpen) return null;
 
@@ -56,7 +54,7 @@ export default function CameraQRScannerModal({ isOpen, onClose, onScanSuccess })
             </div>
             <div>
               <h4 className="text-xs font-bold text-white">Live Camera QR Scanner</h4>
-              <p className="text-[10px] text-slate-400">கார்டை கேமராவின் முன் காட்டவும்</p>
+              <p className="text-[10px] text-slate-400">Position the member badge inside the viewfinder</p>
             </div>
           </div>
           <button 
@@ -72,7 +70,6 @@ export default function CameraQRScannerModal({ isOpen, onClose, onScanSuccess })
         <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10 flex items-center justify-center min-h-[300px]">
           <div id="qr-reader-container" className="w-full h-full" />
 
-          {/* இலக்கு குறியீடு அனிமேஷன் (Focus Reticle) */}
           {isScanning && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="w-60 h-60 border-2 border-cyan-400/50 rounded-2xl relative animate-pulse">
@@ -92,10 +89,9 @@ export default function CameraQRScannerModal({ isOpen, onClose, onScanSuccess })
           )}
         </div>
 
-        {/* Status Hint */}
         <div className="text-center">
           <span className="text-[11px] text-slate-400 font-mono">
-            PVC ஐடி கார்டு அல்லது மொபைல் QR-ஐ ஸ்கேன் செய்யவும்
+            Supports Smart PVC Badges and Mobile Digital Passes
           </span>
         </div>
 

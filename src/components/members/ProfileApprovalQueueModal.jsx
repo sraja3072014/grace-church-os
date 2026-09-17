@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { 
   UserCheck, Check, X, Clock, AlertCircle, 
-  ArrowRight, Shield, RefreshCw 
+  ArrowRight, Shield, RefreshCw, MapPin, ExternalLink, Navigation
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import { getVaultData, setVaultData } from '../../utils/vaultStore';
 
 export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }) {
   const [pendingRequests, setPendingRequests] = useState([]);
 
-  const loadRequests = () => {
+  const loadRequests = async () => {
     try {
-      const raw = localStorage.getItem('graceos_pending_profile_updates');
-      const list = raw ? JSON.parse(raw) : [];
-      setPendingRequests(list);
+      const list = await getVaultData('pending_profile_updates', []);
+      if (Array.isArray(list) && list.length > 0) {
+        setPendingRequests(list);
+      } else {
+        const legacy = JSON.parse(localStorage.getItem('graceos_pending_profile_updates') || '[]');
+        setPendingRequests(legacy);
+      }
     } catch {
       setPendingRequests([]);
     }
@@ -22,15 +27,24 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
     if (isOpen) loadRequests();
   }, [isOpen]);
 
-  // கோரிக்கையை ஏற்றுக்கொண்டு முதன்மை டேட்டாபேஸில் புதுப்பித்தல்
-  const handleApprove = (req) => {
+  const handleApprove = async (req) => {
     soundFX?.playSuccessChime?.();
-    const families = JSON.parse(localStorage.getItem('app_members_family_database') || '[]');
+    const families = await getVaultData('members', []);
 
     let updated = false;
     const modifiedFamilies = families.map(fam => {
-      if (fam.headMember && (fam.headMember.memberId === req.memberId || fam.headMember.phone === req.phone)) {
-        fam.headMember = { ...fam.headMember, ...req.updatedFields };
+      const isHeadMatch = fam.headMember && (
+        fam.headMember.memberId === req.memberId || fam.headMember.phone === req.phone
+      );
+
+      if (isHeadMatch) {
+        fam.headMember = {
+          ...fam.headMember,
+          ...req.updatedFields,
+          mapLink: req.updatedFields?.mapLink || fam.headMember.mapLink
+        };
+        if (req.updatedFields?.address) fam.address = req.updatedFields.address;
+        if (req.updatedFields?.mapLink) fam.mapLink = req.updatedFields.mapLink;
         updated = true;
       }
       if (fam.members) {
@@ -46,21 +60,22 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
     });
 
     if (updated) {
+      await setVaultData('members', modifiedFamilies, true);
       localStorage.setItem('app_members_family_database', JSON.stringify(modifiedFamilies));
     }
 
-    // க்யூவிலிருந்து நீக்குதல்
     const remaining = pendingRequests.filter(r => r.requestId !== req.requestId);
+    await setVaultData('pending_profile_updates', remaining, true);
     localStorage.setItem('graceos_pending_profile_updates', JSON.stringify(remaining));
     setPendingRequests(remaining);
 
     if (onUpdated) onUpdated();
   };
 
-  // கோரிக்கையை நிராகரித்தல்
-  const handleReject = (reqId) => {
+  const handleReject = async (reqId) => {
     soundFX?.playClickPop?.();
     const remaining = pendingRequests.filter(r => r.requestId !== reqId);
+    await setVaultData('pending_profile_updates', remaining, true);
     localStorage.setItem('graceos_pending_profile_updates', JSON.stringify(remaining));
     setPendingRequests(remaining);
   };
@@ -68,7 +83,7 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 select-none">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 select-none animate-in fade-in">
       <div className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-5">
         
         {/* Header */}
@@ -79,7 +94,7 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
             </div>
             <div>
               <h3 className="text-base font-bold text-white">Member Profile Update Approvals</h3>
-              <p className="text-[11px] text-slate-400">விசுவாசிகள் சமர்ப்பித்த சுயவிவர மாற்றங்களுக்கான ஒப்புதல் பலகை</p>
+              <p className="text-[11px] text-slate-400">Review and verify portal profile edit requests from believers</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-white cursor-pointer">
@@ -92,7 +107,7 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
           {pendingRequests.length === 0 ? (
             <div className="text-center py-10 text-slate-500 space-y-2">
               <Clock size={28} className="mx-auto opacity-40" />
-              <p className="text-xs">நிலுவையில் உள்ள சுயவிவர மாற்றங்கள் எதுவும் இல்லை.</p>
+              <p className="text-xs">No pending member profile change requests found.</p>
             </div>
           ) : (
             pendingRequests.map((req) => (
@@ -102,7 +117,14 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-bold text-white">{req.memberName}</h4>
+                    <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                      <span>{req.memberName}</span>
+                      {req.updatedFields?.mapLink && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-mono flex items-center gap-1 font-bold">
+                          <MapPin size={9} /> GPS Location Attached
+                        </span>
+                      )}
+                    </h4>
                     <span className="text-[10px] text-slate-400 font-mono">{req.memberId || req.phone}</span>
                   </div>
                   <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
@@ -113,14 +135,32 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
                 {/* Changes Comparison Grid */}
                 <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-900/60 p-2.5 rounded-xl border border-white/5">
                   <div>
-                    <span className="text-[10px] text-slate-500 block uppercase font-mono">Original</span>
+                    <span className="text-[10px] text-slate-500 block uppercase font-mono">Original Record</span>
                     <div className="text-slate-300 font-medium">{req.oldValue || '—'}</div>
                   </div>
                   <div>
-                    <span className="text-[10px] text-emerald-400 block uppercase font-mono">New Requested</span>
+                    <span className="text-[10px] text-emerald-400 block uppercase font-mono">Requested Update</span>
                     <div className="text-white font-bold">{req.newValue}</div>
                   </div>
                 </div>
+
+                {req.updatedFields?.mapLink && (
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                    <span className="text-emerald-300 font-medium flex items-center gap-1.5">
+                      <Navigation size={13} className="text-emerald-400 shrink-0" />
+                      <span>Submitted Residence Location:</span>
+                    </span>
+                    <a
+                      href={req.updatedFields.mapLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition"
+                    >
+                      <ExternalLink size={11} />
+                      <span>Open in Google Maps</span>
+                    </a>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex items-center justify-end gap-2 pt-1">
@@ -130,7 +170,7 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
                     className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
                   >
                     <X size={13} />
-                    <span>நிராகரி (Reject)</span>
+                    <span>Reject</span>
                   </button>
 
                   <button
@@ -139,7 +179,7 @@ export default function ProfileApprovalQueueModal({ isOpen, onClose, onUpdated }
                     className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-md transition cursor-pointer active:scale-95"
                   >
                     <Check size={13} />
-                    <span>ஏற்றுக்கொள் (Approve)</span>
+                    <span>Approve Update</span>
                   </button>
                 </div>
               </div>

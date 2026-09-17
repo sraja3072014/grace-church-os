@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, X, Users, Cake, HeartHandshake, 
   Calendar, Flame, ChevronLeft, MessageSquareShare, 
-  CheckCircle2, Clock, BookOpen, Volume2
+  CheckCircle2, Clock, BookOpen, Volume2, Building2, AlertTriangle
 } from 'lucide-react';
 import { sendBirthdayWishes } from '../../utils/whatsappEngine';
 import { soundFX } from '../../utils/audioEngine';
@@ -91,6 +91,28 @@ export default function QuickWidgetBar() {
         { seekerName: 'Bro. Stephen Raj', title: 'Hospital ICU Recovery', contactPhone: '+91 98401 11223' },
         { seekerName: 'Sis. Hannah', title: 'Job Examination Visa', contactPhone: '+91 98401 33445' }
       ];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // 4. Leases expiring within the next 60 days
+  const expiringLeases = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('graceos_church_properties_db');
+      const properties = raw ? JSON.parse(raw) : [];
+      const today = new Date();
+      const alertWindow = 60 * 24 * 60 * 60 * 1000;
+
+      return properties.filter((property) => {
+        if (property.ownershipType !== 'RENTED' || !property.leaseExpiryDate) return false;
+
+        const expiry = new Date(`${property.leaseExpiryDate}T23:59:59`);
+        if (Number.isNaN(expiry.getTime())) return false;
+
+        const timeRemaining = expiry.getTime() - today.getTime();
+        return timeRemaining > 0 && timeRemaining <= alertWindow;
+      });
     } catch {
       return [];
     }
@@ -268,6 +290,55 @@ export default function QuickWidgetBar() {
               ))}
             </div>
           </div>
+
+          {/* Tile 5: Lease & Agreement Alerts */}
+          {expiringLeases.length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-500/[0.06] border border-amber-500/25 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-2">
+                  <AlertTriangle size={15} className="text-amber-400" />
+                  Lease & Agreement Alerts
+                </span>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                  {expiringLeases.length} Pending
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {expiringLeases.map((lease) => {
+                  const daysRemaining = Math.ceil(
+                    (new Date(`${lease.leaseExpiryDate}T23:59:59`).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
+                  );
+
+                  return (
+                    <div key={lease.id || lease.title} className="p-2.5 rounded-xl bg-black/40 border border-amber-500/10 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-white text-xs truncate flex items-center gap-1.5">
+                          <Building2 size={12} className="text-amber-300 shrink-0" />
+                          {lease.title || 'Unnamed property'}
+                        </span>
+                        <span className="text-[10px] text-amber-300 font-mono font-bold shrink-0">
+                          ₹ {Number(lease.monthlyRent || 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 font-mono pt-1 border-t border-white/5">
+                        <span className="flex items-center gap-1 text-rose-300">
+                          <Calendar size={11} />
+                          {lease.leaseExpiryDate} ({daysRemaining}d)
+                        </span>
+                        <span className="truncate">{lease.landlordName || 'Landlord'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-[9px] text-slate-500 text-center font-mono">
+                Assets & Gear பகுதியில் புதிய ஒப்பந்தங்களை புதுப்பிக்கலாம்
+              </p>
+            </div>
+          )}
 
         </div>
 

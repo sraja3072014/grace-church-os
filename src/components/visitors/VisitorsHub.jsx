@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   HeartHandshake, UserPlus, Phone, MapPin, Calendar, 
   CheckCircle2, Edit3, Trash2, Search, ArrowRight, 
   UserCheck, X, Sparkles, Filter
 } from 'lucide-react';
+import { getVaultData, setVaultData } from '../../utils/vaultStore';
 
 export default function VisitorsHub({ session }) {
   const stages = [
@@ -13,29 +14,7 @@ export default function VisitorsHub({ session }) {
     { id: 'ready_for_membership', label: '4. Ready for Full Membership', badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' }
   ];
 
-  const [visitors, setVisitors] = useState(() => {
-    try {
-      const saved = localStorage.getItem('app_visitors_database');
-      return saved ? JSON.parse(saved) : [
-        {
-          id: 'VIS-101',
-          name: 'Bro. Samuel Raj',
-          phone: '+91 98401 23456',
-          area: 'Anna Nagar, Chennai',
-          firstVisitDate: '2026-08-30',
-          serviceAttended: '1st Sunday Service',
-          prayerRequest: 'Job relocation and peace in family',
-          broughtBy: 'Sis. Grace',
-          followUpStage: 'calling_scheduled',
-          assignedCaretaker: 'Elder Thomas',
-          careNotes: 'Spoke over phone. Invited to cottage prayer.'
-        }
-      ];
-    } catch {
-      return [];
-    }
-  });
-
+  const [visitors, setVisitors] = useState([]);
   const [activeSubTab, setActiveSubTab] = useState('pipeline');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStageFilter, setSelectedStageFilter] = useState('ALL');
@@ -58,12 +37,34 @@ export default function VisitorsHub({ session }) {
     careNotes: ''
   });
 
+  useEffect(() => {
+    async function loadData() {
+      const data = await getVaultData('visitors', [
+        {
+          id: 'VIS-101',
+          name: 'Bro. Samuel Raj',
+          phone: '+91 98401 23456',
+          area: 'Anna Nagar, Chennai',
+          firstVisitDate: '2026-08-30',
+          serviceAttended: '1st Sunday Service',
+          prayerRequest: 'Job relocation and peace in family',
+          broughtBy: 'Sis. Grace',
+          followUpStage: 'calling_scheduled',
+          assignedCaretaker: 'Elder Thomas',
+          careNotes: 'Spoke over phone. Invited to cottage prayer.'
+        }
+      ]);
+      setVisitors(data);
+    }
+    loadData();
+  }, []);
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  const handleRegisterVisitor = (e) => {
+  const handleRegisterVisitor = async (e) => {
     e.preventDefault();
     if (!regForm.name.trim() || !regForm.phone.trim()) {
       showToast('Name and phone number are required.');
@@ -72,13 +73,13 @@ export default function VisitorsHub({ session }) {
 
     const newEntry = {
       id: `VIS-${Date.now().toString().slice(-4)}`,
-      name: regForm.name,
-      phone: regForm.phone,
-      area: regForm.area || 'City Area',
+      name: regForm.name.trim(),
+      phone: regForm.phone.trim(),
+      area: regForm.area.trim() || 'City Area',
       firstVisitDate: new Date().toISOString().split('T')[0],
       serviceAttended: regForm.serviceAttended,
-      prayerRequest: regForm.prayerRequest || 'Salvation and general blessing',
-      broughtBy: regForm.broughtBy || 'Self / Walk-in',
+      prayerRequest: regForm.prayerRequest.trim() || 'Salvation and general blessing',
+      broughtBy: regForm.broughtBy.trim() || 'Self / Walk-in',
       followUpStage: 'new_contact',
       assignedCaretaker: session?.username || 'Pastoral Care Desk',
       careNotes: 'New contact logged.'
@@ -86,6 +87,7 @@ export default function VisitorsHub({ session }) {
 
     const updated = [newEntry, ...visitors];
     setVisitors(updated);
+    await setVaultData('visitors', updated, true);
     localStorage.setItem('app_visitors_database', JSON.stringify(updated));
 
     setRegForm({
@@ -113,7 +115,7 @@ export default function VisitorsHub({ session }) {
     setIsUpdateModalOpen(true);
   };
 
-  const handleSaveStageUpdate = (e) => {
+  const handleSaveStageUpdate = async (e) => {
     e.preventDefault();
     if (!activeVisitor) return;
 
@@ -131,48 +133,51 @@ export default function VisitorsHub({ session }) {
     });
 
     setVisitors(updated);
+    await setVaultData('visitors', updated, true);
     localStorage.setItem('app_visitors_database', JSON.stringify(updated));
     setIsUpdateModalOpen(false);
     showToast(`Updated care stage for ${activeVisitor.name}`);
   };
 
-  const handleConvertToMember = (vis) => {
+  const handleConvertToMember = async (vis) => {
     try {
-      const savedMembers = localStorage.getItem('app_members_family_database');
-      const families = savedMembers ? JSON.parse(savedMembers) : [];
-
+      const families = await getVaultData('members', []);
       const nextNum = families.length + 101;
       const newFamily = {
         familyId: `FAM-${nextNum}`,
         familyName: `${vis.name} Household`,
         area: vis.area,
         headMember: {
-          memberId: `MBR-${nextNum}`,
+          memberId: `GCC-MBR-${nextNum}`,
           name: vis.name,
           roleInFamily: 'Head of Family',
           gender: 'Male',
           phone: vis.phone,
           status: 'Active',
-          campus: 'Main Cathedral'
+          campus: session?.activeCampus || 'Headquarters'
         },
         members: []
       };
 
-      localStorage.setItem('app_members_family_database', JSON.stringify([newFamily, ...families]));
+      const updatedFamilies = [newFamily, ...families];
+      await setVaultData('members', updatedFamilies, true);
+      localStorage.setItem('app_members_family_database', JSON.stringify(updatedFamilies));
 
       const updatedVisitors = visitors.filter(v => v.id !== vis.id);
       setVisitors(updatedVisitors);
+      await setVaultData('visitors', updatedVisitors, true);
       localStorage.setItem('app_visitors_database', JSON.stringify(updatedVisitors));
 
-      showToast(`${vis.name} promoted to permanent Church Member!`);
+      showToast(`${vis.name} successfully promoted to permanent Church Member!`);
     } catch {
-      showToast('Conversion failed.');
+      showToast('Member conversion failed.');
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const updated = visitors.filter(v => v.id !== id);
     setVisitors(updated);
+    await setVaultData('visitors', updated, true);
     localStorage.setItem('app_visitors_database', JSON.stringify(updated));
     showToast('Seeker profile removed.');
   };

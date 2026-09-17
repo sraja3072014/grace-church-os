@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, ClipboardCheck, UserPlus, 
   HeartHandshake, Calendar, Radio, DollarSign, 
-  BarChart3, Settings, ShieldCheck, LogOut, ChevronDown, Building2, Megaphone
+  BarChart3, Settings, ShieldCheck, LogOut, ChevronDown, Building2, Megaphone, Baby, Package //
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
 
@@ -48,13 +48,16 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
     { id: 'attendance', label: 'Attendance', icon: ClipboardCheck, color: 'from-emerald-500 to-teal-600' },
     { id: 'members', label: 'Members Desk', icon: Users, color: 'from-indigo-500 to-purple-600' },
     { id: 'visitors', label: 'Visitors Hub', icon: UserPlus, color: 'from-amber-500 to-orange-600' },
+    { id: 'ministries', label: 'Ministries & Kids', icon: Baby, color: 'from-amber-400 to-rose-500' },
     { id: 'prayer', label: 'Prayer Wall', icon: HeartHandshake, color: 'from-rose-500 to-pink-600' },
     { id: 'events', label: 'Events Hub', icon: Calendar, color: 'from-sky-500 to-indigo-600' },
     { id: 'livestream', label: 'Live Desk', icon: Radio, color: 'from-violet-500 to-fuchsia-600' },
     { id: 'finance', label: 'Finance & 80G', icon: DollarSign, color: 'from-emerald-400 to-green-600' },
     { id: 'broadcast', label: 'Broadcast Hub', icon: Megaphone, color: 'from-amber-500 to-rose-600', badge: 'SMS/WA' },
     { id: 'reports', label: 'Reports', icon: BarChart3, color: 'from-teal-400 to-cyan-600' },
+    { id: 'inventory', label: 'Assets & Gear', icon: Package, color: 'from-cyan-400 to-teal-500' },
     { id: 'settings', label: 'Settings', icon: Settings, color: 'from-slate-400 to-slate-600' },
+      
   ];
 
   return (

@@ -63,14 +63,14 @@ export default function BackupDatabaseTab() {
     const folder = await selectVaultFolder();
     if (folder) {
       setMountedFolder(folder);
-      soundFX.playSuccessChime();
+      soundFX?.playSuccessChime?.();
       showToast(`Target Root Mounted: "${folder}". Created /database and /backup.`);
     }
   };
 
   const handleCreateBackup = async () => {
     setIsBackingUp(true);
-    soundFX.playClickPop();
+    soundFX?.playClickPop?.();
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
@@ -81,8 +81,15 @@ export default function BackupDatabaseTab() {
       visitors: JSON.parse(localStorage.getItem('app_visitors_database') || '[]'),
       finance: JSON.parse(localStorage.getItem('app_finance_transactions_ledger') || '[]'),
       expenses: JSON.parse(localStorage.getItem('app_expenses_ledger') || '[]'),
-      prayers: JSON.parse(localStorage.getItem('app_prayer_requests_db') || '[]'),
-      events: JSON.parse(localStorage.getItem('app_events_database') || '[]'),
+      prayers: JSON.parse(localStorage.getItem('graceos_prayer_wall_db') || localStorage.getItem('app_prayer_requests_db') || '[]'),
+      events: JSON.parse(localStorage.getItem('graceos_church_events_db') || localStorage.getItem('app_events_database') || '[]'),
+      properties: JSON.parse(localStorage.getItem('graceos_church_properties_db') || '[]'),
+      assets: JSON.parse(localStorage.getItem('graceos_church_assets_db') || '[]'),
+      payroll: JSON.parse(localStorage.getItem('graceos_staff_payroll_db') || '[]'),
+      sundaySchool: JSON.parse(localStorage.getItem('graceos_sundayschool_kids_db') || '[]'),
+      youth: JSON.parse(localStorage.getItem('graceos_youth_fellowship_db') || '[]'),
+      women: JSON.parse(localStorage.getItem('graceos_women_fellowship_db') || '[]'),
+      men: JSON.parse(localStorage.getItem('graceos_men_fellowship_db') || '[]'),
       engine: 'GraceOS Dual-Tree Vault FS'
     };
 
@@ -107,7 +114,7 @@ export default function BackupDatabaseTab() {
     localStorage.setItem('graceos_last_backup_time', now.toISOString());
     setDaysSinceBackup(0);
     setIsBackingUp(false);
-    soundFX.playSuccessChime();
+    soundFX?.playSuccessChime?.();
     showToast(`Snapshot written to ${newBackup.path}`);
   };
 
@@ -123,7 +130,7 @@ export default function BackupDatabaseTab() {
     }
 
     setIsEncrypting(true);
-    soundFX.playClickPop();
+    soundFX?.playClickPop?.();
     try {
       const fullData = {
         timestamp: new Date().toISOString(),
@@ -132,8 +139,15 @@ export default function BackupDatabaseTab() {
         visitors: JSON.parse(localStorage.getItem('app_visitors_database') || '[]'),
         finance: JSON.parse(localStorage.getItem('app_finance_transactions_ledger') || '[]'),
         expenses: JSON.parse(localStorage.getItem('app_expenses_ledger') || '[]'),
-        prayers: JSON.parse(localStorage.getItem('app_prayer_requests_db') || '[]'),
-        events: JSON.parse(localStorage.getItem('app_events_database') || '[]')
+        prayers: JSON.parse(localStorage.getItem('graceos_prayer_wall_db') || localStorage.getItem('app_prayer_requests_db') || '[]'),
+        events: JSON.parse(localStorage.getItem('graceos_church_events_db') || localStorage.getItem('app_events_database') || '[]'),
+        properties: JSON.parse(localStorage.getItem('graceos_church_properties_db') || '[]'),
+        assets: JSON.parse(localStorage.getItem('graceos_church_assets_db') || '[]'),
+        payroll: JSON.parse(localStorage.getItem('graceos_staff_payroll_db') || '[]'),
+        sundaySchool: JSON.parse(localStorage.getItem('graceos_sundayschool_kids_db') || '[]'),
+        youth: JSON.parse(localStorage.getItem('graceos_youth_fellowship_db') || '[]'),
+        women: JSON.parse(localStorage.getItem('graceos_women_fellowship_db') || '[]'),
+        men: JSON.parse(localStorage.getItem('graceos_men_fellowship_db') || '[]')
       };
       const encryptedString = await encryptDataPayload(fullData, password);
       const blob = new Blob([encryptedString], { type: 'application/octet-stream' });
@@ -148,14 +162,14 @@ export default function BackupDatabaseTab() {
       URL.revokeObjectURL(url);
 
       const newEntry = {
-        id: Date.now(), name: fileName, path: 'USB / Pen Drive Storage',
+        id: Date.now(), name: fileName, path: 'USB / External Storage',
         size: `${(encryptedString.length / 1024).toFixed(1)} KB`,
         date: 'Today, Just now', type: 'AES-256 .godb'
       };
       syncHistory([newEntry, ...backupHistory]);
       localStorage.setItem('graceos_last_backup_time', new Date().toISOString());
       setDaysSinceBackup(0);
-      soundFX.playSuccessChime();
+      soundFX?.playSuccessChime?.();
       showToast('Password-protected .godb backup downloaded successfully!');
       setPassword('');
       setConfirmPassword('');
@@ -189,10 +203,23 @@ export default function BackupDatabaseTab() {
           if (parsed.visitors) localStorage.setItem('app_visitors_database', JSON.stringify(parsed.visitors));
           if (parsed.finance) localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(parsed.finance));
           if (parsed.expenses) localStorage.setItem('app_expenses_ledger', JSON.stringify(parsed.expenses));
-          if (parsed.prayers) localStorage.setItem('app_prayer_requests_db', JSON.stringify(parsed.prayers));
-          if (parsed.events) localStorage.setItem('app_events_database', JSON.stringify(parsed.events));
+          if (parsed.prayers) {
+            localStorage.setItem('graceos_prayer_wall_db', JSON.stringify(parsed.prayers));
+            localStorage.setItem('app_prayer_requests_db', JSON.stringify(parsed.prayers));
+          }
+          if (parsed.events) {
+            localStorage.setItem('graceos_church_events_db', JSON.stringify(parsed.events));
+            localStorage.setItem('app_events_database', JSON.stringify(parsed.events));
+          }
+          if (parsed.properties) localStorage.setItem('graceos_church_properties_db', JSON.stringify(parsed.properties));
+          if (parsed.assets) localStorage.setItem('graceos_church_assets_db', JSON.stringify(parsed.assets));
+          if (parsed.payroll) localStorage.setItem('graceos_staff_payroll_db', JSON.stringify(parsed.payroll));
+          if (parsed.sundaySchool) localStorage.setItem('graceos_sundayschool_kids_db', JSON.stringify(parsed.sundaySchool));
+          if (parsed.youth) localStorage.setItem('graceos_youth_fellowship_db', JSON.stringify(parsed.youth));
+          if (parsed.women) localStorage.setItem('graceos_women_fellowship_db', JSON.stringify(parsed.women));
+          if (parsed.men) localStorage.setItem('graceos_men_fellowship_db', JSON.stringify(parsed.men));
 
-          soundFX.playSuccessChime();
+          soundFX?.playSuccessChime?.();
           showToast(`Database restored from "${file.name}" successfully! ✓`);
         } catch (err) {
           showToast(err.message || 'Invalid backup file format.');
@@ -231,7 +258,7 @@ export default function BackupDatabaseTab() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl relative select-none animate-in fade-in pb-12">
+    <div className="flex flex-col gap-6 max-w-4xl relative select-none animate-in fade-in pb-12 text-slate-100">
       {toast && (
         <div className="fixed top-5 right-5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 backdrop-blur-md shadow-2xl z-50 animate-in fade-in">
           <CheckCircle2 size={15} />
@@ -245,19 +272,20 @@ export default function BackupDatabaseTab() {
             <Clock size={20} className="text-amber-400 shrink-0" />
             <div>
               <h5 className="text-xs font-bold">Backup reminder: {daysSinceBackup} days since the last backup.</h5>
-              <p className="text-[11px] text-slate-400 mt-0.5">Save the church&apos;s latest records to your connected storage.</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Save the church's latest records to your connected storage partition.</p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleCreateBackup}
-            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition cursor-pointer"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition cursor-pointer"
           >
             Backup now
           </button>
         </div>
       )}
 
+      {/* Cloud Sync Status */}
       <div className="p-5 rounded-2xl win11-card border border-white/10 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
@@ -271,13 +299,14 @@ export default function BackupDatabaseTab() {
               </span>
             </h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              இணைய இணைப்பு இருக்கும்போது லோக்கல் வால்ட் தரவுகளை கிளவுடுடன் முரண்பாடுகள் இன்றி ஒத்திசைக்கும்.
+              Automatically syncs local disk vault tables to cloud endpoints with conflict resolution when online.
             </p>
           </div>
         </div>
         <CloudSyncStatusWidget />
       </div>
 
+      {/* Local Storage Engine */}
       <div className="p-5 rounded-2xl win11-card border border-white/[0.08] flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
@@ -286,12 +315,12 @@ export default function BackupDatabaseTab() {
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               Dual-Tree Local Storage Vault Engine
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-medium">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono font-medium">
                 Direct Disk Node
               </span>
             </h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              Primary live tables stay in <strong className="text-amber-400 font-mono">/database</strong> and complete snapshots archive into <strong className="text-sky-400 font-mono">/backup</strong>.
+              Live operational tables stay in <strong className="text-cyan-300 font-mono">/database</strong> and disaster recovery dumps archive into <strong className="text-sky-400 font-mono">/backup</strong>.
             </p>
           </div>
         </div>
@@ -300,17 +329,18 @@ export default function BackupDatabaseTab() {
           <button 
             onClick={handleRestoreDB}
             type="button"
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold transition active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold transition active:scale-95 cursor-pointer"
           >
-            <Upload size={14} className="text-indigo-400" />
+            <Upload size={14} className="text-cyan-400" />
             <span>Restore DB</span>
           </button>
 
+          {/* BankAccountsTab போன்ற சியான்/ப்ளூ கிரேடியன்ட் பட்டன் */}
           <button 
             disabled={isBackingUp}
             onClick={handleCreateBackup}
             type="button"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 hover:to-amber-500 text-white font-bold text-xs shadow-lg shadow-rose-500/20 active:scale-95 transition disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw size={14} className={isBackingUp ? 'animate-spin' : ''} />
             <span>{isBackingUp ? 'Archiving...' : 'Create Snapshot Backup'}</span>
@@ -318,6 +348,7 @@ export default function BackupDatabaseTab() {
         </div>
       </div>
 
+      {/* Directory Mounting & Schedule */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-4 rounded-xl win11-card border border-white/[0.06] flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
@@ -328,7 +359,7 @@ export default function BackupDatabaseTab() {
           </div>
 
           <div className="p-3 rounded-xl bg-slate-950/80 border border-white/10 font-mono text-xs space-y-1">
-            <div className="text-amber-400 font-bold truncate">
+            <div className="text-cyan-300 font-bold truncate">
               📁 {mountedFolder || 'No Directory Mounted'}
             </div>
             <div className="text-[10px] text-slate-400 pl-4">
@@ -342,7 +373,7 @@ export default function BackupDatabaseTab() {
           <button 
             type="button"
             onClick={handleConnectRootFolder}
-            className="w-full py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+            className="w-full py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
           >
             <FolderCheck size={14} />
             <span>{mountedFolder ? 'Change Root Folder' : 'Connect Storage Folder'}</span>
@@ -352,7 +383,7 @@ export default function BackupDatabaseTab() {
         <div className="p-4 rounded-xl win11-card border border-white/[0.06] flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-slate-200 flex items-center gap-2">
-              <Clock size={14} className="text-amber-400" /> Automated Schedule
+              <Clock size={14} className="text-cyan-400" /> Automated Schedule
             </label>
             <input 
               type="checkbox" 
@@ -361,7 +392,7 @@ export default function BackupDatabaseTab() {
                 setAutoBackup(e.target.checked);
                 showToast(e.target.checked ? 'Auto-backup enabled' : 'Auto-backup disabled');
               }}
-              className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+              className="w-4 h-4 accent-cyan-500 rounded cursor-pointer"
             />
           </div>
           <select 
@@ -371,7 +402,7 @@ export default function BackupDatabaseTab() {
               setBackupFrequency(e.target.value);
               showToast(`Schedule set to ${e.target.value}`);
             }}
-            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 disabled:opacity-40"
+            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 disabled:opacity-40"
           >
             <option>Daily (11:59 PM)</option>
             <option>Every 12 Hours</option>
@@ -383,16 +414,17 @@ export default function BackupDatabaseTab() {
         </div>
       </div>
 
+      {/* AES Encrypted Vault Export */}
       <div className="p-6 rounded-3xl win11-card border border-white/10 space-y-5">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+            <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
               <ShieldCheck size={22} />
             </div>
             <div>
               <h4 className="text-sm font-bold text-white flex items-center gap-2">
                 AES-256 Encrypted Vault Export (.godb)
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">USB Ready</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 font-mono">USB Ready</span>
               </h4>
               <p className="text-xs text-slate-400 mt-0.5">Protect an offline backup with a password before storing it externally.</p>
             </div>
@@ -404,16 +436,22 @@ export default function BackupDatabaseTab() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-slate-300 font-medium block">Password</label>
-              <input type="password" required minLength={4} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 4 characters" className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white mt-1.5 focus:outline-none focus:border-indigo-400 font-mono" />
+              <input type="password" required minLength={4} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 4 characters" className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white mt-1.5 focus:outline-none focus:border-cyan-400 font-mono" />
             </div>
             <div>
               <label className="text-xs text-slate-300 font-medium block">Confirm password</label>
-              <input type="password" required minLength={4} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat password" className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white mt-1.5 focus:outline-none focus:border-indigo-400 font-mono" />
+              <input type="password" required minLength={4} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat password" className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white mt-1.5 focus:outline-none focus:border-cyan-400 font-mono" />
             </div>
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-white/5">
             <span className="text-[10px] text-slate-500 font-mono">Format: .godb • PBKDF2 &amp; AES-GCM 256-Bit Protection</span>
-            <button type="submit" disabled={isEncrypting} className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95 transition cursor-pointer disabled:opacity-50">
+            
+            {/* BankAccountsTab போன்ற சியான்/ப்ளூ கிரேடியன்ட் பட்டன் */}
+            <button 
+              type="submit" 
+              disabled={isEncrypting} 
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
               <Lock size={14} />
               <span>{isEncrypting ? 'Encrypting...' : 'Save Encrypted .godb'}</span>
             </button>
@@ -421,34 +459,37 @@ export default function BackupDatabaseTab() {
         </form>
       </div>
 
+      {/* Excel / CSV Data Hub */}
       <div className="p-5 rounded-2xl win11-card border border-white/10 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
             <FileSpreadsheet size={22} />
           </div>
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               Excel / CSV Data Migration &amp; Reports
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-mono">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 font-mono">
                 Spreadsheet
               </span>
             </h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              சபை விசுவாசிகள் பட்டியல் மற்றும் 80G தணிக்கை லெட்ஜரை எக்செல் வழியாக ஏற்றுமதி/இறக்குமதி செய்தல்.
+              Export and import church membership rosters and financial audit books directly via Excel/CSV spreadsheets.
             </p>
           </div>
         </div>
 
+        {/* BankAccountsTab போன்ற சியான்/ப்ளூ கிரேடியன்ட் பட்டன் */}
         <button
           type="button"
           onClick={() => setIsExcelModalOpen(true)}
-          className="px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shrink-0"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition cursor-pointer shrink-0"
         >
           <FileSpreadsheet size={15} />
           <span>Open Excel Hub</span>
         </button>
       </div>
 
+      {/* Available Snapshot Archives */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h5 className="text-xs font-bold uppercase tracking-wider text-slate-300">

@@ -25,3 +25,10 @@ __pycache__/
 .env.local
 .env.*.local
 *.log
+
+# Electron பில்ட் அவுட்புட்கள்
+release/
+dist/
+dist-electron/
+*.exe
+*.blockmap

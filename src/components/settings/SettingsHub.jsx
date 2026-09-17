@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { 
   Building2, GitBranch, Users, UserPlus, ClipboardCheck, ShieldCheck, ShieldAlert,
   CreditCard, HeartHandshake, Receipt, BarChart3,
-  Palette, Smartphone, MessageSquare, BookOpen, Database, Wrench, Sliders, 
-  Globe, Save, CheckCircle2 
+  Palette, Smartphone, MessageSquare, BookOpen, Wrench, Sliders, 
+  Globe, HardDrive, Save, CheckCircle2 
 } from 'lucide-react';
 
 // 1. Church Setup
 import MainChurchTab from './church/MainChurchTab';
 import BranchesTab from './church/BranchesTab';
+import MultiCampusHQDesk from '../campus/MultiCampusHQDesk';
 
 // 2. People & Access
 import UsersStaffTab from './people/UsersStaffTab';
@@ -22,6 +23,7 @@ import BankAccountsTab from './finance/BankAccountsTab';
 import GivingCategoriesTab from './finance/GivingCategoriesTab';
 import Tax80GReceiptsTab from './finance/Tax80GReceiptsTab';
 import FinanceReportsTab from './finance/FinanceReportsTab';
+import PaymentGatewayConfigTab from './finance/PaymentGatewayConfigTab';
 
 // 4. System & Hardware
 import ThemeDisplayTab from './system/ThemeDisplayTab';
@@ -32,55 +34,64 @@ import BackupDatabaseTab from './system/BackupDatabaseTab';
 import ServiceRequestsTab from './system/ServiceRequestsTab';
 import AdvancedSettingsTab from './system/AdvancedSettingsTab';
 import LanguageRegionTab from './system/LanguageRegionTab';
+import AuditTrailViewerDesk from './AuditTrailViewerDesk';
+import CloudSyncConfigTab from './system/CloudSyncConfigTab';
 
-export default function SettingsHub() {
+export default function SettingsHub({ session }) {
   const [activeTab, setActiveTab] = useState('main_church');
-  const [savedStatus, setSavedStatus] = useState(false);
+  const isSeniorPastorOrAdmin = 
+    session?.role === 'ADMIN' || 
+    session?.role === 'PASTOR' || 
+    session?.username?.toLowerCase().includes('pastor');
 
   const navigationGroups = [
     {
-      group: 'Church Setup',
+      group: 'Church Administration',
       items: [
         { id: 'main_church', label: 'Main Church Profile', icon: Building2 },
-        { id: 'branches', label: 'Branches Management', icon: GitBranch },
+        { id: 'branches', label: 'Branch Campuses', icon: GitBranch },
+        ...(isSeniorPastorOrAdmin ? [{ id: 'campus_hq', label: 'Multi-Campus Network HQ', icon: Globe }] : []),
       ]
     },
     {
       group: 'People & Access',
       items: [
-        { id: 'users_staff', label: 'Users & Staff Credentials', icon: Users },
-        { id: 'registration_cfg', label: 'Member Registration Form', icon: UserPlus },
+        { id: 'users_staff', label: 'Staff Credentials', icon: Users },
+        { id: 'registration_cfg', label: 'Member Registration Intake', icon: UserPlus },
         { id: 'attendance_cfg', label: 'Attendance & QR Setup', icon: ClipboardCheck },
         { id: 'access_control', label: 'Access Control (RBAC)', icon: ShieldCheck },
-        { id: 'safety_policy', label: 'Safety & Abuse Policy', icon: ShieldAlert },
+        { id: 'safety_policy', label: 'Safety & Protection Policy', icon: ShieldAlert },
       ]
     },
     {
-      group: 'Finance & Accounts',
+      group: 'Treasury & Taxation',
       items: [
         { id: 'bank_acc', label: 'Bank Accounts & UPI', icon: CreditCard },
-        { id: 'giving_cat', label: 'Giving / Tithe Categories', icon: HeartHandshake },
-        { id: 'tax_80g', label: 'Tax & 80G Receipts Engine', icon: Receipt },
+        { id: 'giving_cat', label: 'Tithe & Giving Categories', icon: HeartHandshake },
+        { id: 'tax_80g', label: '80G Tax Engine Setup', icon: Receipt },
         { id: 'fin_reports', label: 'Financial Audit Exports', icon: BarChart3 },
+        { id: 'payment_gw', label: 'Payment Gateway & UPI', icon: CreditCard },
       ]
     },
     {
-      group: 'System & Hardware',
+      group: 'System & Vault Node',
       items: [
-        { id: 'theme_display', label: 'Theme & Glass Polish', icon: Palette },
-        { id: 'language_region', label: 'Language & Region', icon: Globe },
-        { id: 'mobile_sync', label: 'Mobile App Node', icon: Smartphone },
+        { id: 'local_vault', label: 'Physical Disk Vault', icon: HardDrive },
+        { id: 'theme_display', label: 'Theme & Liquid Polish', icon: Palette },
+        { id: 'language_region', label: 'Language & Locale', icon: Globe },
+        { id: 'mobile_sync', label: 'Mobile App Relay', icon: Smartphone },
         { id: 'whatsapp_hub', label: 'WhatsApp Messenger Hub', icon: MessageSquare },
-        { id: 'bible_hub', label: 'Bible Display Engine', icon: BookOpen },
-        { id: 'backup_db', label: 'Database & Backup', icon: Database },
+        { id: 'bible_hub', label: 'Scripture Display Engine', icon: BookOpen },
+        { id: 'audit', label: 'Audit Trail & Security Logs', icon: ShieldAlert },
         { id: 'service_req', label: 'Hardware Maintenance', icon: Wrench },
-        { id: 'advanced_cfg', label: 'Advanced Settings', icon: Sliders },
+        { id: 'advanced_cfg', label: 'Advanced Engine Setup', icon: Sliders },
+        { id: 'supabase_cloud', label: 'Supabase Cloud Gateway', icon: Globe },
       ]
     }
   ];
 
   return (
-    <div className="flex h-full gap-5 select-none overflow-hidden">
+    <div className="flex h-full gap-5 select-none overflow-hidden text-slate-100">
       
       {/* 1. Left Sub-Navigation Menu */}
       <div className="w-80 crystal-card rounded-2xl p-4 flex flex-col justify-between overflow-hidden shrink-0 border border-white/[0.08]">
@@ -96,6 +107,7 @@ export default function SettingsHub() {
                 return (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => setActiveTab(item.id)}
                     className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 text-left active:scale-98 cursor-pointer ${
                       isSelected
@@ -116,9 +128,10 @@ export default function SettingsHub() {
       {/* 2. Right Dynamic Viewport */}
       <div className="flex-1 crystal-card rounded-2xl p-6 flex flex-col overflow-hidden border border-white/[0.08]">
         <div className="flex-1 overflow-y-auto pr-1">
-          {/* Church Setup */}
+          {/* Church Administration */}
           {activeTab === 'main_church' && <MainChurchTab />}
           {activeTab === 'branches' && <BranchesTab />}
+          {activeTab === 'campus_hq' && <MultiCampusHQDesk session={session} />}
 
           {/* People & Access */}
           {activeTab === 'users_staff' && <UsersStaffTab />}
@@ -127,21 +140,24 @@ export default function SettingsHub() {
           {activeTab === 'access_control' && <AccessControlTab />}
           {activeTab === 'safety_policy' && <ProtectionPolicyTab />}
 
-          {/* Finance & Accounts */}
+          {/* Treasury & Taxation */}
           {activeTab === 'bank_acc' && <BankAccountsTab />}
           {activeTab === 'giving_cat' && <GivingCategoriesTab />}
           {activeTab === 'tax_80g' && <Tax80GReceiptsTab />}
           {activeTab === 'fin_reports' && <FinanceReportsTab />}
+          {activeTab === 'payment_gw' && <PaymentGatewayConfigTab />}
 
-          {/* System & Hardware */}
+          {/* System & Vault Node */}
+          {activeTab === 'local_vault' && <BackupDatabaseTab />}
           {activeTab === 'theme_display' && <ThemeDisplayTab />}
           {activeTab === 'language_region' && <LanguageRegionTab />}
           {activeTab === 'mobile_sync' && <MobileSyncTab />}
           {activeTab === 'whatsapp_hub' && <WhatsappHubTab />}
           {activeTab === 'bible_hub' && <BibleHubTab />}
-          {activeTab === 'backup_db' && <BackupDatabaseTab />}
+          {activeTab === 'audit' && <AuditTrailViewerDesk />}
           {activeTab === 'service_req' && <ServiceRequestsTab />}
           {activeTab === 'advanced_cfg' && <AdvancedSettingsTab />}
+          {activeTab === 'supabase_cloud' && <CloudSyncConfigTab />}
         </div>
       </div>
 

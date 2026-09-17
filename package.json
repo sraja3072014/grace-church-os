@@ -1,33 +1,53 @@
 {
   "name": "grace-os",
-  "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "description": "Grace Church OS Desktop Suite",
+  "author": "Raja",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "electron:build": "vite build && electron-builder --win"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.116.0",
-    "@tauri-apps/plugin-dialog": "^2.7.3",
-    "@tauri-apps/plugin-fs": "^2.5.2",
-    "clsx": "^2.1.1",
-    "html5-qrcode": "^2.3.8",
+    "@capacitor-mlkit/barcode-scanning": "^8.0.0",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@supabase/supabase-js": "^2.49.1",
     "lucide-react": "^1.16.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tailwind-merge": "^2.4.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.19",
-    "postcss": "^8.4.39",
-    "tailwindcss": "^3.4.6",
-    "vite": "^5.3.4"
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
+    "electron": "^34.2.0",
+    "electron-builder": "^26.15.3",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "vite": "^5.4.14",
+    "wait-on": "^8.0.2"
+  },
+  "build": {
+    "appId": "com.gracechurch.os",
+    "productName": "Grace Church OS",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
