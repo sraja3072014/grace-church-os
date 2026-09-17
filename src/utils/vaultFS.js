@@ -3,6 +3,10 @@ const VAULT_ROOT_KEY = 'graceos_vault_root';
 // செயலி தற்போது Tauri டெஸ்க்டாப்பில் இயங்குகிறதா என அறிதல்
 const isTauri = typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__);
 
+// Rollup பில்டில் இருந்து பேக்கேஜ் பெயரை மறைக்க:
+const TAURI_FS_PKG = '@tauri-apps/plugin-fs';
+const TAURI_DIALOG_PKG = '@tauri-apps/plugin-dialog';
+
 const safeJsonParse = (raw, fallback) => {
   try {
     return raw ? JSON.parse(raw) : fallback;
@@ -24,7 +28,7 @@ const ensureVaultStructure = async (rootFolder) => {
 
   if (isTauri) {
     try {
-      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      const fs = await import(/* @vite-ignore */ TAURI_FS_PKG);
       await fs.mkdir(databasePath, { recursive: true });
       await fs.mkdir(backupPath, { recursive: true });
       return rootFolder;
@@ -49,7 +53,7 @@ export const initVaultFolder = async () => {
 export const selectVaultFolder = async () => {
   if (isTauri) {
     try {
-      const { open } = await import(/* @vite-ignore */ '@tauri-apps/plugin-dialog');
+      const { open } = await import(/* @vite-ignore */ TAURI_DIALOG_PKG);
       const selected = await open({
         directory: true,
         multiple: false,
@@ -63,11 +67,10 @@ export const selectVaultFolder = async () => {
         return selected;
       }
     } catch {
-      // Tauri dialog error esetén fallback கீழே இயங்கும்
+      // Fallback below
     }
   }
 
-  // Web Browser / Vercel-க்கான Fallback
   const fallback = window.prompt('Enter GraceOS Vault Root Directory:', localStorage.getItem(VAULT_ROOT_KEY) || 'D:\\GraceOS');
   if (fallback) {
     localStorage.setItem(VAULT_ROOT_KEY, fallback);
@@ -95,16 +98,15 @@ export const writeDatabaseFile = async (fileName, payload) => {
 
   if (isTauri) {
     try {
-      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      const fs = await import(/* @vite-ignore */ TAURI_FS_PKG);
       await fs.mkdir(databaseDir, { recursive: true });
       await fs.writeTextFile(filePath, JSON.stringify(payload, null, 2));
       return filePath;
     } catch {
-      // Tauri-யில் தோல்வியடைந்தால் லோக்கல் ஸ்டோரேஜில் கேச் செய்யும்
+      // Fallback to cache below
     }
   }
 
-  // Web / Fallback Storage
   localStorage.setItem('graceos_vault_database_cache', JSON.stringify({
     fileName,
     filePath,
@@ -122,7 +124,7 @@ export const readDatabaseFile = async (fileName) => {
 
   if (isTauri) {
     try {
-      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      const fs = await import(/* @vite-ignore */ TAURI_FS_PKG);
       const raw = await fs.readTextFile(filePath);
       return safeJsonParse(raw, null);
     } catch {
@@ -130,7 +132,6 @@ export const readDatabaseFile = async (fileName) => {
     }
   }
 
-  // Web Browser Fallback
   const cached = localStorage.getItem('graceos_vault_database_cache');
   if (cached) {
     const parsed = safeJsonParse(cached, null);
@@ -152,16 +153,15 @@ export const createBackupSnapshot = async (payload) => {
 
   if (isTauri) {
     try {
-      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      const fs = await import(/* @vite-ignore */ TAURI_FS_PKG);
       await fs.mkdir(backupDir, { recursive: true });
       await fs.writeTextFile(filePath, JSON.stringify(payload, null, 2));
       return fileName;
     } catch {
-      // தொடர்ந்து கீழே உள்ள லோக்கல் சேமிப்பு இயங்கும்
+      // Fallback
     }
   }
 
-  // Web / Fallback Storage
   localStorage.setItem('graceos_vault_snapshot_cache', JSON.stringify({
     fileName,
     filePath,
@@ -179,7 +179,7 @@ export const readVaultSnapshot = async (snapshotName) => {
 
   if (isTauri) {
     try {
-      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      const fs = await import(/* @vite-ignore */ TAURI_FS_PKG);
       const raw = await fs.readTextFile(filePath);
       return safeJsonParse(raw, null);
     } catch {
@@ -187,7 +187,6 @@ export const readVaultSnapshot = async (snapshotName) => {
     }
   }
 
-  // Web Browser Fallback
   const cached = localStorage.getItem('graceos_vault_snapshot_cache');
   if (cached) {
     const parsed = safeJsonParse(cached, null);
