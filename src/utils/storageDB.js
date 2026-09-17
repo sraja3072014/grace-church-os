@@ -16,25 +16,29 @@ export const initDB = () => {
 };
 
 export const saveLargeWallpaper = async (base64Data) => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
+  try {
+    const db = await openDB();
     const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.put(base64Data, 'active_custom_wallpaper');
-    req.onsuccess = () => resolve(true);
-    req.onerror = () => reject(req.error);
-  });
+    tx.objectStore(STORE_NAME).put(base64Data, 'current_wallpaper');
+    return true;
+  } catch (err) {
+    console.warn('IndexedDB save failed, image too large:', err);
+    return false;
+  }
 };
 
 export const getLargeWallpaper = async () => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.get('active_custom_wallpaper');
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const req = tx.objectStore(STORE_NAME).get('current_wallpaper');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
 };
 
 export const deleteLargeWallpaper = async () => {
