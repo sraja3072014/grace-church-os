@@ -1,5 +1,8 @@
 const VAULT_ROOT_KEY = 'graceos_vault_root';
 
+// செயலி தற்போது Tauri டெஸ்க்டாப்பில் இயங்குகிறதா என அறிதல்
+const isTauri = typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__);
+
 const safeJsonParse = (raw, fallback) => {
   try {
     return raw ? JSON.parse(raw) : fallback;
@@ -19,14 +22,18 @@ const ensureVaultStructure = async (rootFolder) => {
   const databasePath = resolvePath(rootFolder, 'database');
   const backupPath = resolvePath(rootFolder, 'backup');
 
-  try {
-    const fs = await import('@tauri-apps/plugin-fs');
-    await fs.mkdir(databasePath, { recursive: true });
-    await fs.mkdir(backupPath, { recursive: true });
-    return rootFolder;
-  } catch {
-    return rootFolder;
+  if (isTauri) {
+    try {
+      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      await fs.mkdir(databasePath, { recursive: true });
+      await fs.mkdir(backupPath, { recursive: true });
+      return rootFolder;
+    } catch {
+      return rootFolder;
+    }
   }
+
+  return rootFolder;
 };
 
 export const initVaultFolder = async () => {
@@ -40,27 +47,32 @@ export const initVaultFolder = async () => {
 };
 
 export const selectVaultFolder = async () => {
-  try {
-    const { open } = await import('@tauri-apps/plugin-dialog');
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: 'Select GraceOS Vault Root Folder',
-      defaultPath: localStorage.getItem(VAULT_ROOT_KEY) || 'D:\\'
-    });
+  if (isTauri) {
+    try {
+      const { open } = await import(/* @vite-ignore */ '@tauri-apps/plugin-dialog');
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select GraceOS Vault Root Folder',
+        defaultPath: localStorage.getItem(VAULT_ROOT_KEY) || 'D:\\'
+      });
 
-    if (selected && typeof selected === 'string') {
-      localStorage.setItem(VAULT_ROOT_KEY, selected);
-      await ensureVaultStructure(selected);
-      return selected;
+      if (selected && typeof selected === 'string') {
+        localStorage.setItem(VAULT_ROOT_KEY, selected);
+        await ensureVaultStructure(selected);
+        return selected;
+      }
+    } catch {
+      // Tauri dialog error esetén fallback கீழே இயங்கும்
     }
-  } catch {
-    const fallback = window.prompt('Enter GraceOS Vault Root Directory:', localStorage.getItem(VAULT_ROOT_KEY) || 'D:\\GraceOS');
-    if (fallback) {
-      localStorage.setItem(VAULT_ROOT_KEY, fallback);
-      await ensureVaultStructure(fallback);
-      return fallback;
-    }
+  }
+
+  // Web Browser / Vercel-க்கான Fallback
+  const fallback = window.prompt('Enter GraceOS Vault Root Directory:', localStorage.getItem(VAULT_ROOT_KEY) || 'D:\\GraceOS');
+  if (fallback) {
+    localStorage.setItem(VAULT_ROOT_KEY, fallback);
+    await ensureVaultStructure(fallback);
+    return fallback;
   }
 
   return null;
@@ -81,20 +93,25 @@ export const writeDatabaseFile = async (fileName, payload) => {
   const databaseDir = resolvePath(rootFolder, 'database');
   const filePath = resolvePath(databaseDir, fileName);
 
-  try {
-    const fs = await import('@tauri-apps/plugin-fs');
-    await fs.mkdir(databaseDir, { recursive: true });
-    await fs.writeTextFile(filePath, JSON.stringify(payload, null, 2));
-    return filePath;
-  } catch {
-    localStorage.setItem('graceos_vault_database_cache', JSON.stringify({
-      fileName,
-      filePath,
-      payload,
-      timestamp: new Date().toISOString()
-    }));
-    return filePath;
+  if (isTauri) {
+    try {
+      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      await fs.mkdir(databaseDir, { recursive: true });
+      await fs.writeTextFile(filePath, JSON.stringify(payload, null, 2));
+      return filePath;
+    } catch {
+      // Tauri-யில் தோல்வியடைந்தால் லோக்கல் ஸ்டோரேஜில் கேச் செய்யும்
+    }
   }
+
+  // Web / Fallback Storage
+  localStorage.setItem('graceos_vault_database_cache', JSON.stringify({
+    fileName,
+    filePath,
+    payload,
+    timestamp: new Date().toISOString()
+  }));
+  return filePath;
 };
 
 export const readDatabaseFile = async (fileName) => {
@@ -103,13 +120,25 @@ export const readDatabaseFile = async (fileName) => {
 
   const filePath = resolvePath(resolvePath(rootFolder, 'database'), fileName);
 
-  try {
-    const fs = await import('@tauri-apps/plugin-fs');
-    const raw = await fs.readTextFile(filePath);
-    return safeJsonParse(raw, null);
-  } catch {
-    return null;
+  if (isTauri) {
+    try {
+      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      const raw = await fs.readTextFile(filePath);
+      return safeJsonParse(raw, null);
+    } catch {
+      return null;
+    }
   }
+
+  // Web Browser Fallback
+  const cached = localStorage.getItem('graceos_vault_database_cache');
+  if (cached) {
+    const parsed = safeJsonParse(cached, null);
+    if (parsed && parsed.fileName === fileName) {
+      return parsed.payload;
+    }
+  }
+  return null;
 };
 
 export const createBackupSnapshot = async (payload) => {
@@ -121,20 +150,25 @@ export const createBackupSnapshot = async (payload) => {
   const fileName = `backup_snapshot_${timestamp.toISOString().slice(0, 10).replace(/-/g, '_')}_${Date.now().toString().slice(-4)}.json`;
   const filePath = resolvePath(backupDir, fileName);
 
-  try {
-    const fs = await import('@tauri-apps/plugin-fs');
-    await fs.mkdir(backupDir, { recursive: true });
-    await fs.writeTextFile(filePath, JSON.stringify(payload, null, 2));
-    return fileName;
-  } catch {
-    localStorage.setItem('graceos_vault_snapshot_cache', JSON.stringify({
-      fileName,
-      filePath,
-      payload,
-      timestamp: timestamp.toISOString()
-    }));
-    return fileName;
+  if (isTauri) {
+    try {
+      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      await fs.mkdir(backupDir, { recursive: true });
+      await fs.writeTextFile(filePath, JSON.stringify(payload, null, 2));
+      return fileName;
+    } catch {
+      // தொடர்ந்து கீழே உள்ள லோக்கல் சேமிப்பு இயங்கும்
+    }
   }
+
+  // Web / Fallback Storage
+  localStorage.setItem('graceos_vault_snapshot_cache', JSON.stringify({
+    fileName,
+    filePath,
+    payload,
+    timestamp: timestamp.toISOString()
+  }));
+  return fileName;
 };
 
 export const readVaultSnapshot = async (snapshotName) => {
@@ -143,11 +177,23 @@ export const readVaultSnapshot = async (snapshotName) => {
 
   const filePath = resolvePath(resolvePath(rootFolder, 'backup'), snapshotName);
 
-  try {
-    const fs = await import('@tauri-apps/plugin-fs');
-    const raw = await fs.readTextFile(filePath);
-    return safeJsonParse(raw, null);
-  } catch {
-    return null;
+  if (isTauri) {
+    try {
+      const fs = await import(/* @vite-ignore */ '@tauri-apps/plugin-fs');
+      const raw = await fs.readTextFile(filePath);
+      return safeJsonParse(raw, null);
+    } catch {
+      return null;
+    }
   }
+
+  // Web Browser Fallback
+  const cached = localStorage.getItem('graceos_vault_snapshot_cache');
+  if (cached) {
+    const parsed = safeJsonParse(cached, null);
+    if (parsed && parsed.fileName === snapshotName) {
+      return parsed.payload;
+    }
+  }
+  return null;
 };
