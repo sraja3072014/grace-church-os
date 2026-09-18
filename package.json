@@ -2,7 +2,7 @@
   "name": "grace-os",
   "version": "0.1.0",
   "type": "module",
-   "description": "Grace Church OS Desktop Suite",
+  "description": "Grace Church OS Desktop Suite",
   "author": "Raja",
   "main": "electron/main.js",
   "scripts": {
@@ -17,11 +17,12 @@
     "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "@supabase/supabase-js": "^2.49.1",
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.16.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "devDependencies": {
+    "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",
