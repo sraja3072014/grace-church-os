@@ -1,339 +1,532 @@
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
-import FusionSidebar from './components/layout/FusionSidebar';
-import Header from './components/layout/Header';
-import MainDashboard from './components/dashboard/MainDashboard';
-import AttendanceDesk from './components/attendance/AttendanceDesk';
-import MembersDesk from './components/members/MembersDesk';
-import FinanceDesk from './components/finance/FinanceDesk';
-import CommunityHub from './components/community/CommunityHub';
-import SettingsHub from './components/settings/SettingsHub';
-import UnifiedLoginModal from './components/auth/UnifiedLoginModal';
-import LeaderPortalView from './components/portal/LeaderPortalView';
-import RainCanvas from './components/layout/RainCanvas';
-import TaskbarDock from './components/layout/TaskbarDock';
-import { getLargeWallpaper } from './utils/storageDB';
-import VisitorsHub from './components/visitors/VisitorsDashboard';
-import PrayerWall from './components/prayer/PrayerWall';
-import EventsHub from './components/events/EventsHub';
-import LiveDesk from './components/live/LiveDesk';
-import ReportDashboard from './components/reports/ReportDashboard';
-import BulkBroadcastMessenger from './components/broadcast/BulkBroadcastMessenger';
-import QuickWidgetBar from './components/widgets/QuickWidgetBar';
-import PWAInstallPrompt from './components/common/PWAInstallPrompt';
-import VaultConnectionGuard from './components/layout/VaultConnectionGuard';
-import MinistriesHubDesk from './components/ministry/MinistriesHubDesk';
-import ChurchInventoryDesk from './components/inventory/ChurchInventoryDesk';
-import { LayoutDashboard } from 'lucide-react';
-import { useAutoCloudSync } from './hooks/useAutoCloudSync';
-import MobileAppRoot from './components/mobile/MobileAppRoot';
+import { 
+  LayoutDashboard, 
+  Users, 
+  Receipt, 
+  Calendar, 
+  Settings, 
+  LogOut, 
+  Church, 
+  Search, 
+  Bell, 
+  Globe, 
+  ShieldCheck, 
+  RefreshCw,
+  PlusCircle,
+  TrendingUp,
+  CreditCard,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
+import { supabase } from './utils/supabaseClient';
 
-// மொபைல் சாதனத்தைக் கண்டறியும் செயல்பாடு
-const checkIsMobile = () => {
-  if (typeof window === 'undefined') return false;
-  const userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
-  const isMobileDevice = /android|iphone|ipad|ipod|windows phone/i.test(userAgent);
-  const isCapacitor = Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  return isCapacitor || isMobileDevice || window.innerWidth < 768;
+// இருமொழி அகராதி (English & தமிழ்)
+const translations = {
+  en: {
+    appTitle: "Grace Church OS",
+    tagline: "Enterprise Management Suite",
+    dashboard: "Dashboard",
+    members: "Believers Registry",
+    finance: "Finance & Tithes",
+    events: "Events & Calendar",
+    settings: "Settings",
+    logout: "Sign Out",
+    welcome: "Welcome Back, Pastor / Administrator",
+    totalMembers: "Total Registered",
+    monthlyIncome: "Monthly Offerings",
+    activePledges: "Active Ministries",
+    cloudSync: "Live Cloud Sync",
+    synced: "Connected to Supabase",
+    offline: "Local Storage Mode",
+    recentTransactions: "Recent Finance Ledger",
+    addRecord: "New Record",
+    donor: "Donor / Believer",
+    amount: "Amount",
+    category: "Category",
+    mode: "Payment Mode",
+    searchPlaceholder: "Search records, members, transactions...",
+    loginTitle: "GraceOS Portal Access",
+    loginSubtitle: "Sign in with your administrative credentials",
+    username: "Username / Email",
+    password: "Password",
+    loginBtn: "Authenticate & Enter",
+    switchLang: "தமிழ்",
+    quickInsertTitle: "Quick Tithe / Offering Entry",
+    saveBtn: "Save Record",
+    cancelBtn: "Cancel",
+    notes: "Notes"
+  },
+  ta: {
+    appTitle: "கிரேஸ் சர்ச் OS",
+    tagline: "தேவாலய மேலாண்மை தளம்",
+    dashboard: "டாஷ்போர்டு",
+    members: "உறுப்பினர்கள் பட்டியல்",
+    finance: "நிதி & காணிக்கை",
+    events: "நிகழ்வுகள் & நாட்காட்டி",
+    settings: "அமைப்புகள்",
+    logout: "வெளியேறு",
+    welcome: "வணக்கம், போதகர் / நிர்வாகி",
+    totalMembers: "மொத்த உறுப்பினர்கள்",
+    monthlyIncome: "மாத காணிக்கை வரவு",
+    activePledges: "செயலில் உள்ள ஊழியங்கள்",
+    cloudSync: "கிளவுட் இணைப்பு",
+    synced: "Supabase இணைக்கப்பட்டுள்ளது",
+    offline: "ஆஃப்லைன் முறை",
+    recentTransactions: "சமீபத்திய நிதிப் பதிவுகள்",
+    addRecord: "புதிய பதிவு",
+    donor: "நன்கொடையாளர் பெயர்",
+    amount: "தொகை",
+    category: "பிரிவு",
+    mode: "செலுத்திய முறை",
+    searchPlaceholder: "பதிவுகள், உறுப்பினர்களைத் தேடுக...",
+    loginTitle: "கிரேஸ் போர்டல் உள்நுழைவு",
+    loginSubtitle: "நிர்வாகி சான்றுகளுடன் உள்நுழையவும்",
+    username: "பயனர் பெயர் / மின்னஞ்சல்",
+    password: "கடவுச்சொல்",
+    loginBtn: "உள்நுழையவும்",
+    switchLang: "English",
+    quickInsertTitle: "விரைவுக் காணிக்கை பதிவு",
+    saveBtn: "பதிவு செய்க",
+    cancelBtn: "ரத்து செய்",
+    notes: "குறிப்புகள்"
+  }
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [wallpaperData, setWallpaperData] = useState(null);
-  const [isMobileScreen, setIsMobileScreen] = useState(checkIsMobile);
-  const { syncStatus, lastSyncedAt } = useAutoCloudSync();
-
-  // மொழி தேர்வு நிலை: 'en' அல்லது 'ta'
-  const [currentLang, setCurrentLang] = useState(() => {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('graceos_auth') === 'true';
+  });
+  const [lang, setLang] = useState(() => {
     return localStorage.getItem('graceos_lang') || 'en';
   });
-
-  // 1. Session State Management
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const local = localStorage.getItem('graceos_session');
-      return local ? JSON.parse(local) : null;
-    } catch {
-      return null;
-    }
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [loginCreds, setLoginCreds] = useState({ username: '', password: '' });
+  const [membersCount, setMembersCount] = useState(0);
+  const [ledger, setLedger] = useState([]);
+  const [syncStatus, setSyncStatus] = useState('Connecting...');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    donor_name: '',
+    category: 'TITHE',
+    amount: '',
+    payment_mode: 'UPI',
+    notes: 'Direct Entry'
   });
 
-  const session = currentUser;
+  const t = translations[lang];
 
-  // Screen resize watcher
-  useEffect(() => {
-    const handleResize = () => setIsMobileScreen(checkIsMobile());
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // 2. Theme Configuration State
-  const [theme, setTheme] = useState(() => {
-    try {
-      const local = localStorage.getItem('graceos_theme_config');
-      const parsed = local ? JSON.parse(local) : {};
-      return {
-        preset: parsed.preset || 'fluid_aurora_mesh',
-        customColor: parsed.customColor || '#06b6d4',
-        useCustomColor: parsed.useCustomColor || false,
-        activeTextColor: parsed.activeTextColor || '#ffffff',
-        manualTextColorOverride: parsed.manualTextColorOverride || false,
-        wallpaperDim: parsed.wallpaperDim ?? 20,
-        wallpaperBrightness: parsed.wallpaperBrightness ?? 100,
-        glassGlowColor: parsed.glassGlowColor || '#06b6d4',
-        shadowIntensity: parsed.shadowIntensity ?? 40,
-        layoutStyle: parsed.layoutStyle || 'sidebar',
-        enableRainFX: parsed.enableRainFX || false,
-        enableThunderPulse: parsed.enableThunderPulse || false,
-        enableHolyDustFX: parsed.enableHolyDustFX || false
-      };
-    } catch {
-      return {
-        preset: 'fluid_aurora_mesh',
-        customColor: '#06b6d4',
-        useCustomColor: false,
-        activeTextColor: '#ffffff',
-        manualTextColorOverride: false,
-        wallpaperDim: 20,
-        wallpaperBrightness: 100,
-        glassGlowColor: '#06b6d4',
-        shadowIntensity: 40,
-        layoutStyle: 'sidebar',
-        enableRainFX: false,
-        enableThunderPulse: false,
-        enableHolyDustFX: false
-      };
-    }
-  });
-
-  const syncThemeAndWallpaper = async () => {
-    try {
-      const local = localStorage.getItem('graceos_theme_config');
-      if (local) setTheme(JSON.parse(local));
-      const img = await getLargeWallpaper();
-      setWallpaperData(img);
-    } catch (err) {
-      console.error('Error syncing theme:', err);
+  // லாகின் செயல்முறை
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (loginCreds.username && loginCreds.password) {
+      setIsAuthenticated(true);
+      localStorage.setItem('graceos_auth', 'true');
     }
   };
-
-  useEffect(() => {
-    syncThemeAndWallpaper();
-    window.addEventListener('graceos_theme_updated', syncThemeAndWallpaper);
-    return () => window.removeEventListener('graceos_theme_updated', syncThemeAndWallpaper);
-  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('graceos_session');
-    localStorage.removeItem('graceos_user_role');
-    setCurrentUser(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('graceos_auth');
   };
 
-  const handleLoginSuccess = (user) => {
-    localStorage.setItem('graceos_session', JSON.stringify(user));
-    if (user?.role) {
-      localStorage.setItem('graceos_user_role', user.role);
+  const toggleLanguage = () => {
+    const nextLang = lang === 'en' ? 'ta' : 'en';
+    setLang(nextLang);
+    localStorage.setItem('graceos_lang', nextLang);
+  };
+
+  // நேரலை Supabase டேட்டா வாசித்தல்
+  const fetchCloudData = async () => {
+    try {
+      setSyncStatus('Syncing...');
+      
+      // உறுப்பினர்கள் எண்ணிக்கை
+      const { count: mCount } = await supabase
+        .from('members')
+        .select('*', { count: 'exact', head: true });
+      setMembersCount(mCount || 0);
+
+      // நிதி அட்டவணை பதிவுகள்
+      const { data: ledgerData, error: lErr } = await supabase
+        .from('finance_ledger')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (!lErr && ledgerData) {
+        setLedger(ledgerData);
+      }
+      setSyncStatus(t.synced);
+    } catch {
+      setSyncStatus(t.offline);
     }
-    setCurrentUser(user);
   };
 
-  // 3. பயனர் லாகின் செய்யவில்லை என்றால் UnifiedLoginModal திரை
-  if (!session) {
-    return <UnifiedLoginModal onLoginSuccess={handleLoginSuccess} />;
-  }
+  // புதிய காணிக்கை பதிவு சேர்த்தல்
+  const handleInsertRecord = async (e) => {
+    e.preventDefault();
+    if (!formData.amount) return;
 
-  // 4. உறுப்பினர் (MEMBER / BELIEVER) என்றால் மொபைல் & டெஸ்க்டாப் இரண்டிலுமே மெம்பர் போர்ட்டல் மட்டுமே திறக்கும்
-  const isMember = session.role === 'MEMBER' || session.role === 'BELIEVER';
-  if (isMember) {
+    try {
+      const { error } = await supabase
+        .from('finance_ledger')
+        .insert([{
+          donor_name: formData.donor_name || 'Anonymous',
+          category: formData.category,
+          amount: parseFloat(formData.amount),
+          payment_mode: formData.payment_mode,
+          notes: formData.notes
+        }]);
+
+      if (!error) {
+        setIsModalOpen(false);
+        setFormData({ donor_name: '', category: 'TITHE', amount: '', payment_mode: 'UPI', notes: 'Direct Entry' });
+        await fetchCloudData();
+      } else {
+        alert(`Error: ${error.message}`);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCloudData();
+    }
+  }, [isAuthenticated, lang]);
+
+  // --- 1. லாகின் திரை ---
+  if (!isAuthenticated) {
     return (
-      <div className="w-full min-h-screen overflow-x-hidden bg-slate-950">
-        <MobileAppRoot 
-          session={session} 
-          currentLang={currentLang}
-          setCurrentLang={setCurrentLang}
-          onLogout={handleLogout} 
-          onSwitchToDesktop={null} 
-        />
-      </div>
-    );
-  }
+      <div className="min-h-screen bg-[#07050d] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[128px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-600/20 rounded-full blur-[128px] pointer-events-none" />
 
-  // 5. ஒருவேளை அட்மின் மொபைலில் லாகின் செய்திருந்தால் மொபைல் பார்வை
-  if (isMobileScreen) {
-    return (
-      <div className="w-full min-h-screen overflow-x-hidden bg-slate-950">
-        <MobileAppRoot 
-          session={session} 
-          currentLang={currentLang}
-          setCurrentLang={setCurrentLang}
-          onLogout={handleLogout} 
-          onSwitchToDesktop={() => setIsMobileScreen(false)} 
-        />
-      </div>
-    );
-  }
-
-  // 6. துறைத் தலைவர்களுக்கான Leader Portal
-  if (session.role === 'LEADER' || session.role === 'DEPARTMENT_LEAD') {
-    return <LeaderPortalView userSession={session} onLogout={handleLogout} />;
-  }
-
-  // 7. பாஸ்டர் & அட்மின் பிரதான டெஸ்க்டாப் போர்ட்டல்
-  const dynamicTextColor = theme?.activeTextColor || '#ffffff';
-  const wallpaperDim = theme?.wallpaperDim ?? 20;
-  const wallpaperBrightness = theme?.wallpaperBrightness ?? 100;
-  const glassGlow = theme?.glassGlowColor || '#06b6d4';
-  const shadowAlpha = (theme?.shadowIntensity ?? 40) / 100;
-  const isDockLayout = theme?.layoutStyle === 'windows_dock';
-
-  return (
-    <div 
-      style={{
-        '--dynamic-text-color': dynamicTextColor,
-        '--card-glow-color': glassGlow,
-        '--shadow-depth': `rgba(0, 0, 0, ${shadowAlpha})`,
-        color: dynamicTextColor
-      }}
-      className="relative flex h-screen w-screen overflow-hidden select-none font-sans bg-[#07050d]"
-    >
-      {/* Weather Canvas */}
-      <RainCanvas 
-        enableRain={theme?.enableRainFX} 
-        enableThunder={theme?.enableThunderPulse} 
-        enableHolyDust={theme?.enableHolyDustFX} 
-      />
-
-      {/* Wallpaper Layer */}
-      {wallpaperData && (
-        <div 
-          className="fixed inset-0 bg-cover bg-center pointer-events-none z-[0] transition-all duration-300"
-          style={{ 
-            backgroundImage: `url(${wallpaperData})`,
-            filter: `brightness(${wallpaperBrightness}%)`,
-            imageRendering: 'auto'
-          }}
+        <button 
+          onClick={toggleLanguage}
+          className="absolute top-6 right-6 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-xs text-cyan-400 backdrop-blur-md transition-all cursor-pointer"
         >
-          <div 
-            className="w-full h-full pointer-events-none transition-colors duration-300"
-            style={{ backgroundColor: `rgba(0, 0, 0, ${wallpaperDim / 100})` }}
-          />
+          <Globe className="w-4 h-4" />
+          {t.switchLang}
+        </button>
+
+        <div className="w-full max-w-md p-8 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-xl shadow-2xl relative z-10">
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/20">
+              <Church className="w-9 h-9 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-wide text-white">{t.loginTitle}</h1>
+            <p className="text-xs text-slate-400 mt-1">{t.loginSubtitle}</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">{t.username}</label>
+              <input 
+                type="text" 
+                required
+                value={loginCreds.username}
+                onChange={(e) => setLoginCreds({ ...loginCreds, username: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none text-sm text-white placeholder-slate-500 transition-all"
+                placeholder="admin@gracechurch.org"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">{t.password}</label>
+              <input 
+                type="password" 
+                required
+                value={loginCreds.password}
+                onChange={(e) => setLoginCreds({ ...loginCreds, password: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none text-sm text-white placeholder-slate-500 transition-all"
+                placeholder="••••••••"
+              />
+            </div>
+            <button 
+              type="submit"
+              className="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 font-semibold text-sm text-white shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
+            >
+              {t.loginBtn}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // --- 2. முதன்மை டெஸ்க்டாப் ERP டேஷ்போர்டு ---
+  return (
+    <div className="min-h-screen bg-[#080612] text-slate-100 flex overflow-hidden font-sans">
+      {/* Sidebar Navigation */}
+      <aside className="w-64 border-r border-white/10 bg-white/[0.02] backdrop-blur-xl flex flex-col justify-between p-4 select-none">
+        <div>
+          {/* Logo */}
+          <div className="flex items-center gap-3 px-3 py-4 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
+              <Church className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="font-bold text-sm leading-tight text-white">{t.appTitle}</h2>
+              <span className="text-[10px] text-cyan-400">{t.tagline}</span>
+            </div>
+          </div>
+
+          {/* Nav Links */}
+          <nav className="space-y-1">
+            {[
+              { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
+              { id: 'members', label: t.members, icon: Users },
+              { id: 'finance', label: t.finance, icon: Receipt },
+              { id: 'events', label: t.events, icon: Calendar },
+              { id: 'settings', label: t.settings, icon: Settings }
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 border border-cyan-500/30 text-cyan-300' 
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="pt-4 border-t border-white/10 space-y-2">
+          <button 
+            onClick={toggleLanguage}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 text-xs text-slate-300 hover:bg-white/10 transition-all cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-cyan-400" />
+              Language
+            </span>
+            <span className="font-semibold text-cyan-400">{t.switchLang}</span>
+          </button>
+          
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            {t.logout}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col overflow-y-auto">
+        {/* Top Header */}
+        <header className="h-16 border-b border-white/10 bg-white/[0.01] backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-20">
+          <div className="flex items-center gap-4 flex-1 max-w-md">
+            <div className="relative w-full">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input 
+                type="text" 
+                placeholder={t.searchPlaceholder}
+                className="w-full pl-9 pr-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-400">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>{syncStatus}</span>
+            </div>
+            <button 
+              onClick={fetchCloudData}
+              title="Refresh Cloud Sync"
+              className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button className="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer">
+              <Bell className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
+
+        {/* Dashboard Grid */}
+        <div className="p-8 space-y-6">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-wide">{t.dashboard}</h1>
+            <p className="text-xs text-slate-400 mt-0.5">{t.welcome}</p>
+          </div>
+
+          {/* Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-400">{t.totalMembers}</span>
+                <Users className="w-5 h-5 text-cyan-400" />
+              </div>
+              <div className="text-2xl font-bold text-white">{membersCount}</div>
+              <span className="text-[10px] text-emerald-400 flex items-center gap-1 mt-1 font-medium">
+                <TrendingUp className="w-3 h-3" /> Live Verified Sync
+              </span>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-400">{t.monthlyIncome}</span>
+                <Receipt className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div className="text-2xl font-bold text-white">₹ 48,500</div>
+              <span className="text-[10px] text-slate-400 mt-1 block">Tithe, Offering & Special Funds</span>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-400">{t.activePledges}</span>
+                <CreditCard className="w-5 h-5 text-purple-400" />
+              </div>
+              <div className="text-2xl font-bold text-white">12 Wings</div>
+              <span className="text-[10px] text-slate-400 mt-1 block">Youth, Sunday School, Women's Wing</span>
+            </div>
+          </div>
+
+          {/* Transactions Table */}
+          <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 backdrop-blur-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-cyan-400" />
+                {t.recentTransactions}
+              </h2>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 text-xs font-medium transition-all cursor-pointer"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                {t.addRecord}
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-white/10 text-slate-400">
+                    <th className="py-3 px-3">{t.donor}</th>
+                    <th className="py-3 px-3">{t.category}</th>
+                    <th className="py-3 px-3">{t.amount}</th>
+                    <th className="py-3 px-3">{t.mode}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-slate-200">
+                  {ledger.length > 0 ? (
+                    ledger.map((row) => (
+                      <tr key={row.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 px-3 font-medium text-white">{row.donor_name || 'Anonymous'}</td>
+                        <td className="py-3 px-3">
+                          <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-cyan-400 font-mono">
+                            {row.category || 'TITHE'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-emerald-400">₹ {row.amount}</td>
+                        <td className="py-3 px-3 text-slate-400">{row.payment_mode || 'UPI'}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="py-8 text-center text-slate-500">
+                        No ledger entries found. Perform a sync or insert records.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* புதிய பதிவு சேர்க்கும் Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md p-6 rounded-2xl bg-[#0f0c1b] border border-white/10 shadow-2xl">
+            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              <PlusCircle className="w-4 h-4 text-cyan-400" />
+              {t.quickInsertTitle}
+            </h3>
+            <form onSubmit={handleInsertRecord} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1">{t.donor}</label>
+                <input 
+                  type="text" 
+                  value={formData.donor_name}
+                  onChange={(e) => setFormData({ ...formData, donor_name: e.target.value })}
+                  placeholder="e.g. John Doe (Optional)"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1">{t.category}</label>
+                  <select 
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-[#181427] border border-white/10 text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="TITHE">TITHE</option>
+                    <option value="OFFERING">OFFERING</option>
+                    <option value="MISSION">MISSION</option>
+                    <option value="BUILDING">BUILDING</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1">{t.amount} (₹)</label>
+                  <input 
+                    type="number" 
+                    required
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    placeholder="500"
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">{t.mode}</label>
+                <select 
+                  value={formData.payment_mode}
+                  onChange={(e) => setFormData({ ...formData, payment_mode: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[#181427] border border-white/10 text-white focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="UPI">UPI</option>
+                  <option value="CASH">CASH</option>
+                  <option value="BANK_TRANSFER">BANK TRANSFER</option>
+                </select>
+              </div>
+              <div className="flex gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 py-2 rounded-lg bg-white/5 text-slate-400 hover:bg-white/10 transition-all cursor-pointer"
+                >
+                  {t.cancelBtn}
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 font-semibold text-white transition-all cursor-pointer"
+                >
+                  {t.saveBtn}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
-
-      {/* Custom Color Glow Aura */}
-      {theme?.useCustomColor && !wallpaperData && (
-        <div 
-          className="fixed top-[-15%] left-[-10%] w-[65vw] h-[65vw] rounded-full blur-[170px] pointer-events-none opacity-25 transition-all duration-700 z-[0]"
-          style={{ backgroundColor: theme.customColor }}
-        />
-      )}
-
-      {/* Fluid Mesh Waves Presets */}
-      {!wallpaperData && !theme?.useCustomColor && (
-        <>
-          {theme?.preset === 'fluid_aurora_mesh' && (
-            <>
-              <div className="absolute top-[-15%] left-[-10%] w-[55vw] h-[55vw] rounded-full bg-rose-600/20 blur-[160px] pointer-events-none animate-pulse" />
-              <div className="absolute bottom-[-15%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-700/20 blur-[170px] pointer-events-none" />
-              <div className="absolute top-[25%] left-[30%] w-[45vw] h-[45vw] rounded-full bg-amber-500/15 blur-[150px] pointer-events-none" />
-            </>
-          )}
-          {theme?.preset === 'sunset_glow' && (
-            <>
-              <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-orange-600/20 blur-[150px] pointer-events-none" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-purple-700/20 blur-[160px] pointer-events-none" />
-            </>
-          )}
-          {theme?.preset === 'velvet_pink' && (
-            <>
-              <div className="absolute top-[-10%] left-[20%] w-[50vw] h-[50vw] rounded-full bg-rose-600/20 blur-[150px] pointer-events-none" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-purple-800/25 blur-[160px] pointer-events-none" />
-            </>
-          )}
-          {theme?.preset === 'midnight_rain' && (
-            <>
-              <div className="absolute top-[-10%] left-[-5%] w-[50vw] h-[50vw] rounded-full bg-cyan-600/20 blur-[150px] pointer-events-none" />
-              <div className="absolute bottom-[-10%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-blue-800/25 blur-[160px] pointer-events-none" />
-            </>
-          )}
-        </>
-      )}
-
-      {/* Classic Sidebar Mode */}
-      {!isDockLayout && (
-        <FusionSidebar 
-          activeTab={activeTab || 'dashboard'} 
-          setActiveTab={setActiveTab} 
-          session={session} 
-          onLogout={handleLogout} 
-        />
-      )}
-
-      {/* Primary Desktop Container */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
-        <VaultConnectionGuard />
-        <Header />
-
-        <main className={`flex-1 overflow-y-auto ${isDockLayout ? 'pb-24' : 'p-5'}`}>
-          {activeTab && (
-            <div className="relative p-2 sm:p-4 animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
-                <span className="text-[11px] font-mono uppercase tracking-widest text-slate-400">
-                  Module: <strong className="text-cyan-400">{activeTab.replace('_', ' ')}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('dashboard')}
-                  className="px-3 py-1 bg-black/40 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer backdrop-blur-md"
-                  title="Return to Home Dashboard"
-                >
-                  <LayoutDashboard size={12} />
-                  <span>Home Dashboard</span>
-                </button>
-              </div>
-
-              {/* Core Functional Modules */}
-              {activeTab === 'dashboard' && <MainDashboard setActiveTab={setActiveTab} session={session} />}
-              {activeTab === 'attendance' && <AttendanceDesk session={session} />}
-              {activeTab === 'members' && <MembersDesk session={session} />}
-              {activeTab === 'ministries' && <MinistriesHubDesk session={session} />}
-              {activeTab === 'inventory' && <ChurchInventoryDesk session={session} />}
-              {activeTab === 'finance' && <FinanceDesk session={session} />}
-              {activeTab === 'broadcast' && <BulkBroadcastMessenger />}
-              {activeTab === 'community' && <CommunityHub session={session} />}
-              {activeTab === 'visitors' && <VisitorsHub session={session} />}
-              {(activeTab === 'prayer_wall' || activeTab === 'prayer') && <PrayerWall session={session} />}
-              {(activeTab === 'events_hub' || activeTab === 'events') && <EventsHub session={session} />}
-              {(activeTab === 'live_desk' || activeTab === 'live') && <LiveDesk session={session} />}
-              {(activeTab === 'reports' || activeTab === 'report_hub') && <ReportDashboard session={session} />}
-              {activeTab === 'settings' && <SettingsHub session={session} />}
-            </div>
-          )}
-
-          {!activeTab && (
-            <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center select-none text-center space-y-4">
-              <div className="p-5 rounded-3xl bg-black/40 border border-white/10 backdrop-blur-md space-y-2">
-                <h1 className="text-3xl font-black text-white tracking-widest uppercase">GraceOS Desktop</h1>
-                <p className="text-xs text-slate-400">All windows minimized. Click below to reopen your workspace.</p>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('dashboard')}
-                  className="mt-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition cursor-pointer"
-                >
-                  Open Main Dashboard
-                </button>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* Windows 11 Taskbar Dock Mode */}
-      {isDockLayout && (
-        <TaskbarDock activeTab={activeTab || 'dashboard'} setActiveTab={setActiveTab} />
-      )}
-
-      <QuickWidgetBar />
-      <PWAInstallPrompt />
     </div>
   );
 }
