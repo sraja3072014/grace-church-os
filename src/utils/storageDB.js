@@ -1,7 +1,9 @@
-const DB_NAME = 'graceos_assets_db';
+// src/utils/storageDB.js
+const DB_NAME = 'GraceOS_Storage';
 const STORE_NAME = 'wallpapers';
 
-export const initDB = () => {
+// IndexedDB-ஐ திறக்கும் அல்லது உருவாக்கும் உதவி ஃபங்ஷன்
+const openDB = () => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
     request.onupgradeneeded = (e) => {
@@ -15,24 +17,31 @@ export const initDB = () => {
   });
 };
 
+// 1. பெரிய வால்பேப்பரை IndexedDB-ல் சேமித்தல்
 export const saveLargeWallpaper = async (base64Data) => {
   try {
     const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(base64Data, 'current_wallpaper');
-    return true;
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.put(base64Data, 'current_wallpaper');
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
   } catch (err) {
-    console.warn('IndexedDB save failed, image too large:', err);
+    console.warn('IndexedDB save failed:', err);
     return false;
   }
 };
 
+// 2. சேமிக்கப்பட்ட வால்பேப்பரைப் பெறுதல்
 export const getLargeWallpaper = async () => {
   try {
     const db = await openDB();
     return new Promise((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
-      const req = tx.objectStore(STORE_NAME).get('current_wallpaper');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get('current_wallpaper');
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => resolve(null);
     });
@@ -41,13 +50,18 @@ export const getLargeWallpaper = async () => {
   }
 };
 
+// 3. வால்பேப்பரை நீக்குதல்
 export const deleteLargeWallpaper = async () => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.delete('active_custom_wallpaper');
-    req.onsuccess = () => resolve(true);
-    req.onerror = () => reject(req.error);
-  });
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.delete('current_wallpaper');
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch {
+    return false;
+  }
 };

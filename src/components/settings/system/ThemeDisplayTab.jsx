@@ -1,37 +1,9 @@
 import React, { useState, useRef } from 'react';
 import {
   Palette, CloudRain, Zap, CheckCircle2,
-  Upload, Trash2, Pipette,
-  Sparkles, HardDrive, SunMedium, Layers, Check, Layout
+  Upload, Trash2, Sparkles, HardDrive, SunMedium, Layers, Check, Layout
 } from 'lucide-react';
 import { saveLargeWallpaper, getLargeWallpaper, deleteLargeWallpaper } from '../../../utils/storageDB';
-import { getAverageBrightnessFromImage } from '../../../utils/contrastEngine';
-
-function getContrastingTextColor(hexColor) {
-  if (!hexColor || typeof hexColor !== 'string') return '#f8fafc';
-  const cleanHex = hexColor.replace('#', '');
-  if (cleanHex.length !== 6) return '#f8fafc';
-
-  const r = parseInt(cleanHex.substring(0, 2), 16);
-  const g = parseInt(cleanHex.substring(2, 4), 16);
-  const b = parseInt(cleanHex.substring(4, 6), 16);
-
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 128 ? '#0f172a' : '#f8fafc';
-}
-
-const PRESET_10_COLORS = [
-  '#0f172a', // 1. Deep Slate
-  '#1e1b4b', // 2. Midnight Indigo
-  '#14532d', // 3. Forest Emerald
-  '#7c2d12', // 4. Burnt Amber
-  '#831843', // 5. Velvet Rose
-  '#0369a1', // 6. Ocean Azure
-  '#312e81', // 7. Royal Violet
-  '#701a75', // 8. Deep Magenta
-  '#3f3f46', // 9. Neutral Graphite
-  '#f8fafc'  // 10. Clean White / Light Mode
-];
 
 export default function ThemeDisplayTab() {
   const [toast, setToast] = useState('');
@@ -40,22 +12,15 @@ export default function ThemeDisplayTab() {
   const [themeConfig, setThemeConfig] = useState(() => {
     const local = localStorage.getItem('graceos_theme_config');
     const parsed = local ? JSON.parse(local) : {};
-    const defaultBg = parsed.bgColor || '#0f172a';
-    const defaultSidebarBg = parsed.sidebarBg || '#090d16';
-
     return {
       preset: parsed.preset || 'fluid_aurora_mesh',
-      bgColor: defaultBg,
+      bgColor: parsed.bgColor || '#0f172a',
       textColor: parsed.textColor || '#f8fafc',
-      autoTextColor: parsed.autoTextColor ?? true,
 
-      sidebarBg: defaultSidebarBg,
+      sidebarBg: parsed.sidebarBg || '#090d16',
       sidebarTextColor: parsed.sidebarTextColor || '#f8fafc',
-      autoSidebarText: parsed.autoSidebarText ?? true,
       layoutStyle: parsed.layoutStyle || 'windows_dock',
 
-      customColor: parsed.customColor || '#06b6d4',
-      useCustomColor: parsed.useCustomColor || false,
       hasCustomWallpaper: parsed.hasCustomWallpaper || false,
       wallpaperDim: parsed.wallpaperDim ?? 35,
       wallpaperBrightness: parsed.wallpaperBrightness ?? 100,
@@ -66,8 +31,6 @@ export default function ThemeDisplayTab() {
       enableRainFX: parsed.enableRainFX || false,
       enableThunderPulse: parsed.enableThunderPulse || false,
       enableHolyDustFX: parsed.enableHolyDustFX || false,
-
-      localDbPath: parsed.localDbPath || 'D:\\GraceOS_Data'
     };
   });
 
@@ -121,42 +84,15 @@ export default function ThemeDisplayTab() {
     window.dispatchEvent(new Event('graceos_theme_updated'));
   };
 
-  const handleBgColorChange = (newBg) => {
-    const updated = { ...themeConfig, bgColor: newBg };
-    if (themeConfig.autoTextColor) {
-      updated.textColor = getContrastingTextColor(newBg);
-    }
-    updateConfig(updated);
-  };
-
-  const toggleAutoTextColor = () => {
-    const nextVal = !themeConfig.autoTextColor;
+  const handlePresetSelect = (p) => {
     const updated = {
       ...themeConfig,
-      autoTextColor: nextVal,
-      textColor: nextVal ? getContrastingTextColor(themeConfig.bgColor) : themeConfig.textColor
+      preset: p.id,
+      bgColor: p.defaultBg,
+      hasCustomWallpaper: false // Preset தேர்வு செய்யும்போது கஸ்டம் வால்பேப்பர் ஆஃப் செய்யப்படும்
     };
     updateConfig(updated);
-    showToast(nextVal ? 'Auto Text Contrast Enabled ✓' : 'Manual Text Color Override Enabled');
-  };
-
-  const handleSidebarBgChange = (newSidebarBg) => {
-    const updated = { ...themeConfig, sidebarBg: newSidebarBg };
-    if (themeConfig.autoSidebarText) {
-      updated.sidebarTextColor = getContrastingTextColor(newSidebarBg);
-    }
-    updateConfig(updated);
-  };
-
-  const toggleAutoSidebarText = () => {
-    const nextVal = !themeConfig.autoSidebarText;
-    const updated = {
-      ...themeConfig,
-      autoSidebarText: nextVal,
-      sidebarTextColor: nextVal ? getContrastingTextColor(themeConfig.sidebarBg) : themeConfig.sidebarTextColor
-    };
-    updateConfig(updated);
-    showToast(nextVal ? 'Auto Sidebar Contrast Enabled ✓' : 'Manual Sidebar Text Enabled');
+    showToast(`Preset Applied: ${p.name} ✓`);
   };
 
   const handleImageUpload = (e) => {
@@ -183,11 +119,6 @@ export default function ThemeDisplayTab() {
     showToast('Custom wallpaper removed.');
   };
 
-  const activeBg = themeConfig.bgColor || '#0f172a';
-  const activeText = themeConfig.textColor || '#f8fafc';
-  const activeSidebarBg = themeConfig.sidebarBg || '#090d16';
-  const activeSidebarText = themeConfig.sidebarTextColor || '#f8fafc';
-
   return (
     <div className="flex flex-col gap-6 max-w-4xl select-none animate-in fade-in duration-200 pb-12 text-slate-200">
       {toast && (
@@ -207,17 +138,17 @@ export default function ThemeDisplayTab() {
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               Liquid Dark Acrylic Studio &amp; Theme Engine
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono">
-                Windows 11 Acrylic Tuner
+                Active Studio
               </span>
             </h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              10-color swatch presets, auto/manual font contrast, acrylic waves, and custom sidebar palettes.
+              Select dark acrylic wave presets, manage custom wallpapers, and toggle atmospheric FX.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Dark Presets */}
+      {/* Dark Presets (Fixed & Working) */}
       <div className="flex flex-col gap-3">
         <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
           Dark Acrylic Wave Presets
@@ -228,15 +159,7 @@ export default function ThemeDisplayTab() {
             return (
               <div
                 key={p.id}
-                onClick={() => {
-                  const updated = {
-                    ...themeConfig,
-                    preset: p.id,
-                    bgColor: p.defaultBg,
-                    textColor: themeConfig.autoTextColor ? getContrastingTextColor(p.defaultBg) : themeConfig.textColor
-                  };
-                  updateConfig(updated);
-                }}
+                onClick={() => handlePresetSelect(p)}
                 className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 cursor-pointer transition relative overflow-hidden group ${
                   isSelected
                     ? 'border-cyan-400 bg-white/[0.08] shadow-xl shadow-cyan-500/10'
@@ -259,162 +182,6 @@ export default function ThemeDisplayTab() {
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Canvas Palette & Contrast */}
-      <div className="p-5 rounded-2xl win11-card border border-white/[0.08] space-y-4">
-        <div className="flex items-center justify-between border-b border-white/5 pb-3">
-          <div>
-            <span className="text-xs font-bold text-white">Dashboard Canvas Palette &amp; Auto Contrast</span>
-            <p className="text-[10px] text-slate-400">Choose from 10 swatches or manual color picker. Text color contrast will calculate automatically.</p>
-          </div>
-
-          <button
-            type="button"
-            onClick={toggleAutoTextColor}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
-              themeConfig.autoTextColor
-                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-md'
-                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
-            }`}
-          >
-            <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition ${
-              themeConfig.autoTextColor ? 'bg-emerald-500 border-emerald-400 text-slate-950' : 'border-slate-500'
-            }`}>
-              {themeConfig.autoTextColor && <Check size={12} strokeWidth={3} />}
-            </div>
-            <span>Auto Text Color</span>
-          </button>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-xs text-slate-300 font-semibold">
-            Color Presets (10 Preset Swatches):
-          </label>
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {PRESET_10_COLORS.map((hex, idx) => {
-              const isSelected = activeBg.toLowerCase() === hex.toLowerCase();
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleBgColorChange(hex)}
-                  style={{ backgroundColor: hex }}
-                  title={`Preset ${idx + 1}: ${hex}`}
-                  className={`w-9 h-9 rounded-2xl border-2 flex items-center justify-center transition active:scale-90 cursor-pointer shadow-md shrink-0 ${
-                    isSelected ? 'border-amber-400 scale-110 shadow-amber-500/20' : 'border-white/15 hover:border-white/40'
-                  }`}
-                >
-                  {isSelected && (
-                    <Check size={14} className={hex === '#f8fafc' ? 'text-slate-900' : 'text-white'} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-          <div className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-300 font-medium block">Custom Background</span>
-              <span className="text-[10px] text-slate-500 font-mono">{activeBg}</span>
-            </div>
-            <input
-              type="color"
-              value={activeBg}
-              onChange={(e) => handleBgColorChange(e.target.value)}
-              className="w-8 h-8 rounded-xl bg-transparent border-0 cursor-pointer"
-            />
-          </div>
-
-          <div className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-300 font-medium block">Dashboard Font Color</span>
-              <span className="text-[10px] text-slate-500 font-mono">
-                {themeConfig.autoTextColor ? `${activeText} (Auto)` : activeText}
-              </span>
-            </div>
-            <input
-              type="color"
-              value={activeText}
-              disabled={themeConfig.autoTextColor}
-              onChange={(e) => {
-                const updated = { ...themeConfig, textColor: e.target.value, autoTextColor: false };
-                updateConfig(updated);
-              }}
-              className={`w-8 h-8 rounded-xl bg-transparent border-0 cursor-pointer ${
-                themeConfig.autoTextColor ? 'opacity-30 cursor-not-allowed' : ''
-              }`}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Sidebar & Dock Colors */}
-      <div className="p-5 rounded-2xl win11-card border border-white/[0.08] space-y-4">
-        <div className="flex items-center justify-between border-b border-white/5 pb-3">
-          <div className="flex items-center gap-2">
-            <Layout className="text-sky-400" size={18} />
-            <div>
-              <span className="text-xs font-bold text-white">Sidebar &amp; Dock Navigation Colors</span>
-              <p className="text-[10px] text-slate-400">Configure background and icon tinting for navigation docks.</p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={toggleAutoSidebarText}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
-              themeConfig.autoSidebarText
-                ? 'bg-sky-500/20 border-sky-500/40 text-sky-300 shadow-md'
-                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
-            }`}
-          >
-            <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition ${
-              themeConfig.autoSidebarText ? 'bg-sky-500 border-sky-400 text-slate-950' : 'border-slate-500'
-            }`}>
-              {themeConfig.autoSidebarText && <Check size={12} strokeWidth={3} />}
-            </div>
-            <span>Auto Sidebar Text</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-300 font-medium block">Sidebar / Dock Background</span>
-              <span className="text-[10px] text-slate-500 font-mono">{activeSidebarBg}</span>
-            </div>
-            <input
-              type="color"
-              value={activeSidebarBg}
-              onChange={(e) => handleSidebarBgChange(e.target.value)}
-              className="w-8 h-8 rounded-xl bg-transparent border-0 cursor-pointer"
-            />
-          </div>
-
-          <div className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-300 font-medium block">Sidebar Text &amp; Icon Color</span>
-              <span className="text-[10px] text-slate-500 font-mono">
-                {themeConfig.autoSidebarText ? `${activeSidebarText} (Auto)` : activeSidebarText}
-              </span>
-            </div>
-            <input
-              type="color"
-              value={activeSidebarText}
-              disabled={themeConfig.autoSidebarText}
-              onChange={(e) => {
-                const updated = { ...themeConfig, sidebarTextColor: e.target.value, autoSidebarText: false };
-                updateConfig(updated);
-              }}
-              className={`w-8 h-8 rounded-xl bg-transparent border-0 cursor-pointer ${
-                themeConfig.autoSidebarText ? 'opacity-30 cursor-not-allowed' : ''
-              }`}
-            />
-          </div>
         </div>
       </div>
 
@@ -528,7 +295,7 @@ export default function ThemeDisplayTab() {
       {/* Desktop Navigation Layout Style */}
       <div className="p-5 rounded-2xl win11-card border border-white/[0.08] flex flex-col gap-3">
         <div className="flex items-center justify-between border-b border-white/5 pb-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-white">
             Desktop Navigation Layout Style
           </span>
           <span className="text-[10px] font-mono text-cyan-300 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
