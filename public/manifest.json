@@ -1,28 +1,8 @@
 {
   "short_name": "GraceOS",
-  "name": "GraceOS - Church Management System",
-  "icons": [
-    {
-      "src": "/icons/icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "maskable"
-    }
-  ],
+  "name": "Grace Church Network OS",
   "start_url": "/",
   "background_color": "#07050d",
   "theme_color": "#06b6d4",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "scope": "/"
+  "display": "standalone"
 }

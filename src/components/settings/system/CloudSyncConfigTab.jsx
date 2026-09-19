@@ -50,34 +50,30 @@ export default function CloudSyncConfigTab() {
     setConnectionStatus(null);
 
     try {
-      // நேரடி REST URL பிங் (Trailing slash நீக்கப்பட்டது)
       const cleanUrl = config.supabaseUrl.replace(/\/$/, '');
-      const testEndpoint = `${cleanUrl}/rest/v1/`;
+      const testEndpoint = `${cleanUrl}/rest/v1/members?select=*&limit=1`;
 
       const res = await fetch(testEndpoint, {
         method: 'GET',
         headers: {
           'apikey': config.supabaseAnonKey.trim(),
-          'Authorization': `Bearer ${config.supabaseAnonKey.trim()}`
+          'Authorization': `Bearer ${config.supabaseAnonKey.trim()}`,
+          'Content-Type': 'application/json'
         }
       });
 
-      // 200 (Success), 404/401 (Gateway reached with valid TLS)
-      if (res.status === 200 || res.status === 404 || res.ok) {
+      if (res.ok || res.status === 200 || res.status === 206) {
         setConnectionStatus({ success: true, message: 'Connected successfully to Supabase Node!' });
         showToast('Supabase Live Handshake Successful! ✓');
-      } else if (res.status === 401 && config.supabaseAnonKey.startsWith('sb_publishable_')) {
-        // புதிய Supabase Publishable கீ அங்கீகரிக்கப்பட்ட நிலை
-        setConnectionStatus({ success: true, message: 'Supabase Node Reachable & Key Verified!' });
-        showToast('Supabase Live Handshake Successful! ✓');
       } else {
-        throw new Error(`HTTP ${res.status}`);
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `HTTP Error ${res.status}`);
       }
     } catch (err) {
       console.error(err);
       setConnectionStatus({ 
         success: false, 
-        message: 'Handshake failed. Ensure URL is https://ximqamzipltgnqwbroko.supabase.co and key is correct.' 
+        message: `Handshake failed: ${err.message}. Check your Anon Key.` 
       });
       showToast('Cloud Handshake Failed.');
     } finally {
