@@ -1,45 +1,88 @@
+// src/components/attendance/AttendanceDesk.jsx
 import React, { useState } from 'react';
 import AttendanceDeskScanner from './AttendanceDeskScanner';
 import AttendanceAnalyticsFollowUp from './AttendanceAnalyticsFollowUp';
-import { QrCode, UserX } from 'lucide-react';
+import DynamicAuraKiosk from './DynamicAuraKiosk';
+import SmartAttendanceScannerModal from './SmartAttendanceScannerModal';
+import { QrCode, UserX, Sparkles, ShieldCheck } from 'lucide-react';
 
 export default function AttendanceDesk() {
-  const [activeSubTab, setActiveSubTab] = useState('scanner'); // 'scanner' | 'followup'
+  const [activeSubTab, setActiveSubTab] = useState('scanner'); // 'scanner' | 'followup' | 'kiosk'
+  const [isSmartModalOpen, setIsSmartModalOpen] = useState(false);
 
   return (
     <div className="space-y-6">
       {/* Sub Navigation Switcher */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('scanner')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-            activeSubTab === 'scanner'
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
-          }`}
-        >
-          <QrCode size={14} />
-          <span>Live Rapid Scanner</span>
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('scanner')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              activeSubTab === 'scanner'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <QrCode size={14} />
+            <span>Live Rapid Scanner</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('followup')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-            activeSubTab === 'followup'
-              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
-          }`}
-        >
-          <UserX size={14} />
-          <span>Absentee Care Desk</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('followup')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              activeSubTab === 'followup'
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <UserX size={14} />
+            <span>Absentee Care Desk</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('kiosk')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              activeSubTab === 'kiosk'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Sparkles size={14} />
+            <span>Aura Kiosk &amp; GPS Check-In</span>
+          </button>
+        </div>
+
+        {/* Quick Launch Smart GPS Scanner */}
+        {activeSubTab === 'kiosk' && (
+          <button
+            type="button"
+            onClick={() => setIsSmartModalOpen(true)}
+            className="px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-1.5 cursor-pointer"
+          >
+            <ShieldCheck size={14} />
+            <span>Open GPS Geo-Fence Scanner</span>
+          </button>
+        )}
       </div>
 
       {/* Panels */}
       {activeSubTab === 'scanner' && <AttendanceDeskScanner />}
       {activeSubTab === 'followup' && <AttendanceAnalyticsFollowUp />}
+      {activeSubTab === 'kiosk' && (
+        <div className="space-y-4">
+          <DynamicAuraKiosk />
+        </div>
+      )}
+
+      {/* Smart Attendance GPS Scanner Modal */}
+      <SmartAttendanceScannerModal
+        isOpen={isSmartModalOpen}
+        onClose={() => setIsSmartModalOpen(false)}
+        memberId="MBR-101"
+      />
     </div>
   );
 }

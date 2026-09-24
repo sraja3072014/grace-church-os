@@ -1,238 +1,425 @@
-import React, { useState, useEffect } from 'react';
-import { CreditCard, QrCode, Save, CheckCircle2, ShieldCheck, Zap, KeyRound, DollarSign } from 'lucide-react';
-import { getVaultData, setVaultData } from '../../../utils/vaultStore';
+// src/components/settings/finance/PaymentGatewayConfigTab.jsx
+import React, { useState } from 'react';
+import { 
+  Wallet, Plus, Edit2, Trash2, X, Check, 
+  KeyRound, ShieldCheck, Eye, EyeOff, Radio, RefreshCw, Zap
+} from 'lucide-react';
 
-export default function PaymentGatewayConfigTab() {
-  const [toast, setToast] = useState('');
-
-  const defaultGatewayConfig = {
-    activeProvider: 'RAZORPAY',
-    razorpayKeyId: '',
-    razorpayKeySecret: '',
-    razorpayWebhookSecret: '',
-    stripePublishableKey: '',
-    stripeSecretKey: '',
-    upiMerchantVpa: 'gracecathedral@sbi',
-    upiMerchantName: 'Grace Cathedral Trust',
-    enableDynamicQrOnCheckout: true,
-    enableAutoReceiptAfterPayment: true
-  };
-
-  const [gatewayConfig, setGatewayConfig] = useState(defaultGatewayConfig);
-
-  useEffect(() => {
-    async function loadGatewayConfig() {
-      const savedConfig = await getVaultData('payment_gateway_config', defaultGatewayConfig);
-      setGatewayConfig(savedConfig);
+export default function PaymentGatewaysTab({ onTriggerSuccess }) {
+  const [gateways, setGateways] = useState([
+    {
+      id: 1,
+      provider: 'Razorpay',
+      displayName: 'Razorpay PG (UPI, Cards, NetBanking)',
+      environment: 'Live',
+      apiKey: 'rzp_live_98a7sd98f7asdf89',
+      apiSecret: '••••••••••••••••••••••••',
+      merchantId: 'M_RAZOR_CATHERAL',
+      webhookSecret: 'whsec_987asdf89a7sdf',
+      isEnabled: true,
+      supportedModes: ['GPay / PhonePe UPI', 'Debit/Credit Cards', 'NetBanking'],
+      feePayer: 'Church Absorbs Fee (0% to Donor)'
+    },
+    {
+      id: 2,
+      provider: 'PhonePe PG',
+      displayName: 'PhonePe Direct Payment Gateway',
+      environment: 'Live',
+      apiKey: 'PHONEPE_PG_MID_109283',
+      apiSecret: '••••••••••••••••••••••••',
+      merchantId: 'PHONEPE_M_98234',
+      webhookSecret: 'ph_wh_098234asdf',
+      isEnabled: true,
+      supportedModes: ['PhonePe UPI Direct', 'QR Auto-Intent', 'Credit Cards'],
+      feePayer: 'Church Absorbs Fee'
+    },
+    {
+      id: 3,
+      provider: 'Stripe',
+      displayName: 'Stripe International (Foreign USD/EUR Donations)',
+      environment: 'Test',
+      apiKey: 'pk_test_51Mz897asdf897asdf',
+      apiSecret: '••••••••••••••••••••••••',
+      merchantId: 'acct_1Mz897asdf',
+      webhookSecret: 'whsec_stripe_test_123',
+      isEnabled: false,
+      supportedModes: ['International Cards', 'Apple Pay', 'Google Pay Global'],
+      feePayer: 'Donor Covers Fee (Add 2.5%)'
     }
-    loadGatewayConfig();
-  }, []);
+  ]);
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [showSecret, setShowSecret] = useState(false);
+
+  const [formState, setFormState] = useState({
+    provider: 'Razorpay',
+    displayName: '',
+    environment: 'Live',
+    apiKey: '',
+    apiSecret: '',
+    merchantId: '',
+    webhookSecret: '',
+    feePayer: 'Church Absorbs Fee (0% to Donor)',
+    isEnabled: true
+  });
+
+  const providerTemplates = {
+    Razorpay: {
+      name: 'Razorpay PG (UPI, Cards, NetBanking)',
+      keyPlaceholder: 'rzp_live_...',
+      secretPlaceholder: 'Razorpay Key Secret'
+    },
+    'PhonePe PG': {
+      name: 'PhonePe Direct Payment Gateway',
+      keyPlaceholder: 'Merchant Key / App ID',
+      secretPlaceholder: 'Salt Key / Secret Key'
+    },
+    'Paytm PG': {
+      name: 'Paytm All-In-One Gateway',
+      keyPlaceholder: 'Paytm Merchant ID (MID)',
+      secretPlaceholder: 'Merchant Key'
+    },
+    Stripe: {
+      name: 'Stripe Global (Foreign Cards & Currencies)',
+      keyPlaceholder: 'pk_live_... / pk_test_...',
+      secretPlaceholder: 'sk_live_... / sk_test_...'
+    },
+    Cashfree: {
+      name: 'Cashfree AutoCollect & PG',
+      keyPlaceholder: 'App ID',
+      secretPlaceholder: 'Secret Key'
+    }
   };
 
-  const handleSave = async (e) => {
+  const handleOpenModal = (gw = null) => {
+    setShowSecret(false);
+    if (gw) {
+      setEditingId(gw.id);
+      setFormState({ ...gw });
+    } else {
+      setEditingId(null);
+      setFormState({
+        provider: 'Razorpay',
+        displayName: providerTemplates['Razorpay'].name,
+        environment: 'Live',
+        apiKey: '',
+        apiSecret: '',
+        merchantId: '',
+        webhookSecret: '',
+        feePayer: 'Church Absorbs Fee (0% to Donor)',
+        isEnabled: true
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleProviderChange = (prov) => {
+    setFormState({
+      ...formState,
+      provider: prov,
+      displayName: providerTemplates[prov]?.name || prov
+    });
+  };
+
+  const handleSaveGateway = (e) => {
     e.preventDefault();
-    await setVaultData('payment_gateway_config', gatewayConfig, true);
-    localStorage.setItem('graceos_payment_gateway_config', JSON.stringify(gatewayConfig));
-    showToast('Payment Gateway Parameters Enforced Successfully!');
+    if (!formState.apiKey || !formState.apiSecret) {
+      alert('API Key and Secret are required');
+      return;
+    }
+
+    if (editingId) {
+      setGateways(gateways.map(g => g.id === editingId ? { ...formState, id: g.id } : g));
+      onTriggerSuccess('Payment Gateway credentials updated successfully!');
+    } else {
+      const newGw = {
+        ...formState,
+        id: Date.now(),
+        supportedModes: ['UPI (GPay / PhonePe)', 'Cards', 'NetBanking']
+      };
+      setGateways([...gateways, newGw]);
+      onTriggerSuccess('New Payment Gateway integration added!');
+    }
+    setIsModalOpen(false);
+  };
+
+  const handleToggleEnable = (id) => {
+    setGateways(gateways.map(g => {
+      if (g.id === id) {
+        const nextState = !g.isEnabled;
+        onTriggerSuccess(`${g.provider} Gateway ${nextState ? 'Activated' : 'Deactivated'}`);
+        return { ...g, isEnabled: nextState };
+      }
+      return g;
+    }));
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm("Are you sure you want to delete this Payment Gateway configuration?")) {
+      setGateways(gateways.filter(g => g.id !== id));
+      onTriggerSuccess('Payment gateway configuration removed.');
+    }
   };
 
   return (
-    <form onSubmit={handleSave} className="flex flex-col gap-6 max-w-4xl relative select-none text-slate-100 pb-12">
-      
-      {toast && (
-        <div className="fixed top-5 right-5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 backdrop-blur-md shadow-2xl z-50 animate-in fade-in">
-          <CheckCircle2 size={15} />
-          <span className="font-semibold">{toast}</span>
-        </div>
-      )}
-
-      {/* Header Banner */}
-      <div className="p-5 rounded-2xl win11-card border border-white/10 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-            <CreditCard size={24} />
-          </div>
+    <div className="space-y-6 animate-in fade-in duration-200 text-slate-200">
+      {/* Gateway Directory Card */}
+      <div className="win11-card rounded-3xl p-6 sm:p-8 space-y-6">
+        <div className="border-b border-white/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              Payment Gateway &amp; UPI Merchant Engine
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono">
-                Checkout Ready
-              </span>
-            </h4>
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Wallet className="text-cyan-400" size={20} />
+              Online Payment Gateways &amp; API Webhooks
+            </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Connect Razorpay, Stripe, or Direct Merchant UPI VPA for online tithes, touch kiosks, and donor checkout.
+              Connect Razorpay, PhonePe, Paytm, and Stripe to collect tithes on Member Mobile App with instant 80G tax receipts
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => handleOpenModal()}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/25 cursor-pointer shrink-0 transition"
+          >
+            <Plus size={15} />
+            <span>Connect Payment Gateway</span>
+          </button>
         </div>
 
-        {/* BankAccountsTab பட்டன் பாணிக்கு மாற்றப்பட்ட Save Gateway பட்டன் */}
-        <button 
-          type="submit"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition cursor-pointer"
-        >
-          <Save size={15} />
-          <span>Save Gateway</span>
-        </button>
+        {/* Gateways Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {gateways.map((gw) => (
+            <div
+              key={gw.id}
+              className={`p-5 rounded-2xl border transition-all space-y-4 win11-card ${
+                gw.isEnabled
+                  ? 'border-cyan-400/50 shadow-lg shadow-cyan-500/10'
+                  : 'border-white/5 opacity-70'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-white">{gw.displayName}</h4>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                      gw.environment === 'Live' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    }`}>
+                      {gw.environment}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-cyan-400 font-medium">{gw.feePayer}</p>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenModal(gw)}
+                    className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 cursor-pointer transition"
+                    title="Edit API Keys"
+                  >
+                    <Edit2 size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(gw.id)}
+                    className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer transition"
+                    title="Delete Gateway"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {/* API Credentials Box */}
+              <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2 font-mono text-xs">
+                <div className="flex justify-between text-slate-400">
+                  <span className="font-sans">API Key / MID:</span>
+                  <span className="text-white font-bold">{gw.apiKey.slice(0, 10)}...</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span className="font-sans">Key Secret:</span>
+                  <span className="text-slate-400">••••••••••••••••</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span className="font-sans">Webhook Secret:</span>
+                  <span className="text-emerald-400">{gw.webhookSecret ? 'Configured & Active' : 'Not Set'}</span>
+                </div>
+              </div>
+
+              {/* Toggle Enable & Mode */}
+              <div className="flex items-center justify-between pt-1 text-xs">
+                <span className="text-slate-400 text-[11px]">Instant Auto-Reconciliation</span>
+                
+                <button
+                  type="button"
+                  onClick={() => handleToggleEnable(gw.id)}
+                  className={`cursor-pointer px-3 py-1 rounded-full text-[10px] font-bold transition-all ${
+                    gw.isEnabled
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                      : 'bg-slate-800 text-slate-400 border border-white/10'
+                  }`}
+                >
+                  {gw.isEnabled ? '● Active on App' : 'Disabled'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Provider Selector Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
-        <button
-          type="button"
-          onClick={() => setGatewayConfig({ ...gatewayConfig, activeProvider: 'RAZORPAY' })}
-          className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
-            gatewayConfig.activeProvider === 'RAZORPAY'
-              ? 'bg-cyan-500/15 border-cyan-500 text-white shadow-lg'
-              : 'win11-card border-white/10 text-slate-400 hover:text-white'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-sm text-cyan-400 font-sans">Razorpay</span>
-            <Zap size={15} className="text-cyan-400" />
-          </div>
-          <span className="text-[10px] text-slate-400 mt-2">Indian UPI, NetBanking, Cards</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setGatewayConfig({ ...gatewayConfig, activeProvider: 'UPI_DIRECT' })}
-          className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
-            gatewayConfig.activeProvider === 'UPI_DIRECT'
-              ? 'bg-amber-500/15 border-amber-500 text-white shadow-lg'
-              : 'win11-card border-white/10 text-slate-400 hover:text-white'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-sm text-amber-400 font-sans">Direct UPI QR</span>
-            <QrCode size={15} className="text-amber-400" />
-          </div>
-          <span className="text-[10px] text-slate-400 mt-2">Zero 0% Fee Instant Settlement</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setGatewayConfig({ ...gatewayConfig, activeProvider: 'STRIPE' })}
-          className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
-            gatewayConfig.activeProvider === 'STRIPE'
-              ? 'bg-indigo-500/15 border-indigo-500 text-white shadow-lg'
-              : 'win11-card border-white/10 text-slate-400 hover:text-white'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-sm text-indigo-400 font-sans">Stripe Global</span>
-            <DollarSign size={15} className="text-indigo-400" />
-          </div>
-          <span className="text-[10px] text-slate-400 mt-2">International Currencies (USD/AED)</span>
-        </button>
-      </div>
-
-      {/* Razorpay Parameters */}
-      {gatewayConfig.activeProvider === 'RAZORPAY' && (
-        <div className="p-5 rounded-2xl win11-card border border-white/10 space-y-4">
-          <h5 className="text-xs font-bold uppercase tracking-wider text-cyan-300 font-mono flex items-center gap-1.5">
-            <KeyRound size={14} />
-            <span>Razorpay Live Merchant API Keys</span>
-          </h5>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Key ID *</label>
-              <input 
-                type="text"
-                required
-                placeholder="rzp_live_xxxxxxxxxxxx"
-                value={gatewayConfig.razorpayKeyId}
-                onChange={(e) => setGatewayConfig({ ...gatewayConfig, razorpayKeyId: e.target.value })}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
-              />
+      {/* Modal: Connect Gateway */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
+          <div className="win11-card w-full max-w-xl p-6 rounded-3xl border border-white/25 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <KeyRound className="text-cyan-400" size={18} />
+                {editingId ? 'Edit Payment Gateway Keys' : 'Connect New Payment Gateway'}
+              </h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X size={18} />
+              </button>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Key Secret *</label>
-              <input 
-                type="password"
-                required
-                placeholder="••••••••••••••••••••"
-                value={gatewayConfig.razorpayKeySecret}
-                onChange={(e) => setGatewayConfig({ ...gatewayConfig, razorpayKeySecret: e.target.value })}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
-              />
-            </div>
+
+            <form onSubmit={handleSaveGateway} className="space-y-3.5">
+              {/* Select Provider */}
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Select Gateway Provider *</label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-1.5">
+                  {['Razorpay', 'PhonePe PG', 'Paytm PG', 'Stripe', 'Cashfree'].map((prov) => (
+                    <button
+                      key={prov}
+                      type="button"
+                      onClick={() => handleProviderChange(prov)}
+                      className={`py-2 px-2 rounded-xl text-xs font-bold transition-all border text-center cursor-pointer ${
+                        formState.provider === prov
+                          ? 'bg-cyan-500 text-white border-cyan-400 shadow-md shadow-cyan-500/20'
+                          : 'bg-black/30 border-white/10 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {prov}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="md:col-span-2">
+                  <label className="text-xs text-slate-300 font-medium">Gateway Display Label *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formState.displayName}
+                    onChange={(e) => setFormState({ ...formState, displayName: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white mt-1 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 font-medium">Environment Mode</label>
+                  <select
+                    value={formState.environment}
+                    onChange={(e) => setFormState({ ...formState, environment: e.target.value })}
+                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white mt-1 focus:outline-none focus:border-cyan-400 cursor-pointer"
+                  >
+                    <option value="Live">Live Production Mode</option>
+                    <option value="Test">Test / Sandbox Mode</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 font-medium">Merchant ID / MID</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. M_RAZOR_CATHERAL"
+                    value={formState.merchantId}
+                    onChange={(e) => setFormState({ ...formState, merchantId: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white mt-1 focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-xs text-slate-300 font-medium">
+                    API Key / Key ID * ({formState.provider})
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={providerTemplates[formState.provider]?.keyPlaceholder || 'Enter Key'}
+                    value={formState.apiKey}
+                    onChange={(e) => setFormState({ ...formState, apiKey: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white mt-1 focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-300 font-medium">
+                      API Key Secret *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowSecret(!showSecret)}
+                      className="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {showSecret ? <EyeOff size={12} /> : <Eye size={12} />}
+                      <span>{showSecret ? 'Hide Secret' : 'Show Secret'}</span>
+                    </button>
+                  </div>
+                  <input
+                    type={showSecret ? 'text' : 'password'}
+                    required
+                    placeholder={providerTemplates[formState.provider]?.secretPlaceholder || 'Enter Secret'}
+                    value={formState.apiSecret}
+                    onChange={(e) => setFormState({ ...formState, apiSecret: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white mt-1 focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-xs text-slate-300 font-medium">Webhook Signing Secret (For Auto-Receipts)</label>
+                  <input
+                    type="text"
+                    placeholder="whsec_..."
+                    value={formState.webhookSecret}
+                    onChange={(e) => setFormState({ ...formState, webhookSecret: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white mt-1 focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-xs text-slate-300 font-medium">Transaction Fee Policy</label>
+                  <select
+                    value={formState.feePayer}
+                    onChange={(e) => setFormState({ ...formState, feePayer: e.target.value })}
+                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white mt-1 focus:outline-none focus:border-cyan-400 cursor-pointer"
+                  >
+                    <option value="Church Absorbs Fee (0% to Donor)">Church Absorbs Fee (Donor pays exact giving amount)</option>
+                    <option value="Donor Covers Fee (Add 2.0%)">Donor Option to Cover Processing Fee (Recommended)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-xs text-slate-400 hover:text-white cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/25 cursor-pointer transition"
+                >
+                  {editingId ? 'Update Credentials' : 'Save & Connect Gateway'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-
-      {/* Direct UPI Parameters */}
-      {gatewayConfig.activeProvider === 'UPI_DIRECT' && (
-        <div className="p-5 rounded-2xl win11-card border border-white/10 space-y-4">
-          <h5 className="text-xs font-bold uppercase tracking-wider text-amber-300 font-mono flex items-center gap-1.5">
-            <QrCode size={14} />
-            <span>Direct NPCI UPI VPA Merchant Profile</span>
-          </h5>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Merchant UPI VPA *</label>
-              <input 
-                type="text"
-                required
-                placeholder="churchtrust@sbi"
-                value={gatewayConfig.upiMerchantVpa}
-                onChange={(e) => setGatewayConfig({ ...gatewayConfig, upiMerchantVpa: e.target.value })}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-mono font-bold"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Registered Payee Legal Name</label>
-              <input 
-                type="text"
-                required
-                placeholder="Grace Cathedral Charitable Trust"
-                value={gatewayConfig.upiMerchantName}
-                onChange={(e) => setGatewayConfig({ ...gatewayConfig, upiMerchantName: e.target.value })}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Stripe Parameters */}
-      {gatewayConfig.activeProvider === 'STRIPE' && (
-        <div className="p-5 rounded-2xl win11-card border border-white/10 space-y-4">
-          <h5 className="text-xs font-bold uppercase tracking-wider text-indigo-300 font-mono flex items-center gap-1.5">
-            <KeyRound size={14} />
-            <span>Stripe Live Gateway API Keys</span>
-          </h5>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Publishable Key</label>
-              <input 
-                type="text"
-                placeholder="pk_live_xxxxxxxxxxxx"
-                value={gatewayConfig.stripePublishableKey}
-                onChange={(e) => setGatewayConfig({ ...gatewayConfig, stripePublishableKey: e.target.value })}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-400 font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Secret Key</label>
-              <input 
-                type="password"
-                placeholder="sk_live_xxxxxxxxxxxx"
-                value={gatewayConfig.stripeSecretKey}
-                onChange={(e) => setGatewayConfig({ ...gatewayConfig, stripeSecretKey: e.target.value })}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-400 font-mono"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-    </form>
+    </div>
   );
 }

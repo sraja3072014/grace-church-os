@@ -18,7 +18,7 @@ export default function TaskbarDock({ activeTab, setActiveTab }) {
     { id: 'community', label: 'Community Feed', desc: 'Broadcasts & Group Circles', icon: MessageSquare, pinned: true },
     { id: 'prayer_wall', label: 'Prayer Wall', desc: 'Intercession & Healing Requests', icon: HeartHandshake, pinned: true },
     { id: 'events_hub', label: 'Events Hub', desc: 'Service Schedules & Meetings', icon: CalendarDays, pinned: true },
-    { id: 'live_desk', label: 'Live Desk', desc: 'Stage Flow & Countdown Timers', icon: Radio, pinned: true },
+    { id: 'livestream', label: 'Live Desk', desc: 'Stage Flow & Countdown Timers', icon: Radio, pinned: true },
     { id: 'bible_engine', label: 'Bible Engine', desc: 'Scripture Search & Projection', icon: BookOpen, pinned: true },
     { id: 'reports', label: 'Reports & Audits', desc: 'Analytics & Financial Statements', icon: BarChart3, pinned: true },
     { id: 'settings', label: 'Settings Studio', desc: 'Theme, Language & System Setup', icon: Settings, pinned: true },

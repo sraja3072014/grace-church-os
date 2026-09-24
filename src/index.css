@@ -172,3 +172,10 @@
     border: none !important;
   }
 }
+
+/* Rainbow Mouse-Hover Glow Effect */
+.rainbow-hover-card:hover {
+  border-color: #ec4899 !important;
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.35), 0 0 50px rgba(6, 182, 212, 0.2) !important;
+  transition: all 0.3s ease-in-out;
+}

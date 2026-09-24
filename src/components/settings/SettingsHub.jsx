@@ -1,9 +1,10 @@
+// src/components/settings/SettingsHub.jsx
 import React, { useState } from 'react';
 import { 
   Building2, GitBranch, Users, UserPlus, ClipboardCheck, ShieldCheck, ShieldAlert,
   CreditCard, HeartHandshake, Receipt, BarChart3,
   Palette, Smartphone, MessageSquare, BookOpen, Wrench, Sliders, 
-  Globe, HardDrive, Save, CheckCircle2 
+  Globe, HardDrive, Save, CheckCircle2, Cloud
 } from 'lucide-react';
 
 // 1. Church Setup
@@ -30,15 +31,21 @@ import ThemeDisplayTab from './system/ThemeDisplayTab';
 import MobileSyncTab from './system/MobileSyncTab';
 import WhatsappHubTab from './system/WhatsappHubTab';
 import BibleHubTab from './system/BibleHubTab';
-import BackupDatabaseTab from './system/BackupDatabaseTab';
 import ServiceRequestsTab from './system/ServiceRequestsTab';
 import AdvancedSettingsTab from './system/AdvancedSettingsTab';
 import LanguageRegionTab from './system/LanguageRegionTab';
 import AuditTrailViewerDesk from './AuditTrailViewerDesk';
-import CloudSyncConfigTab from './system/CloudSyncConfigTab';
+import AdvancedBackupCloudHub from './system/AdvancedBackupCloudHub';
 
 export default function SettingsHub({ session }) {
   const [activeTab, setActiveTab] = useState('main_church');
+  const [toast, setToast] = useState('');
+
+  const triggerSuccess = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  };
+
   const isSeniorPastorOrAdmin = 
     session?.role === 'ADMIN' || 
     session?.role === 'PASTOR' || 
@@ -76,7 +83,6 @@ export default function SettingsHub({ session }) {
     {
       group: 'System & Vault Node',
       items: [
-        { id: 'local_vault', label: 'Physical Disk Vault', icon: HardDrive },
         { id: 'theme_display', label: 'Theme & Liquid Polish', icon: Palette },
         { id: 'language_region', label: 'Language & Locale', icon: Globe },
         { id: 'mobile_sync', label: 'Mobile App Relay', icon: Smartphone },
@@ -84,14 +90,20 @@ export default function SettingsHub({ session }) {
         { id: 'bible_hub', label: 'Scripture Display Engine', icon: BookOpen },
         { id: 'audit', label: 'Audit Trail & Security Logs', icon: ShieldAlert },
         { id: 'service_req', label: 'Hardware Maintenance', icon: Wrench },
+        { id: 'advanced_backup_cloud', label: 'Advanced Backup & Cloud Hub', icon: Cloud },
         { id: 'advanced_cfg', label: 'Advanced Engine Setup', icon: Sliders },
-        { id: 'supabase_cloud', label: 'Supabase Cloud Gateway', icon: Globe },
       ]
     }
   ];
 
   return (
-    <div className="flex h-full gap-5 select-none overflow-hidden text-slate-100">
+    <div className="flex h-full gap-5 select-none overflow-hidden text-slate-100 relative">
+      {toast && (
+        <div className="fixed top-5 right-5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 backdrop-blur-md shadow-2xl z-50">
+          <CheckCircle2 size={15} />
+          <span className="font-semibold">{toast}</span>
+        </div>
+      )}
       
       {/* 1. Left Sub-Navigation Menu */}
       <div className="w-80 crystal-card rounded-2xl p-4 flex flex-col justify-between overflow-hidden shrink-0 border border-white/[0.08]">
@@ -148,7 +160,6 @@ export default function SettingsHub({ session }) {
           {activeTab === 'payment_gw' && <PaymentGatewayConfigTab />}
 
           {/* System & Vault Node */}
-          {activeTab === 'local_vault' && <BackupDatabaseTab />}
           {activeTab === 'theme_display' && <ThemeDisplayTab />}
           {activeTab === 'language_region' && <LanguageRegionTab />}
           {activeTab === 'mobile_sync' && <MobileSyncTab />}
@@ -156,8 +167,8 @@ export default function SettingsHub({ session }) {
           {activeTab === 'bible_hub' && <BibleHubTab />}
           {activeTab === 'audit' && <AuditTrailViewerDesk />}
           {activeTab === 'service_req' && <ServiceRequestsTab />}
+          {activeTab === 'advanced_backup_cloud' && <AdvancedBackupCloudHub onTriggerSuccess={triggerSuccess} />}
           {activeTab === 'advanced_cfg' && <AdvancedSettingsTab />}
-          {activeTab === 'supabase_cloud' && <CloudSyncConfigTab />}
         </div>
       </div>
 

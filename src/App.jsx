@@ -4,6 +4,8 @@ import FusionSidebar from './components/layout/FusionSidebar';
 import Header from './components/layout/Header';
 import MainDashboard from './components/dashboard/MainDashboard';
 import AttendanceDesk from './components/attendance/AttendanceDesk';
+import DynamicAuraKiosk from './components/attendance/DynamicAuraKiosk';
+import SmartAttendanceScannerModal from './components/attendance/SmartAttendanceScannerModal';
 import MembersDesk from './components/members/MembersDesk';
 import FinanceDesk from './components/finance/FinanceDesk';
 import CommunityHub from './components/community/CommunityHub';
@@ -13,7 +15,7 @@ import TaskbarDock from './components/layout/TaskbarDock';
 import VisitorsHub from './components/visitors/VisitorsDashboard';
 import PrayerWall from './components/prayer/PrayerWall';
 import EventsHub from './components/events/EventsHub';
-import LiveDesk from './components/live/LiveDesk';
+import LiveStreamMediaDesk from './components/media/LiveStreamMediaDesk';
 import ReportDashboard from './components/reports/ReportDashboard';
 import BulkBroadcastMessenger from './components/broadcast/BulkBroadcastMessenger';
 import QuickWidgetBar from './components/widgets/QuickWidgetBar';
@@ -21,18 +23,18 @@ import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import MinistriesHubDesk from './components/ministry/MinistriesHubDesk';
 import ChurchInventoryDesk from './components/inventory/ChurchInventoryDesk';
 import { getLargeWallpaper } from './utils/storageDB';
-import { LayoutDashboard, Lock, Mail, ArrowRight, Church, Globe } from 'lucide-react';
+import { LayoutDashboard, Lock, Mail, ArrowRight, Church, Globe, QrCode } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [wallpaperData, setWallpaperData] = useState(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const sampleMemberId = "grace-member-uuid-12345";
 
-  // 1. மொழித் தேர்வு ('en' அல்லது 'ta')
   const [currentLang, setCurrentLang] = useState(() => {
     return localStorage.getItem('graceos_lang') || 'en';
   });
 
-  // 2. அட்மின் லாகின் செஷன் நிலை
   const [session, setSession] = useState(() => {
     try {
       const local = localStorage.getItem('graceos_session');
@@ -45,39 +47,42 @@ export default function App() {
   const [loginCreds, setLoginCreds] = useState({ username: '', password: '' });
   const [authError, setAuthError] = useState('');
 
-  // 3. தீம் அமைப்பு
   const [theme, setTheme] = useState(() => {
     try {
       const local = localStorage.getItem('graceos_theme_config');
       const parsed = local ? JSON.parse(local) : {};
       return {
-        preset: parsed.preset || 'fluid_aurora_mesh',
-        customColor: parsed.customColor || '#06b6d4',
-        useCustomColor: parsed.useCustomColor || false,
-        activeTextColor: parsed.activeTextColor || '#ffffff',
+        preset: parsed.preset || 'aurora_cosmic',
+        bgColor: parsed.bgColor || '#07050d',
+        textColor: parsed.textColor || '#ffffff',
+        autoContrast: parsed.autoContrast ?? true,
+        activeTextColor: parsed.textColor || '#ffffff',
         wallpaperDim: parsed.wallpaperDim ?? 20,
         wallpaperBrightness: parsed.wallpaperBrightness ?? 100,
         glassGlowColor: parsed.glassGlowColor || '#06b6d4',
         shadowIntensity: parsed.shadowIntensity ?? 40,
-        layoutStyle: parsed.layoutStyle || 'sidebar',
+        layoutStyle: parsed.layoutStyle || 'windows_dock',
         enableRainFX: parsed.enableRainFX || false,
         enableThunderPulse: parsed.enableThunderPulse || false,
-        enableHolyDustFX: parsed.enableHolyDustFX || false
+        enableHolyDustFX: parsed.enableHolyDustFX || false,
+        enableRainbowHover: parsed.enableRainbowHover || false
       };
     } catch {
       return {
-        preset: 'fluid_aurora_mesh',
-        customColor: '#06b6d4',
-        useCustomColor: false,
+        preset: 'aurora_cosmic',
+        bgColor: '#07050d',
+        textColor: '#ffffff',
+        autoContrast: true,
         activeTextColor: '#ffffff',
         wallpaperDim: 20,
         wallpaperBrightness: 100,
         glassGlowColor: '#06b6d4',
         shadowIntensity: 40,
-        layoutStyle: 'sidebar',
+        layoutStyle: 'windows_dock',
         enableRainFX: false,
         enableThunderPulse: false,
-        enableHolyDustFX: false
+        enableHolyDustFX: false,
+        enableRainbowHover: false
       };
     }
   });
@@ -85,7 +90,9 @@ export default function App() {
   const syncThemeAndWallpaper = async () => {
     try {
       const local = localStorage.getItem('graceos_theme_config');
-      if (local) setTheme(JSON.parse(local));
+      if (local) {
+        setTheme(JSON.parse(local));
+      }
       const img = await getLargeWallpaper();
       setWallpaperData(img);
     } catch (err) {
@@ -96,10 +103,13 @@ export default function App() {
   useEffect(() => {
     syncThemeAndWallpaper();
     window.addEventListener('graceos_theme_updated', syncThemeAndWallpaper);
-    return () => window.removeEventListener('graceos_theme_updated', syncThemeAndWallpaper);
+    window.addEventListener('storage', syncThemeAndWallpaper);
+    return () => {
+      window.removeEventListener('graceos_theme_updated', syncThemeAndWallpaper);
+      window.removeEventListener('storage', syncThemeAndWallpaper);
+    };
   }, []);
 
-  // அட்மின் லாகின் சரிபார்த்தல்
   const handleLogin = (e) => {
     e.preventDefault();
     setAuthError('');
@@ -115,14 +125,13 @@ export default function App() {
       localStorage.setItem('graceos_session', JSON.stringify(userObj));
       setSession(userObj);
     } else {
-      setAuthError(currentLang === 'ta' ? 'தவறான பயனர் பெயர் அல்லது கடவுச்சொல்! (மாதிரி: admin / grace123)' : 'Invalid credentials! (Demo: admin / grace123)');
+      setAuthError(currentLang === 'ta' ? 'தவறான பயனர் பெயர் அல்லது கடவுச்சொல்!' : 'Invalid credentials!');
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('graceos_session');
     setSession(null);
-    setLoginCreds({ username: '', password: '' });
   };
 
   const toggleLanguage = () => {
@@ -131,7 +140,6 @@ export default function App() {
     localStorage.setItem('graceos_lang', next);
   };
 
-  // --- 1. லாகின் திரை ---
   if (!session) {
     return (
       <div className="min-h-screen bg-[#07050d] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans select-none">
@@ -203,55 +211,43 @@ export default function App() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
-
-          <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Demo: <b className="text-cyan-400">admin</b> / <b className="text-cyan-400">grace123</b></span>
-            <button
-              type="button"
-              onClick={() => setLoginCreds({ username: 'admin', password: 'grace123' })}
-              className="text-cyan-400 hover:underline font-semibold cursor-pointer"
-            >
-              Fill Demo
-            </button>
-          </div>
         </div>
       </div>
     );
   }
 
-  // --- 2. முதன்மை டெஸ்க்டாப் ஒர்க்ஸ்பேஸ் ---
-  const dynamicTextColor = theme?.activeTextColor || '#ffffff';
+  const dynamicTextColor = theme?.textColor || '#ffffff';
   const wallpaperDim = theme?.wallpaperDim ?? 20;
   const wallpaperBrightness = theme?.wallpaperBrightness ?? 100;
   const glassGlow = theme?.glassGlowColor || '#06b6d4';
   const shadowAlpha = (theme?.shadowIntensity ?? 40) / 100;
   const isDockLayout = theme?.layoutStyle === 'windows_dock';
+  const dynamicBgColor = theme?.bgColor || '#07050d';
+  const rainbowHoverClass = theme?.enableRainbowHover ? 'rainbow-hover-card' : '';
 
   return (
     <div 
       style={{
+        backgroundColor: dynamicBgColor,
+        color: dynamicTextColor,
         '--dynamic-text-color': dynamicTextColor,
         '--card-glow-color': glassGlow,
-        '--shadow-depth': `rgba(0, 0, 0, ${shadowAlpha})`,
-        color: dynamicTextColor
+        '--shadow-depth': `rgba(0, 0, 0, ${shadowAlpha})`
       }}
-      className="relative flex h-screen w-screen overflow-hidden select-none font-sans bg-[#07050d]"
+      className={`relative flex h-screen w-screen overflow-hidden select-none font-sans transition-colors duration-300 ${rainbowHoverClass}`}
     >
-      {/* Weather Canvas */}
       <RainCanvas 
         enableRain={theme?.enableRainFX} 
         enableThunder={theme?.enableThunderPulse} 
         enableHolyDust={theme?.enableHolyDustFX} 
       />
 
-      {/* Wallpaper Layer */}
       {wallpaperData && (
         <div 
           className="fixed inset-0 bg-cover bg-center pointer-events-none z-[0] transition-all duration-300"
           style={{ 
             backgroundImage: `url(${wallpaperData})`,
             filter: `brightness(${wallpaperBrightness}%)`,
-            imageRendering: 'auto'
           }}
         >
           <div 
@@ -261,71 +257,89 @@ export default function App() {
         </div>
       )}
 
-      {/* Ambient Glows */}
-      {!wallpaperData && (
-        <>
-          <div className="absolute top-[-15%] left-[-10%] w-[55vw] h-[55vw] rounded-full bg-rose-600/15 blur-[160px] pointer-events-none animate-pulse" />
-          <div className="absolute bottom-[-15%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-700/15 blur-[170px] pointer-events-none" />
-          <div className="absolute top-[25%] left-[30%] w-[45vw] h-[45vw] rounded-full bg-amber-500/10 blur-[150px] pointer-events-none" />
-        </>
-      )}
-
-      {/* Classic Sidebar Navigation */}
+      {/* Permanent Fusion Sidebar */}
       {!isDockLayout && (
-        <FusionSidebar 
-          activeTab={activeTab || 'dashboard'} 
-          setActiveTab={setActiveTab} 
-          session={session} 
-          onLogout={handleLogout} 
-        />
+        <div className={rainbowHoverClass}>
+          <FusionSidebar 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            session={session} 
+            onLogout={handleLogout} 
+          />
+        </div>
       )}
 
-      {/* Primary Desktop Container */}
+      {/* Main Desktop Container */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
-        <Header />
+        <div className={rainbowHoverClass}>
+          <Header />
+        </div>
 
         <main className={`flex-1 overflow-y-auto ${isDockLayout ? 'pb-24' : 'p-5'}`}>
-          <div className="relative p-2 sm:p-4 animate-in fade-in zoom-in-95 duration-200">
-            {/* Window Header Indicator */}
-            <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
-              <span className="text-[11px] font-mono uppercase tracking-widest text-slate-400">
-                Module: <strong className="text-cyan-400">{activeTab.replace('_', ' ')}</strong>
+          <div className={`relative p-2 sm:p-4 animate-in fade-in zoom-in-95 duration-200 ${rainbowHoverClass}`}>
+            
+            <div className={`flex items-center justify-between mb-4 p-3 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl shadow-lg ${rainbowHoverClass}`}>
+              <span className="text-xs font-mono uppercase tracking-widest text-slate-300">
+                Active Module: <strong className="text-cyan-400">{activeTab.replace('_', ' ')}</strong>
               </span>
-              <button
-                type="button"
-                onClick={() => setActiveTab('dashboard')}
-                className="px-3 py-1 bg-black/40 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer backdrop-blur-md"
-              >
-                <LayoutDashboard size={12} />
-                <span>Home Dashboard</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {activeTab === 'attendance' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsScannerOpen(true)}
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-500/20"
+                  >
+                    <QrCode size={14} />
+                    <span>Scan Aura Check-In</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('dashboard')}
+                  className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white border border-white/10 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer backdrop-blur-md"
+                >
+                  <LayoutDashboard size={14} />
+                  <span>Dashboard</span>
+                </button>
+              </div>
             </div>
 
-            {/* Core Functional Modules */}
-            {activeTab === 'dashboard' && <MainDashboard setActiveTab={setActiveTab} session={session} />}
-            {activeTab === 'attendance' && <AttendanceDesk session={session} />}
-            {activeTab === 'members' && <MembersDesk session={session} />}
-            {activeTab === 'ministries' && <MinistriesHubDesk session={session} />}
-            {activeTab === 'inventory' && <ChurchInventoryDesk session={session} />}
-            {activeTab === 'finance' && <FinanceDesk session={session} />}
-            {activeTab === 'broadcast' && <BulkBroadcastMessenger />}
-            {activeTab === 'community' && <CommunityHub session={session} />}
-            {activeTab === 'visitors' && <VisitorsHub session={session} />}
-            {(activeTab === 'prayer_wall' || activeTab === 'prayer') && <PrayerWall session={session} />}
-            {(activeTab === 'events_hub' || activeTab === 'events') && <EventsHub session={session} />}
-            {(activeTab === 'live_desk' || activeTab === 'livestream' || activeTab === 'live') && <LiveDesk session={session} />}
-            {(activeTab === 'reports' || activeTab === 'report_hub') && <ReportDashboard session={session} />}
-            {activeTab === 'settings' && <SettingsHub session={session} />}
+            <div className={rainbowHoverClass}>
+              {activeTab === 'dashboard' && <MainDashboard setActiveTab={setActiveTab} session={session} />}
+              {activeTab === 'attendance' && (
+                <div className="space-y-6">
+                  <AttendanceDesk session={session} />
+                </div>
+              )}
+              {activeTab === 'members' && <MembersDesk session={session} />}
+              {activeTab === 'ministries' && <MinistriesHubDesk session={session} />}
+              {activeTab === 'inventory' && <ChurchInventoryDesk session={session} />}
+              {activeTab === 'finance' && <FinanceDesk session={session} />}
+              {activeTab === 'broadcast' && <BulkBroadcastMessenger />}
+              {activeTab === 'community' && <CommunityHub session={session} />}
+              {activeTab === 'visitors' && <VisitorsHub session={session} />}
+              {(activeTab === 'prayer_wall' || activeTab === 'prayer') && <PrayerWall session={session} />}
+              {(activeTab === 'events_hub' || activeTab === 'events') && <EventsHub session={session} />}
+              {activeTab === 'livestream' && <LiveStreamMediaDesk />}
+              {(activeTab === 'reports' || activeTab === 'report_hub') && <ReportDashboard session={session} />}
+              {activeTab === 'settings' && <SettingsHub session={session} />}
+            </div>
           </div>
         </main>
       </div>
 
-      {/* Windows 11 Taskbar Dock Mode */}
       {isDockLayout && (
-        <TaskbarDock activeTab={activeTab || 'dashboard'} setActiveTab={setActiveTab} />
+        <div className={rainbowHoverClass}>
+          <TaskbarDock activeTab={activeTab || 'dashboard'} setActiveTab={setActiveTab} />
+        </div>
       )}
 
-      {/* Utilities */}
+      <SmartAttendanceScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        memberId={sampleMemberId}
+      />
+
       <QuickWidgetBar />
       <PWAInstallPrompt />
     </div>

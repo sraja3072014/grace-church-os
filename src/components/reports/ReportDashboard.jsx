@@ -1,3 +1,4 @@
+// src/components/reports/ReportDashboard.jsx
 import React, { useState, useMemo } from 'react';
 import { 
   FileText, Download, TrendingUp, Users, 
@@ -84,6 +85,54 @@ export default function ReportDashboard({ session }) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Isolated Print Window Handler for Clean A4 Printing without UI controls
+  const handlePrintDocument = () => {
+    const printContent = document.getElementById('a4-document-canvas').innerHTML;
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${previewDocument?.title || 'GraceOS Document'}</title>
+          <style>
+            @page { size: A4 portrait; margin: 20mm; }
+            body { font-family: serif; color: #000; background: #fff; margin: 0; padding: 0; box-sizing: border-box; }
+            .letterhead { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
+            .letterhead h2 { font-size: 20px; font-weight: 900; text-transform: uppercase; margin: 0; }
+            .letterhead p { font-size: 11px; font-weight: bold; text-transform: uppercase; margin: 4px 0 0 0; font-family: sans-serif; }
+            .letterhead span { font-size: 10px; font-family: monospace; color: #444; }
+            .doc-title { text-align: center; font-size: 14px; font-weight: 900; text-transform: uppercase; text-decoration: underline; margin: 20px 0; font-family: sans-serif; }
+            .content-body { font-size: 13px; line-height: 1.6; color: #222; font-family: sans-serif; }
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 12px; font-family: sans-serif; }
+            th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+            th { background: #f0f0f0; }
+            .signatures { display: flex; justify-content: space-between; margin-top: 60px; align-items: flex-end; font-family: sans-serif; }
+            .seal-box { width: 90px; height: 90px; border: 2px solid #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 9px; font-weight: bold; text-transform: uppercase; }
+            .pastor-box { text-align: right; }
+            .pastor-name { font-size: 15px; font-style: italic; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="letterhead">
+            <h2>${churchName}</h2>
+            <p>${branchType} • MINISTRY OF SACRAMENTS & AUDIT</p>
+            <span>Ref No: ${previewDocument?.refNo} | Date: ${previewDocument?.date}</span>
+          </div>
+          
+          <div class="doc-title">${previewDocument?.title}</div>
+
+          <div class="content-body">
+            ${printContent}
+          </div>
+        </body>
+        <script>
+          window.onload = function() { window.print(); window.close(); };
+        </script>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const totalFamiliesCount = families.length > 0 ? families.length : 84;
@@ -417,7 +466,7 @@ export default function ReportDashboard({ session }) {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={handlePrintDocument}
                   className="px-4 py-1.5 bg-gradient-to-r from-rose-500 to-amber-600 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5"
                 >
                   <Printer size={13} />
@@ -433,50 +482,36 @@ export default function ReportDashboard({ session }) {
               </div>
             </div>
 
-            {/* A4 Document Printable Canvas */}
-            <div className="p-8 overflow-y-auto space-y-6 bg-white select-text font-serif">
+            {/* A4 Document Printable Canvas with ID for Isolated Printing */}
+            <div id="a4-document-canvas" className="p-8 overflow-y-auto space-y-6 bg-white select-text font-serif">
               
-              {/* Church Letterhead */}
-              <div className="border-b-2 border-slate-900 pb-4 text-center space-y-1">
-                <h2 className="text-xl font-black text-slate-900 tracking-wider uppercase">{churchName}</h2>
-                <p className="text-[11px] text-slate-600 font-bold uppercase tracking-widest font-sans">{branchType} • MINISTRY OF SACRAMENTS & AUDIT</p>
-                <p className="text-[10px] text-slate-500 font-mono">Ref No: {previewDocument.refNo} | Date: {previewDocument.date}</p>
-              </div>
-
-              {/* Title */}
-              <div className="text-center py-2">
-                <h3 className="text-sm font-black text-slate-900 tracking-wider uppercase underline underline-offset-4 font-sans">
-                  {previewDocument.title}
-                </h3>
-              </div>
-
               {/* Content Body Based on Type */}
               {previewDocument.type === 'attendance' && (
                 <div className="space-y-4 text-xs text-slate-700 leading-relaxed font-sans">
                   <p>This is to officially certify that the congregation attendance records for the term <strong>{dateRange}</strong> have been audited under pastoral oversight.</p>
-                  <table className="w-full border-collapse border border-slate-300 text-left text-xs my-3">
+                  <table>
                     <thead>
-                      <tr className="bg-slate-100 font-bold text-slate-900">
-                        <th className="border border-slate-300 p-2">Service Name</th>
-                        <th className="border border-slate-300 p-2">Turnout</th>
-                        <th className="border border-slate-300 p-2">Capacity</th>
+                      <tr>
+                        <th>Service Name</th>
+                        <th>Turnout</th>
+                        <th>Capacity</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="border border-slate-300 p-2">1st Morning Service (Tamil)</td>
-                        <td className="border border-slate-300 p-2 font-mono font-bold">245</td>
-                        <td className="border border-slate-300 p-2">88%</td>
+                        <td>1st Morning Service (Tamil)</td>
+                        <td><strong>245</strong></td>
+                        <td>88%</td>
                       </tr>
                       <tr>
-                        <td className="border border-slate-300 p-2">2nd English & Youth Service</td>
-                        <td className="border border-slate-300 p-2 font-mono font-bold">165</td>
-                        <td className="border border-slate-300 p-2">64%</td>
+                        <td>2nd English & Youth Service</td>
+                        <td><strong>165</strong></td>
+                        <td>64%</td>
                       </tr>
                       <tr>
-                        <td className="border border-slate-300 p-2">Sunday School / Children</td>
-                        <td className="border border-slate-300 p-2 font-mono font-bold">131</td>
-                        <td className="border border-slate-300 p-2">100%</td>
+                        <td>Sunday School / Children</td>
+                        <td><strong>131</strong></td>
+                        <td>100%</td>
                       </tr>
                     </tbody>
                   </table>
@@ -486,26 +521,24 @@ export default function ReportDashboard({ session }) {
 
               {previewDocument.type === 'baptism' && (
                 <div className="space-y-4 text-center py-4 text-xs text-slate-700 leading-relaxed">
-                  <p className="italic">"Therefore go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit." — Matthew 28:19</p>
-                  <p className="pt-2">This is to certify that the believer has been publicly baptized by water immersion in confession of faith in the Lord Jesus Christ.</p>
-                  <div className="my-4 p-4 border border-dashed border-slate-400 rounded-xl inline-block w-full text-slate-900 font-bold font-sans">
+                  <p className="italic font-serif text-sm">"Therefore go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit." — Matthew 28:19</p>
+                  <p className="pt-2 font-sans">This is to certify that the believer has been publicly baptized by water immersion in confession of faith in the Lord Jesus Christ.</p>
+                  <div className="my-6 p-6 border-2 border-dashed border-slate-400 rounded-xl inline-block w-full text-slate-900 font-bold font-sans">
                     Official Cathedral Baptism Registry Entry
                   </div>
                 </div>
               )}
 
-              {/* Child Dedication Template */}
               {previewDocument.type === 'dedication' && (
                 <div className="space-y-4 text-center py-4 text-xs text-slate-700 leading-relaxed">
-                  <p className="italic">"Start children off on the way they should go, and even when they are old they will not turn from it." — Proverbs 22:6</p>
-                  <p className="pt-2">This is to certify that the infant has been dedicated to Almighty God in prayer and parental commitment before the congregation.</p>
-                  <div className="my-4 p-4 border border-dashed border-slate-400 rounded-xl inline-block w-full text-slate-900 font-bold font-sans">
+                  <p className="italic font-serif text-sm">"Start children off on the way they should go, and even when they are old they will not turn from it." — Proverbs 22:6</p>
+                  <p className="pt-2 font-sans">This is to certify that the infant has been dedicated to Almighty God in prayer and parental commitment before the congregation.</p>
+                  <div className="my-6 p-6 border-2 border-dashed border-slate-400 rounded-xl inline-block w-full text-slate-900 font-bold font-sans">
                     Official Cathedral Dedication Registry Entry
                   </div>
                 </div>
               )}
 
-              {/* Pastoral Recommendation Template */}
               {previewDocument.type === 'recommendation' && (
                 <div className="space-y-4 text-xs text-slate-700 leading-relaxed text-left font-sans">
                   <p><strong>To Whom It May Concern,</strong></p>
@@ -518,18 +551,15 @@ export default function ReportDashboard({ session }) {
               )}
 
               {/* Document Signatures & Seal */}
-              <div className="pt-8 flex items-end justify-between border-t border-slate-200 text-xs font-sans">
-                <div className="text-center space-y-1">
-                  <div className="w-20 h-20 border-2 border-slate-900 rounded-full mx-auto flex items-center justify-center font-serif font-black text-[9px] text-slate-800 uppercase tracking-tighter">
-                    Official<br/>Cathedral<br/>Seal
-                  </div>
-                  <span className="text-[9px] text-slate-500">Corporate Seal</span>
+              <div className="signatures">
+                <div className="seal-box">
+                  Official<br/>Cathedral<br/>Seal
                 </div>
 
-                <div className="text-right space-y-1">
-                  <div className="font-serif italic font-bold text-sm text-slate-900">{pastorName}</div>
-                  <div className="text-[10px] font-bold uppercase text-slate-700">Senior Pastor & Presiding Elder</div>
-                  <div className="text-[9px] text-slate-500 font-mono">Digitally Verified & Authorized</div>
+                <div className="pastor-box">
+                  <div className="pastor-name">{pastorName}</div>
+                  <div style={{fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase'}}>Senior Pastor & Presiding Elder</div>
+                  <div style={{fontSize: '9px', fontFamily: 'monospace', color: '#555'}}>Digitally Verified & Authorized</div>
                 </div>
               </div>
 

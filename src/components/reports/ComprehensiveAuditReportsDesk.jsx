@@ -1,3 +1,4 @@
+// src/components/reports/ComprehensiveAuditReportsDesk.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   BarChart3, FileSpreadsheet, Printer, Download, 
@@ -41,16 +42,53 @@ export default function ComprehensiveAuditReportsDesk() {
     }));
   }, [ledger, totalIncome]);
 
+  // Isolated Print Window Handler for Perfect A4 Fit
   const handlePrint = () => {
     soundFX?.playClickPop?.();
-    window.print();
+    const printContent = document.getElementById('printable-audit-sheet').innerHTML;
+    const printWindow = window.open('', '_blank', 'width=900,height=650');
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Grace Central Cathedral - Financial Audit Statement</title>
+          <style>
+            @page { size: A4 portrait; margin: 15mm; }
+            body { font-family: sans-serif; color: #000; background: #fff; margin: 0; padding: 0; }
+            .sheet { width: 100%; max-width: 100%; box-sizing: border-box; }
+            h1 { font-size: 20px; font-weight: 900; text-transform: uppercase; text-align: center; margin: 0 0 5px 0; }
+            p { font-size: 12px; text-align: center; color: #555; margin: 0; }
+            .grid-3 { display: flex; justify-content: space-between; margin: 15px 0; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 10px 0; font-family: monospace; }
+            .box { text-align: center; flex: 1; }
+            .box span { display: block; font-size: 10px; color: #666; text-transform: uppercase; font-weight: bold; }
+            .box strong { font-size: 14px; font-weight: 900; color: #000; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+            th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+            th { background: #f2f2f2; font-weight: bold; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .signatures { display: flex; justify-content: space-between; margin-top: 50px; text-align: center; font-size: 11px; }
+            .sig-line { width: 120px; border-top: 1px solid #770000; margin: 0 auto 5px auto; }
+          </style>
+        </head>
+        <body>
+          <div class="sheet">
+            ${printContent}
+          </div>
+          <script>
+            window.onload = function() { window.print(); window.close(); };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
     <div className="space-y-6 max-w-5xl select-none text-slate-200 animate-in fade-in pb-12">
       
       {/* Action Header Bar (Hidden in Print) */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
         <div>
           <h3 className="text-xl font-black text-white flex items-center gap-2">
             <span>Audit &amp; Analytical Growth Reports</span>
@@ -82,17 +120,13 @@ export default function ComprehensiveAuditReportsDesk() {
         </div>
       </div>
 
-      {/* Printable A4 Statement Sheet */}
-      <div className="bg-white text-slate-900 p-8 sm:p-10 rounded-3xl shadow-2xl font-sans border border-slate-200 max-w-[800px] mx-auto print:border-none print:shadow-none print:p-0 print:m-0 print:w-full">
+      {/* Printable A4 Statement Sheet Wrapper ID */}
+      <div id="printable-audit-sheet" className="bg-white text-slate-900 p-8 sm:p-10 rounded-3xl shadow-2xl font-sans border border-slate-200 max-w-[800px] mx-auto">
         
         {/* Statement Letterhead */}
         <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
-          <h1 className="text-xl font-black uppercase tracking-wider text-slate-950">
-            GRACE CENTRAL CATHEDRAL CHURCH
-          </h1>
-          <p className="text-xs text-slate-600 font-medium">
-            Monthly Financial Audit &amp; Ministry Operations Statement
-          </p>
+          <h1>GRACE CENTRAL CATHEDRAL CHURCH</h1>
+          <p>Monthly Financial Audit &amp; Ministry Operations Statement</p>
           <div className="text-[11px] font-mono text-slate-700 font-bold pt-1">
             Audit Period: {reportPeriod} • Generated: {new Date().toISOString().slice(0, 10)}
           </div>
@@ -100,17 +134,17 @@ export default function ComprehensiveAuditReportsDesk() {
 
         {/* Executive Summary Cards */}
         <div className="grid grid-cols-3 gap-3 py-4 border-b border-slate-200 text-center font-mono">
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span className="text-[10px] text-slate-500 block uppercase font-bold">Total Collections</span>
-            <span className="text-base font-black text-slate-900">₹ {totalIncome.toLocaleString()}</span>
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 box">
+            <span>Total Collections</span>
+            <strong>₹ {totalIncome.toLocaleString()}</strong>
           </div>
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span className="text-[10px] text-slate-500 block uppercase font-bold">Reconciled Vouchers</span>
-            <span className="text-base font-black text-slate-900">{ledger.length} Receipts</span>
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 box">
+            <span>Reconciled Vouchers</span>
+            <strong>{ledger.length} Receipts</strong>
           </div>
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span className="text-[10px] text-slate-500 block uppercase font-bold">Statutory Status</span>
-            <span className="text-xs font-bold text-emerald-700 block mt-1">✓ 100% Reconciled</span>
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 box">
+            <span>Statutory Status</span>
+            <strong style={{color: 'green'}}>✓ 100% Reconciled</strong>
           </div>
         </div>
 
@@ -120,19 +154,19 @@ export default function ComprehensiveAuditReportsDesk() {
             1. Fund Allocation &amp; Category Breakdown
           </h4>
           <table className="w-full text-left text-xs border border-slate-300">
-            <thead className="bg-slate-100 font-bold text-slate-700">
+            <thead>
               <tr>
-                <th className="p-2 border-r border-slate-300">Revenue Stream</th>
-                <th className="p-2 border-r border-slate-300 text-center">Share (%)</th>
-                <th className="p-2 text-right">Amount (₹)</th>
+                <th className="border">Revenue Stream</th>
+                <th className="border text-center">Share (%)</th>
+                <th className="border text-right">Amount (₹)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody>
               {categorySummary.map((item, idx) => (
                 <tr key={idx}>
-                  <td className="p-2 border-r border-slate-300 font-medium">{item.category}</td>
-                  <td className="p-2 border-r border-slate-300 text-center font-mono">{item.percentage}%</td>
-                  <td className="p-2 text-right font-mono font-bold">₹ {item.amount.toLocaleString()}</td>
+                  <td className="border font-medium">{item.category}</td>
+                  <td className="border text-center font-mono">{item.percentage}%</td>
+                  <td className="border text-right font-mono font-bold">₹ {item.amount.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -145,46 +179,46 @@ export default function ComprehensiveAuditReportsDesk() {
             2. Detailed Transaction Audit Ledger
           </h4>
           <table className="w-full text-left text-[11px] border border-slate-300">
-            <thead className="bg-slate-100 font-bold text-slate-700">
+            <thead>
               <tr>
-                <th className="p-2 border-r border-slate-300">Date</th>
-                <th className="p-2 border-r border-slate-300">Receipt Ref</th>
-                <th className="p-2 border-r border-slate-300">Purpose / Head</th>
-                <th className="p-2 text-right">Amount (₹)</th>
+                <th className="border">Date</th>
+                <th className="border">Receipt Ref</th>
+                <th className="border">Purpose / Head</th>
+                <th className="border text-right">Amount (₹)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 font-mono">
+            <tbody>
               {ledger.map((tx, idx) => (
                 <tr key={idx}>
-                  <td className="p-2 border-r border-slate-300">{tx.date}</td>
-                  <td className="p-2 border-r border-slate-300">{tx.id}</td>
-                  <td className="p-2 border-r border-slate-300 font-sans">{tx.category}</td>
-                  <td className="p-2 text-right font-bold">₹ {Number(tx.amount).toLocaleString()}</td>
+                  <td className="border">{tx.date}</td>
+                  <td className="border">{tx.id}</td>
+                  <td className="border">{tx.category}</td>
+                  <td className="border text-right font-bold">₹ {Number(tx.amount).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
-            <tfoot className="border-t-2 border-slate-900 bg-slate-50 font-bold text-xs">
+            <tfoot>
               <tr>
-                <td colSpan={3} className="p-2 text-right uppercase font-bold">Audited Gross Total:</td>
-                <td className="p-2 text-right font-mono font-black">₹ {totalIncome.toLocaleString()}</td>
+                <td colSpan={3} className="border text-right uppercase font-bold" style={{padding: '8px'}}>Audited Gross Total:</td>
+                <td className="border text-right font-mono font-black" style={{padding: '8px'}}>₹ {totalIncome.toLocaleString()}</td>
               </tr>
             </tfoot>
           </table>
         </div>
 
         {/* Audit Verification Signatures */}
-        <div className="flex items-end justify-between pt-12 text-center text-xs">
-          <div className="space-y-1">
-            <div className="w-24 border-t border-slate-400 mx-auto" />
-            <span className="text-[10px] text-slate-500 font-bold block">Church Treasurer</span>
+        <div className="signatures">
+          <div>
+            <div className="sig-line" />
+            <span style={{fontSize: '10px', color: '#555', fontWeight: 'bold'}}>Church Treasurer</span>
           </div>
-          <div className="space-y-1">
-            <div className="w-24 border-t border-slate-400 mx-auto" />
-            <span className="text-[10px] text-slate-500 font-bold block">Chartered Auditor</span>
+          <div>
+            <div className="sig-line" />
+            <span style={{fontSize: '10px', color: '#555', fontWeight: 'bold'}}>Chartered Auditor</span>
           </div>
-          <div className="space-y-1">
-            <div className="w-24 border-t border-slate-400 mx-auto" />
-            <span className="text-[10px] text-slate-500 font-bold block">Senior Pastor</span>
+          <div>
+            <div className="sig-line" />
+            <span style={{fontSize: '10px', color: '#555', fontWeight: 'bold'}}>Senior Pastor</span>
           </div>
         </div>
 
