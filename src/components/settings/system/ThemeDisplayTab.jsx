@@ -1,4 +1,4 @@
-// src/components/settings/tabs/ThemeDisplayTab.jsx
+// src/components/settings/system/ThemeDisplayTab.jsx
 import React, { useState, useRef } from 'react';
 import {
   Palette, SunMedium, Layers, Type, LayoutGrid, Volume2, MousePointer, 
@@ -32,6 +32,8 @@ export default function ThemeDisplayTab() {
       enableHolyDustFX: parsed.enableHolyDustFX || false,
       enableSoundWaves: parsed.enableSoundWaves || false,
       enableRainbowHover: parsed.enableRainbowHover || false,
+      ambientGlow: parsed.ambientGlow || 'cyan',
+      glassOpacity: parsed.glassOpacity || 'high',
     };
   });
 
@@ -39,33 +41,33 @@ export default function ThemeDisplayTab() {
     {
       categoryTitle: '1. Aurora Gradient (Lumina) - 3 Styles',
       styles: [
-        { id: 'aurora_cosmic', name: 'Cosmic Violet & Cyan', desc: 'Deep cosmic purple base with electric cyan aura glow.', defaultBg: '#07050d', glow: '#06b6d4', accent: 'from-cyan-500 to-purple-600' },
-        { id: 'aurora_sunset', name: 'Sunset Amber Wave', desc: 'Obsidian warm base with glowing orange-amber highlights.', defaultBg: '#1c1917', glow: '#f59e0b', accent: 'from-orange-500 to-amber-600' },
-        { id: 'aurora_midnight', name: 'Midnight Neon Pink', desc: 'Deep midnight blue with vibrant neon pink radiance.', defaultBg: '#1e1b4b', glow: '#ec4899', accent: 'from-rose-500 to-indigo-600' }
+        { id: 'aurora_cosmic', name: 'Cosmic Violet & Cyan', desc: 'Deep cosmic purple base with electric cyan aura glow.', defaultBg: '#07050d', glow: '#06b6d4', glowType: 'cyan', accent: 'from-cyan-500 to-purple-600' },
+        { id: 'aurora_sunset', name: 'Sunset Amber Wave', desc: 'Obsidian warm base with glowing orange-amber highlights.', defaultBg: '#1c1917', glow: '#f59e0b', glowType: 'emerald', accent: 'from-orange-500 to-amber-600' },
+        { id: 'aurora_midnight', name: 'Midnight Neon Pink', desc: 'Deep midnight blue with vibrant neon pink radiance.', defaultBg: '#1e1b4b', glow: '#ec4899', glowType: 'royal', accent: 'from-rose-500 to-indigo-600' }
       ]
     },
     {
       categoryTitle: '2. Glassmorphism Pro (Mac & Win Fluent) - 3 Styles',
       styles: [
-        { id: 'glass_frosted', name: 'Pure Frosted Acrylic', desc: 'Translucent glass with clean crystal-blue borders.', defaultBg: '#0f172a', glow: '#38bdf8', accent: 'from-blue-500 to-slate-700' },
-        { id: 'glass_obsidian', name: 'Dark Obsidian Glass', desc: 'Pitch dark sleek glass finish with ultra-sharp reflections.', defaultBg: '#09090b', glow: '#a855f7', accent: 'from-purple-500 to-zinc-800' },
-        { id: 'glass_platinum', name: 'Platinum Silver Mist', desc: 'Bright silver-tinted glass surface for corporate look.', defaultBg: '#18181b', glow: '#e2e8f0', accent: 'from-zinc-400 to-slate-600' }
+        { id: 'glass_frosted', name: 'Pure Frosted Acrylic', desc: 'Translucent glass with clean crystal-blue borders.', defaultBg: '#0f172a', glow: '#38bdf8', glowType: 'cyan', accent: 'from-blue-500 to-slate-700' },
+        { id: 'glass_obsidian', name: 'Dark Obsidian Glass', desc: 'Pitch dark sleek glass finish with ultra-sharp reflections.', defaultBg: '#09090b', glow: '#a855f7', glowType: 'royal', accent: 'from-purple-500 to-zinc-800' },
+        { id: 'glass_platinum', name: 'Platinum Silver Mist', desc: 'Bright silver-tinted glass surface for corporate look.', defaultBg: '#18181b', glow: '#e2e8f0', glowType: 'cyan', accent: 'from-zinc-400 to-slate-600' }
       ]
     },
     {
       categoryTitle: '3. Organic Earth & Moss (Bio-Minimalism) - 3 Styles',
       styles: [
-        { id: 'earth_forest', name: 'Deep Forest Pine', desc: 'Calming dark forest greens with emerald moss glow.', defaultBg: '#06130b', glow: '#10b981', accent: 'from-emerald-600 to-teal-800' },
-        { id: 'earth_stone', name: 'Warm Stone & Clay', desc: 'Earthy brown and stone mineral tones for eye comfort.', defaultBg: '#1c1917', glow: '#d97706', accent: 'from-amber-700 to-stone-800' },
-        { id: 'earth_sage', name: 'Sage & Olive Mist', desc: 'Soft olive haze with natural muted green atmosphere.', defaultBg: '#111815', glow: '#84cc16', accent: 'from-lime-600 to-emerald-900' }
+        { id: 'earth_forest', name: 'Deep Forest Pine', desc: 'Calming dark forest greens with emerald moss glow.', defaultBg: '#06130b', glow: '#10b981', glowType: 'emerald', accent: 'from-emerald-600 to-teal-800' },
+        { id: 'earth_stone', name: 'Warm Stone & Clay', desc: 'Earthy brown and stone mineral tones for eye comfort.', defaultBg: '#1c1917', glow: '#d97706', glowType: 'emerald', accent: 'from-amber-700 to-stone-800' },
+        { id: 'earth_sage', name: 'Sage & Olive Mist', desc: 'Soft olive haze with natural muted green atmosphere.', defaultBg: '#111815', glow: '#84cc16', glowType: 'emerald', accent: 'from-lime-600 to-emerald-900' }
       ]
     },
     {
       categoryTitle: '4. Rainbow Liquid Spectrum - 3 Styles',
       styles: [
-        { id: 'rainbow_neon', name: 'Neon Prism Spectrum', desc: 'Continuous multi-color shifting spectrum bubbles.', defaultBg: '#0a0a0f', glow: '#ec4899', accent: 'from-rose-500 via-purple-500 to-cyan-500' },
+        { id: 'rainbow_neon', name: 'Neon Prism Spectrum', desc: 'Continuous multi-color shifting spectrum bubbles.', defaultBg: '#0a0a0f', glow: '#ec4899', glowType: 'royal', accent: 'from-rose-500 via-purple-500 to-cyan-500' },
         { id: 'rainbow_aurora', name: 'Aurora Borealis Wave', desc: 'Flowing shifting rainbow lights across obsidian base.', defaultBg: '#090d16', glow: '#34d399', accent: 'from-emerald-400 via-cyan-500 to-purple-600' },
-        { id: 'rainbow_sunset', name: 'Holographic Sunset Glow', desc: 'Vibrant shifting warm sunset chromatic radiance.', defaultBg: '#18121a', glow: '#f43f5e', accent: 'from-amber-400 via-rose-500 to-indigo-600' }
+        { id: 'rainbow_sunset', name: 'Holographic Sunset Glow', desc: 'Vibrant shifting warm sunset chromatic radiance.', defaultBg: '#18121a', glow: '#f43f5e', glowType: 'royal', accent: 'from-amber-400 via-rose-500 to-indigo-600' }
       ]
     }
   ];
@@ -102,6 +104,10 @@ export default function ThemeDisplayTab() {
     document.body.style.backgroundColor = newConfig.bgColor;
     document.body.style.color = finalTextColor;
 
+    if (newConfig.ambientGlow) {
+      document.body.className = `ambient-glow-${newConfig.ambientGlow} text-slate-100 min-h-screen`;
+    }
+
     window.dispatchEvent(new Event('graceos_theme_updated'));
   };
 
@@ -112,11 +118,12 @@ export default function ThemeDisplayTab() {
       preset: subStyle.id,
       bgColor: subStyle.defaultBg,
       glassGlowColor: subStyle.glow,
+      ambientGlow: subStyle.glowType || 'cyan', // Automatically triggers corresponding background ambient glow aura
       textColor: smartText,
       hasCustomWallpaper: false
     };
     updateConfig(updated);
-    showToast(`Style Applied: ${subStyle.name} ✓`);
+    showToast(`Theme Applied: ${subStyle.name} (Glow Enabled) ✓`);
   };
 
   const handleImageUpload = (e) => {
@@ -323,15 +330,15 @@ export default function ThemeDisplayTab() {
           </div>
         )}
 
-        {/* 3. Themes Section */}
+        {/* 3. Themes Section (With Integrated Ambient Glow Aura) */}
         {activeSubSection === 'themes' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <div className="border-b border-white/10 pb-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <LayoutGrid size={18} className="text-cyan-400" />
-                Master Categories &amp; Sub-Styles (4 Master Themes)
+                Themes &amp; Sub-Styles (With Ambient Background Glow)
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">Select professional design concepts under Aurora, Glassmorphism, Organic Earth, and Rainbow Spectrum.</p>
+              <p className="text-xs text-slate-400 mt-0.5">Select any theme style below. It automatically activates the matching background ambient glow aura!</p>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -345,17 +352,33 @@ export default function ThemeDisplayTab() {
                         <div
                           key={sub.id}
                           onClick={() => handleSubStyleSelect(sub)}
-                          className={`p-3 rounded-xl border flex flex-col justify-between gap-2 cursor-pointer transition ${
-                            isSelected ? 'border-cyan-400 bg-white/10 shadow-lg' : 'border-white/10 bg-black/20 hover:bg-white/5'
+                          className={`p-3.5 rounded-xl border flex flex-col justify-between gap-2.5 cursor-pointer transition relative overflow-hidden group ${
+                            isSelected 
+                              ? 'border-cyan-400 bg-white/10 shadow-xl shadow-cyan-500/10 ring-1 ring-cyan-400' 
+                              : 'border-white/10 bg-black/30 hover:bg-white/5 hover:border-white/25'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className={`w-6 h-6 rounded-lg bg-gradient-to-tr ${sub.accent}`} />
-                            {isSelected && <CheckCircle2 size={14} className="text-cyan-400" />}
+                          {/* Subtle background glow indicator on card */}
+                          <div 
+                            className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full blur-2xl opacity-40 transition group-hover:opacity-75 pointer-events-none"
+                            style={{ backgroundColor: sub.glow }}
+                          />
+
+                          <div className="flex items-center justify-between relative z-10">
+                            <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${sub.accent} shadow-md`} />
+                            {isSelected && <CheckCircle2 size={16} className="text-cyan-400" />}
                           </div>
-                          <div>
-                            <h6 className="text-xs font-bold text-white">{sub.name}</h6>
+
+                          <div className="relative z-10 space-y-0.5">
+                            <h6 className="text-xs font-bold text-white flex items-center gap-1.5">
+                              {sub.name}
+                            </h6>
                             <p className="text-[10px] text-slate-400 leading-tight">{sub.desc}</p>
+                          </div>
+
+                          <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono relative z-10">
+                            <span className="text-slate-400">Glow Aura</span>
+                            <span className="font-bold uppercase" style={{ color: sub.glow }}>{sub.glowType || 'Active'}</span>
                           </div>
                         </div>
                       );

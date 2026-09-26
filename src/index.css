@@ -1,181 +1,117 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
-@layer base {
-  :root {
-    --glow-accent: #06b6d4;
+/* =========================================================
+   1. Corner-to-Center Radiating Glow & Logo Neon Animation
+   ========================================================= */
+@keyframes cornerRadiatingGlow {
+  0% {
+    box-shadow: 
+      inset 0 0 50px rgba(0, 0, 0, 0.8),
+      0 0 20px 0 var(--card-glow-color, #06b6d4),
+      0 0 60px 10px var(--card-glow-color, #06b6d4);
   }
-
-  * {
-    box-sizing: border-box;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  50% {
+    box-shadow: 
+      inset 0 0 30px rgba(0, 0, 0, 0.5),
+      0 0 40px 15px var(--card-glow-color, #06b6d4),
+      0 0 90px 25px var(--card-glow-color, #06b6d4);
   }
+  100% {
+    box-shadow: 
+      inset 0 0 50px rgba(0, 0, 0, 0.8),
+      0 0 20px 0 var(--card-glow-color, #06b6d4),
+      0 0 60px 10px var(--card-glow-color, #06b6d4);
+  }
+}
 
-  html,
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: #090d16;
-    color: #f1f5f9;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    overflow: hidden;
-    overscroll-behavior-y: none;
+@keyframes logoNeonPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px var(--card-glow-color, #06b6d4)) 
+            drop-shadow(0 0 16px var(--card-glow-color, #06b6d4));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px var(--card-glow-color, #06b6d4)) 
+            drop-shadow(0 0 32px var(--card-glow-color, #06b6d4));
   }
 }
 
 /* =========================================================
-   Clean Liquid Frosted Glass (Pure Dark OS)
+   2. Global Fixed Dark Base (No Full Background Color Shift)
    ========================================================= */
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #07050d !important; /* நிரந்தரமான பிரீமியம் டார்க் பேக்ரவுண்ட் */
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* =========================================================
+   3. Window Corner-to-Center Radiating Glow Aura (All 4 Corners)
+   ========================================================= */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(circle at 0% 0%, var(--card-glow-color, #06b6d4) 0%, transparent 45%),
+    radial-gradient(circle at 100% 0%, var(--card-glow-color, #06b6d4) 0%, transparent 45%),
+    radial-gradient(circle at 0% 100%, var(--card-glow-color, #06b6d4) 0%, transparent 45%),
+    radial-gradient(circle at 100% 100%, var(--card-glow-color, #06b6d4) 0%, transparent 45%);
+  opacity: 0.35;
+  transition: background 0.5s ease-in-out;
+}
+
+/* =========================================================
+   4. Logo Glow Utility Class
+   ========================================================= */
+.app-logo-glow {
+  animation: logoNeonPulse 3s ease-in-out infinite;
+  transition: filter 0.3s ease-in-out;
+}
+
+/* =========================================================
+   5. Ultra Glass Frosted Panels with Corner Glow Edge
+   ========================================================= */
+.glass-panel,
 .win11-card,
-.crystal-card,
-.glass-panel {
-  background: rgba(255, 255, 255, 0.04) !important;
+.crystal-card {
+  background: rgba(15, 23, 42, 0.7) !important;
   -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
   backdrop-filter: blur(24px) saturate(160%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15) !important;
-  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25) !important;
+  color: var(--dynamic-text-color, #f8fafc) !important;
+  position: relative;
+  z-index: 10;
+  animation: cornerRadiatingGlow 6s ease-in-out infinite;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.stat-number {
-  color: #ffffff !important;
-  font-weight: 900 !important;
+.glass-panel:hover,
+.win11-card:hover,
+.crystal-card:hover {
+  border-color: var(--card-glow-color, #06b6d4) !important;
 }
 
-/* =========================================================
-   Liquid Glass & Dynamic Neon Utility Tokens
-   ========================================================= */
-.liquid-glass-card {
-  background: rgba(255, 255, 255, 0.04);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
-  backdrop-filter: blur(28px) saturate(160%);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 
-    0 20px 40px -15px rgba(0, 0, 0, 0.6),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4);
-}
-
-.neon-text {
-  color: #ffffff;
-  text-shadow: 
-    0 0 7px var(--glow-accent, #06b6d4),
-    0 0 14px var(--glow-accent, #06b6d4),
-    0 0 28px var(--glow-accent, #06b6d4);
-  transition: text-shadow 0.3s ease-in-out;
-}
-
-/* Badge Text Safety Tokens */
-.badge-emerald {
-  background: rgba(16, 185, 129, 0.15) !important;
-  color: #34d399 !important;
-  border: 1px solid rgba(16, 185, 129, 0.3) !important;
-}
-
-.badge-cyan {
-  background: rgba(6, 182, 212, 0.15) !important;
-  color: #22d3ee !important;
-  border: 1px solid rgba(6, 182, 212, 0.3) !important;
-}
-
-.badge-amber {
-  background: rgba(245, 158, 11, 0.15) !important;
-  color: #fbbf24 !important;
-  border: 1px solid rgba(245, 158, 11, 0.3) !important;
-}
-
-/* =========================================================
-   Smooth Dark Custom Scrollbar
-   ========================================================= */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* =========================================================
-   Ultra Sharp Crystal Acrylic (பிரஷ் & இமேஜ் துல்லியமாகத் தெரிய)
-   ========================================================= */
-.win11-card,
-.crystal-card,
-.glass-panel {
-  /* பின்னணி இமேஜை மறைக்காமல் லேசான கிளாஸ் டின்ட் */
-  background: rgba(15, 23, 42, 0.35) !important;
-  -webkit-backdrop-filter: blur(10px) saturate(130%) !important;
-  backdrop-filter: blur(10px) saturate(130%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 
-    0 16px 36px 0 var(--shadow-depth, rgba(0, 0, 0, 0.4)),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.2) !important;
-  color: var(--dynamic-text-color, #ffffff) !important;
-  transition: all 0.25s ease-in-out;
-}
-
-/* மவுஸ் வைக்கும்போது கார்டின் விளிம்புகள் யூசர் தேர்ந்தெடுத்த கலரில் ஒளிரும் */
-.win11-card:hover {
-  border-color: var(--card-glow-color, #06b6d4) !important;
-  box-shadow: 
-    0 20px 48px 0 var(--shadow-depth, rgba(0, 0, 0, 0.6)),
-    0 0 14px -1px var(--card-glow-color, #06b6d4) !important;
-}
-
-/* டெக்ஸ்ட் எந்த இமேஜ் மீதும் தெளிவாகத் தெரிய சுற்றிலும் மெல்லிய அவுட்லைன் நிழல் */
-.stat-number,
-.win11-card h2,
-.win11-card h3,
-.win11-card p,
-.win11-card span {
-  color: inherit !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.4);
-}
-/* =========================================================
-   Universal Print Isolation Engine (Pure Document Output)
-   ========================================================= */
-@media print {
-  /* பின்னணி நியான், டார்க் மோட், அனிமேஷன்களை நீக்குதல் */
-  body, html {
-    background: #ffffff !important;
-    color: #000000 !important;
-  }
-
-  /* மெனு, ஹெடர், பட்டன்களை மறைத்தல் */
-  nav, aside, button, .no-print, [role="navigation"] {
-    display: none !important;
-  }
-
-  /* பிரிண்ட் ஏரியாவை மட்டும் A4 அளவுக்கு முழுமையாகப் பொருத்துதல் */
-  .print-container {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 10mm !important;
-    background: white !important;
-    color: black !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-}
-
-/* Rainbow Mouse-Hover Glow Effect */
-.rainbow-hover-card:hover {
-  border-color: #ec4899 !important;
-  box-shadow: 0 0 25px rgba(236, 72, 153, 0.35), 0 0 50px rgba(6, 182, 212, 0.2) !important;
-  transition: all 0.3s ease-in-out;
+  background: rgba(255, 255, 255, 0.4);
 }

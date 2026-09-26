@@ -1,8 +1,9 @@
+// src/components/finance/FinanceDesk.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   TrendingUp, Wallet, Receipt, FileText, Plus,
   ArrowUpRight, ArrowDownLeft, ShieldCheck, Trash2, 
-  Printer, CheckCircle2, Search, DollarSign, X, FileCheck2
+  Printer, CheckCircle2, Search, DollarSign, X, FileCheck2, Landmark, Package
 } from 'lucide-react';
 import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
@@ -10,6 +11,7 @@ import FinanceAnalyticsTab from './FinanceAnalyticsTab';
 import Annual80GCertificateModal from './Annual80GCertificateModal';
 import StaffPayrollDesk from './StaffPayrollDesk';
 import AnnualAuditAGMDesk from './AnnualAuditAGMDesk';
+import TreasuryAndAssetDesk from './TreasuryAndAssetDesk'; // Added Treasury & Asset Desk Sub-Tab
 
 export const DEFAULT_GIVING_CATEGORIES = [
   'Sunday Tithes (10%)',
@@ -175,7 +177,7 @@ export default function FinanceDesk({ session }) {
 
         {/* Sub-tab Navigation */}
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/10 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/10 shrink-0">
             <button
               type="button"
               onClick={() => setActiveFinanceSubTab('income')}
@@ -190,7 +192,7 @@ export default function FinanceDesk({ session }) {
               type="button"
               onClick={() => setActiveFinanceSubTab('expenses')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                activeFinanceSubTab === 'expenses' ? 'bg-rose-500 text-white shadow-md font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Receipt size={14} />
@@ -200,11 +202,21 @@ export default function FinanceDesk({ session }) {
               type="button"
               onClick={() => setActiveFinanceSubTab('receipts_80g')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                activeFinanceSubTab === 'receipts_80g' ? 'bg-amber-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
               <FileText size={14} />
-              <span>80G Receipt Generator</span>
+              <span>80G Generator</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('treasury_assets')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'treasury_assets' ? 'bg-cyan-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Package size={14} />
+              <span>Asset &amp; Governance Desk</span>
             </button>
             <button
               type="button"
@@ -233,16 +245,14 @@ export default function FinanceDesk({ session }) {
               }`}
             >
               <FileCheck2 size={14} />
-              <span>AGM Annual Audit Report</span>
+              <span>AGM Annual Audit</span>
             </button>
           </div>
           <button
             type="button"
             onClick={() => setIsCertificateOpen(true)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'receipts_80g' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
-              >
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-cyan-300 border border-white/10 transition flex items-center gap-1.5 cursor-pointer"
+          >
             <FileCheck2 size={15} />
             <span>Annual 80G Certificate</span>
           </button>
@@ -252,8 +262,10 @@ export default function FinanceDesk({ session }) {
       {activeFinanceSubTab === 'analytics' && <FinanceAnalyticsTab />}
       {activeFinanceSubTab === 'payroll' && <StaffPayrollDesk session={session} />}
       {activeFinanceSubTab === 'agm_audit' && <AnnualAuditAGMDesk session={session} />}
+      {activeFinanceSubTab === 'treasury_assets' && <TreasuryAndAssetDesk session={session} />}
 
       {/* 3 Metric Summary Cards */}
+      {activeFinanceSubTab !== 'treasury_assets' && (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="win11-card p-5 rounded-3xl border border-white/10 space-y-2">
           <div className="flex items-center justify-between text-slate-400">
@@ -294,145 +306,146 @@ export default function FinanceDesk({ session }) {
           <span className="text-[10px] text-slate-400 block">Available in bank &amp; cash accounts</span>
         </div>
       </div>
+      )}
 
       {/* TAB 1: INCOME & TITHES */}
-{activeFinanceSubTab === 'income' && (
-  <div className="space-y-6">
-    <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
-      <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2 font-mono">
-        <Plus size={16} />
-        <span>Record New Tithe / Offering Inflow</span>
-      </h3>
+      {activeFinanceSubTab === 'income' && (
+        <div className="space-y-6">
+          <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
+            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2 font-mono">
+              <Plus size={16} />
+              <span>Record New Tithe / Offering Inflow</span>
+            </h3>
 
-      <form onSubmit={handleAddIncome} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div>
-          <label className="text-xs text-slate-300 font-medium">Contributor Name *</label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. Bro. David Miller"
-            value={incomeForm.member}
-            onChange={(e) => setIncomeForm({ ...incomeForm, member: e.target.value })}
-            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none focus:border-rose-500 font-bold"
-          />
+            <form onSubmit={handleAddIncome} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Contributor Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Bro. David Miller"
+                  value={incomeForm.member}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, member: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none focus:border-rose-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Giving Category *</label>
+                <select
+                  value={incomeForm.category}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
+                >
+                  {DEFAULT_GIVING_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Amount ({currencySymbol}) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  placeholder="e.g. 10000"
+                  value={incomeForm.amount}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono font-bold mt-1 focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Payment Mode</label>
+                <select
+                  value={incomeForm.mode}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, mode: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
+                >
+                  <option value="UPI / GPay">UPI / GPay / QR</option>
+                  <option value="Bank Transfer">Bank Transfer (NEFT)</option>
+                  <option value="Cash">Cash Offering</option>
+                  <option value="Cheque">Cheque</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-4 flex justify-between items-center pt-2">
+                <input
+                  type="text"
+                  placeholder="PAN / Tax Identification Number (Optional for 80G Receipt)"
+                  value={incomeForm.panNumber}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, panNumber: e.target.value.toUpperCase() })}
+                  className="w-72 bg-slate-950/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none"
+                />
+
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition text-xs"
+                >
+                  <Plus size={15} />
+                  <span>Save Tithe Record</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Income Table */}
+          <div className="win11-card rounded-3xl overflow-hidden border border-white/10">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-white/10 text-slate-400 text-[10px] uppercase font-mono bg-white/[0.02]">
+                  <tr>
+                    <th className="py-3 px-3.5">Receipt ID</th>
+                    <th className="py-3 px-3.5">Date</th>
+                    <th className="py-3 px-3.5">Contributor</th>
+                    <th className="py-3 px-3.5">Category</th>
+                    <th className="py-3 px-3.5">Payment Channel</th>
+                    <th className="py-3 px-3.5 text-right">Amount</th>
+                    <th className="py-3 px-3.5 text-center">80G / Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {incomeList.map((item) => (
+                    <tr key={item.id} className="hover:bg-white/[0.02] transition">
+                      <td className="py-3 px-3.5 font-mono font-bold text-amber-400">{item.id}</td>
+                      <td className="py-3 px-3.5 text-slate-300 font-mono text-[11px]">{item.date}</td>
+                      <td className="py-3 px-3.5 font-semibold text-white">
+                        <div>{item.member}</div>
+                        {item.panNumber && <div className="text-[10px] text-slate-400 font-mono">PAN: {item.panNumber}</div>}
+                      </td>
+                      <td className="py-3 px-3.5 text-emerald-400 font-medium">{item.category}</td>
+                      <td className="py-3 px-3.5 text-slate-400 font-mono text-[11px]">{item.mode}</td>
+                      <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-400">
+                        + {currencySymbol} {Number(item.amount).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-3.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReceipt(item)}
+                            className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                          >
+                            <Printer size={12} />
+                            <span>80G Receipt</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteIncome(item.id)}
+                            className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-
-        <div>
-          <label className="text-xs text-slate-300 font-medium">Giving Category *</label>
-          <select
-            value={incomeForm.category}
-            onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })}
-            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
-          >
-            {DEFAULT_GIVING_CATEGORIES.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="text-xs text-slate-300 font-medium">Amount ({currencySymbol}) *</label>
-          <input
-            type="number"
-            required
-            min="1"
-            placeholder="e.g. 10000"
-            value={incomeForm.amount}
-            onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
-            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono font-bold mt-1 focus:outline-none focus:border-rose-500"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs text-slate-300 font-medium">Payment Mode</label>
-          <select
-            value={incomeForm.mode}
-            onChange={(e) => setIncomeForm({ ...incomeForm, mode: e.target.value })}
-            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
-          >
-            <option value="UPI / GPay">UPI / GPay / QR</option>
-            <option value="Bank Transfer">Bank Transfer (NEFT)</option>
-            <option value="Cash">Cash Offering</option>
-            <option value="Cheque">Cheque</option>
-          </select>
-        </div>
-
-        <div className="sm:col-span-4 flex justify-between items-center pt-2">
-          <input
-            type="text"
-            placeholder="PAN / Tax Identification Number (Optional for 80G Receipt)"
-            value={incomeForm.panNumber}
-            onChange={(e) => setIncomeForm({ ...incomeForm, panNumber: e.target.value.toUpperCase() })}
-            className="w-72 bg-slate-950/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none"
-          />
-
-          <button
-            type="submit"
-            className="px-6 py-2.5 bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition text-xs"
-          >
-            <Plus size={15} />
-            <span>Save Tithe Record</span>
-          </button>
-        </div>
-      </form>
-    </div>
-
-    {/* Income Table */}
-    <div className="win11-card rounded-3xl overflow-hidden border border-white/10">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead className="border-b border-white/10 text-slate-400 text-[10px] uppercase font-mono bg-white/[0.02]">
-            <tr>
-              <th className="py-3 px-3.5">Receipt ID</th>
-              <th className="py-3 px-3.5">Date</th>
-              <th className="py-3 px-3.5">Contributor</th>
-              <th className="py-3 px-3.5">Category</th>
-              <th className="py-3 px-3.5">Payment Channel</th>
-              <th className="py-3 px-3.5 text-right">Amount</th>
-              <th className="py-3 px-3.5 text-center">80G / Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {incomeList.map((item) => (
-              <tr key={item.id} className="hover:bg-white/[0.02] transition">
-                <td className="py-3 px-3.5 font-mono font-bold text-amber-400">{item.id}</td>
-                <td className="py-3 px-3.5 text-slate-300 font-mono text-[11px]">{item.date}</td>
-                <td className="py-3 px-3.5 font-semibold text-white">
-                  <div>{item.member}</div>
-                  {item.panNumber && <div className="text-[10px] text-slate-400 font-mono">PAN: {item.panNumber}</div>}
-                </td>
-                <td className="py-3 px-3.5 text-emerald-400 font-medium">{item.category}</td>
-                <td className="py-3 px-3.5 text-slate-400 font-mono text-[11px]">{item.mode}</td>
-                <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-400">
-                  + {currencySymbol} {Number(item.amount).toLocaleString()}
-                </td>
-                <td className="py-3 px-3.5 text-center">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedReceipt(item)}
-                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
-                    >
-                      <Printer size={12} />
-                      <span>80G Receipt</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteIncome(item.id)}
-                      className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-)}
+      )}
 
       {/* TAB 2: EXPENSES */}
       {activeFinanceSubTab === 'expenses' && (
