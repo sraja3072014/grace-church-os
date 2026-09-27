@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   TrendingUp, Wallet, Receipt, FileText, Plus,
   ArrowUpRight, ArrowDownLeft, ShieldCheck, Trash2, 
-  Printer, CheckCircle2, Search, DollarSign, X, FileCheck2, Landmark, Package
+  Printer, CheckCircle2, Search, DollarSign, X, FileCheck2, Landmark, Package, Heart
 } from 'lucide-react';
 import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
@@ -11,7 +11,7 @@ import FinanceAnalyticsTab from './FinanceAnalyticsTab';
 import Annual80GCertificateModal from './Annual80GCertificateModal';
 import StaffPayrollDesk from './StaffPayrollDesk';
 import AnnualAuditAGMDesk from './AnnualAuditAGMDesk';
-import TreasuryAndAssetDesk from './TreasuryAndAssetDesk'; // Added Treasury & Asset Desk Sub-Tab
+import TreasuryAndAssetDesk from './TreasuryAndAssetDesk';
 
 export const DEFAULT_GIVING_CATEGORIES = [
   'Sunday Tithes (10%)',
@@ -39,6 +39,21 @@ export default function FinanceDesk({ session }) {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
+  // Fellowship & Sponsorships State with Custom Cause Support
+  const [sponsorships, setSponsorships] = useState([]);
+  const [isCustomCause, setIsCustomCause] = useState(false);
+  const [customCauseInput, setCustomCauseInput] = useState('');
+
+  const [sponsorForm, setSponsorForm] = useState({
+    cause: 'FELLOWSHIP_MEALS',
+    sponsorName: '',
+    phone: '',
+    location: '',
+    occasion: 'BIRTHDAY',
+    targetDate: '',
+    amountEstimate: ''
+  });
+
   const currencySymbol = useMemo(() => {
     try {
       const cfg = JSON.parse(localStorage.getItem('graceos_locale_config') || '{}');
@@ -56,6 +71,7 @@ export default function FinanceDesk({ session }) {
     const loadFinanceData = async () => {
       const storedIncome = await getVaultData('finance', SEED_INCOME);
       const storedExpenses = await getVaultData('expenses', SEED_EXPENSES);
+      const storedSponsorships = await getVaultData('sponsorships', []);
 
       if (!isMounted) return;
 
@@ -74,6 +90,7 @@ export default function FinanceDesk({ session }) {
 
       setIncomeList(normalizedIncome);
       setExpensesList(normalizedExpenses);
+      setSponsorships(Array.isArray(storedSponsorships) ? storedSponsorships : []);
     };
 
     loadFinanceData();
@@ -99,10 +116,6 @@ export default function FinanceDesk({ session }) {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
   };
-
-  const totalIncome = incomeList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
-  const totalExpenses = expensesList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
-  const netBalance = totalIncome - totalExpenses;
 
   const handleAddIncome = async (e) => {
     e.preventDefault();
@@ -153,6 +166,48 @@ export default function FinanceDesk({ session }) {
     await setVaultData('expenses', updated, true);
     showToast('Expense record removed.');
   };
+
+  const handleAddSponsorship = async (e) => {
+    e.preventDefault();
+    const finalCause = isCustomCause && customCauseInput.trim() ? customCauseInput.trim() : sponsorForm.cause;
+    if (!sponsorForm.sponsorName.trim() || !sponsorForm.targetDate || !finalCause) return;
+
+    const newSponsor = {
+      id: `FSP-${Date.now().toString().slice(-3)}`,
+      ...sponsorForm,
+      cause: finalCause,
+      amountEstimate: Number(sponsorForm.amountEstimate) || 0
+    };
+
+    const updated = [newSponsor, ...sponsorships];
+    setSponsorships(updated);
+    await setVaultData('sponsorships', updated, true);
+    setSponsorForm({
+      cause: 'FELLOWSHIP_MEALS',
+      sponsorName: '',
+      phone: '',
+      location: '',
+      occasion: 'BIRTHDAY',
+      targetDate: '',
+      amountEstimate: ''
+    });
+    setIsCustomCause(false);
+    setCustomCauseInput('');
+    showToast('Detailed fellowship sponsorship registered successfully.');
+  };
+
+  const handleDeleteSponsorship = async (id) => {
+    if (!window.confirm('Delete this sponsorship entry?')) return;
+    const updated = sponsorships.filter(s => s.id !== id);
+    setSponsorships(updated);
+    await setVaultData('sponsorships', updated, true);
+    showToast('Sponsorship removed.');
+  };
+
+  const totalIncome = incomeList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const totalExpenses = expensesList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const netBalance = totalIncome - totalExpenses;
+  const totalSponsorshipValue = sponsorships.reduce((sum, s) => sum + (Number(s.amountEstimate) || 0), 0);
 
   return (
     <div className="flex flex-col gap-6 select-none animate-in fade-in duration-200 pb-16 text-slate-100">
@@ -210,13 +265,23 @@ export default function FinanceDesk({ session }) {
             </button>
             <button
               type="button"
-              onClick={() => setActiveFinanceSubTab('treasury_assets')}
+              onClick={() => setActiveFinanceSubTab('sponsorships')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'treasury_assets' ? 'bg-cyan-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+                activeFinanceSubTab === 'sponsorships' ? 'bg-pink-500 text-white shadow-md font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Heart size={14} />
+              <span>Fellowship &amp; Sponsorships</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('equipment')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'equipment' ? 'bg-cyan-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Package size={14} />
-              <span>Asset &amp; Governance Desk</span>
+              <span>Equipment</span>
             </button>
             <button
               type="button"
@@ -262,10 +327,10 @@ export default function FinanceDesk({ session }) {
       {activeFinanceSubTab === 'analytics' && <FinanceAnalyticsTab />}
       {activeFinanceSubTab === 'payroll' && <StaffPayrollDesk session={session} />}
       {activeFinanceSubTab === 'agm_audit' && <AnnualAuditAGMDesk session={session} />}
-      {activeFinanceSubTab === 'treasury_assets' && <TreasuryAndAssetDesk session={session} />}
+      {activeFinanceSubTab === 'equipment' && <TreasuryAndAssetDesk session={session} />}
 
       {/* 3 Metric Summary Cards */}
-      {activeFinanceSubTab !== 'treasury_assets' && (
+      {activeFinanceSubTab !== 'equipment' && activeFinanceSubTab !== 'sponsorships' && (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="win11-card p-5 rounded-3xl border border-white/10 space-y-2">
           <div className="flex items-center justify-between text-slate-400">
@@ -597,6 +662,179 @@ export default function FinanceDesk({ session }) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* FELLOWSHIP & SPONSORSHIPS TAB VIEW (Updated without Choir/General Fund & with Custom Cause + Full Address) */}
+      {activeFinanceSubTab === 'sponsorships' && (
+        <div className="space-y-6 animate-in fade-in">
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-white/10 max-w-sm">
+            <span className="text-xs text-slate-400 block uppercase font-mono">Total Sponsorship Valuation</span>
+            <span className="text-2xl font-black text-pink-400 font-mono mt-1 block">₹ {totalSponsorshipValue.toLocaleString()}</span>
+            <span className="text-[11px] text-slate-400 mt-1 block">{sponsorships.length} Registered Fellowship Sponsorships</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Registration Form */}
+            <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
+              <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                <Plus size={15} className="text-pink-400" />
+                <span>Register Fellowship Sponsorship</span>
+              </h4>
+
+              <form onSubmit={handleAddSponsorship} className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-mono">Sponsorship Cause *</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomCause(!isCustomCause)}
+                      className="text-[10px] text-pink-400 hover:underline cursor-pointer font-semibold"
+                    >
+                      {isCustomCause ? 'Select from list' : '+ Add Custom Cause'}
+                    </button>
+                  </div>
+
+                  {isCustomCause ? (
+                    <input
+                      type="text"
+                      required
+                      placeholder="Type custom cause name..."
+                      value={customCauseInput}
+                      onChange={(e) => setCustomCauseInput(e.target.value)}
+                      className="w-full bg-slate-950 border border-pink-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  ) : (
+                    <select
+                      value={sponsorForm.cause}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, cause: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-pink-300 font-bold focus:outline-none cursor-pointer"
+                    >
+                      <option value="FELLOWSHIP_MEALS">Fellowship Meal (அன்பு விருந்து)</option>
+                      <option value="TRUST_KIDS">Trust Kids / Orphanage Aid (சிறுவர் இல்ல உணவு)</option>
+                      <option value="ALTAR_FLOWERS">Altar Flowers (பீட மலர்கள்)</option>
+                      <option value="BENEVOLENCE">Benevolence Aid (தரும உதவி)</option>
+                    </select>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Sponsor Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Bro. / Sis. Name"
+                      value={sponsorForm.sponsorName}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, sponsorName: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Mobile Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="98430XXXXX"
+                      value={sponsorForm.phone}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, phone: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Location / Full Address *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="City / Area / Address"
+                      value={sponsorForm.location}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, location: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Occasion / Milestone</label>
+                    <select
+                      value={sponsorForm.occasion}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, occasion: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-cyan-300 font-bold focus:outline-none cursor-pointer"
+                    >
+                      <option value="BIRTHDAY">Birthday (பிறந்தநாள்)</option>
+                      <option value="ANNIVERSARY">Wedding Anniversary (திருமண நாள்)</option>
+                      <option value="THANKSGIVING">Thanksgiving (நன்றியறிதல்)</option>
+                      <option value="MEMORIAL">Memorial (நினைவு நாள்)</option>
+                      <option value="GENERAL">General Giving</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Target Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={sponsorForm.targetDate}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, targetDate: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-2 py-2 text-xs text-pink-300 font-mono focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Estimated Value (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="5000"
+                      value={sponsorForm.amountEstimate}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, amountEstimate: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-2 py-2 text-xs text-emerald-400 font-mono font-bold focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-lg shadow-pink-600/20"
+                >
+                  Save Detailed Sponsorship Record
+                </button>
+              </form>
+            </div>
+
+            {/* List Display */}
+            <div className="lg:col-span-2 space-y-3 max-h-[520px] overflow-y-auto pr-1">
+              {sponsorships.length === 0 ? (
+                <div className="p-8 text-center text-slate-500 text-xs font-mono bg-slate-900 rounded-3xl border border-white/10">
+                  No fellowship or sponsorships recorded yet.
+                </div>
+              ) : (
+                sponsorships.map((s) => (
+                  <div key={s.id} className="p-4 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h5 className="text-xs font-bold text-white">{s.sponsorName}</h5>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                          {s.occasion || 'GENERAL'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-mono">
+                        {s.cause} • Ph: {s.phone || 'N/A'} • Address: {s.location || 'N/A'} • Date: {s.targetDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-emerald-400 font-mono">₹ {Number(s.amountEstimate || 0).toLocaleString()}</span>
+                      <button onClick={() => handleDeleteSponsorship(s.id)} className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

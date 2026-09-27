@@ -1,10 +1,12 @@
+// src/components/layout/FusionSidebar.jsx
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, ClipboardCheck, UserPlus, 
   HeartHandshake, Calendar, Radio, DollarSign, 
-  BarChart3, Settings, ShieldCheck, LogOut, ChevronDown, Building2, Megaphone, Baby, Package //
+  BarChart3, Settings, ShieldCheck, LogOut, ChevronDown, Building2, Megaphone, Baby 
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
+import { t } from '../../utils/localeEngine';
 
 export default function FusionSidebar({ activeTab, setActiveTab, session, onLogout }) {
   const [churchName, setChurchName] = useState('Grace City Church');
@@ -13,7 +15,6 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
   const [branches, setBranches] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Main Church, Logo மற்றும் Session தகவல்களை லோட் செய்தல்
   const refreshChurchData = () => {
     const mainChurch = JSON.parse(localStorage.getItem('graceos_main_church') || '{}');
     const localBranches = JSON.parse(localStorage.getItem('graceos_branches') || '[]');
@@ -44,35 +45,29 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'Main Dashboard', icon: LayoutDashboard, color: 'from-cyan-500 to-blue-600' },
-    { id: 'attendance', label: 'Attendance', icon: ClipboardCheck, color: 'from-emerald-500 to-teal-600' },
-    { id: 'members', label: 'Members Desk', icon: Users, color: 'from-indigo-500 to-purple-600' },
-    { id: 'visitors', label: 'Visitors Hub', icon: UserPlus, color: 'from-amber-500 to-orange-600' },
-    { id: 'ministries', label: 'Ministries & Kids', icon: Baby, color: 'from-amber-400 to-rose-500' },
-    { id: 'prayer', label: 'Prayer Wall', icon: HeartHandshake, color: 'from-rose-500 to-pink-600' },
-    { id: 'events', label: 'Events Hub', icon: Calendar, color: 'from-sky-500 to-indigo-600' },
-    { id: 'livestream', label: 'Live Desk', icon: Radio, color: 'from-violet-500 to-fuchsia-600' },
-    { id: 'finance', label: 'Finance & 80G', icon: DollarSign, color: 'from-emerald-400 to-green-600' },
-    { id: 'broadcast', label: 'Broadcast Hub', icon: Megaphone, color: 'from-amber-500 to-rose-600', badge: 'SMS/WA' },
-    { id: 'reports', label: 'Reports', icon: BarChart3, color: 'from-teal-400 to-cyan-600' },
-    { id: 'inventory', label: 'Assets & Gear', icon: Package, color: 'from-cyan-400 to-teal-500' },
-    { id: 'settings', label: 'Settings', icon: Settings, color: 'from-slate-400 to-slate-600' },
-      
-  ];
+  { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard, color: 'from-cyan-500 to-blue-600' },
+  { id: 'attendance', label: t('attendance'), icon: ClipboardCheck, color: 'from-emerald-500 to-teal-600' },
+  { id: 'members', label: t('members'), icon: Users, color: 'from-indigo-500 to-purple-600' },
+  { id: 'visitors', label: t('visitors'), icon: UserPlus, color: 'from-amber-500 to-orange-600' },
+  { id: 'ministries', label: t('ministries'), icon: Baby, color: 'from-amber-400 to-rose-500' },
+  { id: 'prayer', label: t('prayer'), icon: HeartHandshake, color: 'from-rose-500 to-pink-600' },
+  { id: 'events', label: t('events'), icon: Calendar, color: 'from-sky-500 to-indigo-600' },
+  { id: 'livestream', label: t('livestream'), icon: Radio, color: 'from-violet-500 to-fuchsia-600' },
+  { id: 'finance', label: t('finance'), icon: DollarSign, color: 'from-emerald-400 to-green-600' },
+  { id: 'broadcast', label: t('broadcast'), icon: Megaphone, color: 'from-amber-500 to-rose-600', badge: 'SMS/WA' },
+  { id: 'reports', label: t('reports'), icon: BarChart3, color: 'from-teal-400 to-cyan-600' },
+  { id: 'settings', label: t('settings'), icon: Settings, color: 'from-slate-400 to-slate-600' },
+];
 
   return (
-    <aside className="w-68 win11-glass flex flex-col justify-between p-3.5 select-none shrink-0 z-20 m-3 rounded-2xl border border-white/10">
-      
+    <aside className="w-68 win11-glass flex flex-col justify-between p-3.5 select-none shrink-0 z-20 m-3 rounded-2xl border border-white/10[cite: 33]">
       <div className="flex flex-col gap-4">
-        
-        {/* Dynamic Header: Main Church Logo / Branch Switcher */}
         <div className="relative">
           <div 
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center justify-between p-2 rounded-xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] cursor-pointer transition"
           >
             <div className="flex items-center gap-3 overflow-hidden">
-              {/* Dynamic Logo Box */}
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-400 via-indigo-500 to-purple-600 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-cyan-500/20 shrink-0 border border-white/20 overflow-hidden">
                 {churchLogo ? (
                   <img src={churchLogo} alt="Logo" className="w-full h-full object-cover" />
@@ -80,7 +75,6 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
                   <span>G</span>
                 )}
               </div>
-              
               <div className="overflow-hidden">
                 <h1 className="text-xs font-black text-white tracking-wide truncate">{churchName}</h1>
                 <p className="text-[10px] text-cyan-300 font-medium truncate flex items-center gap-1 mt-0.5">
@@ -92,7 +86,6 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
             <ChevronDown size={14} className="text-slate-400 shrink-0 ml-1" />
           </div>
 
-          {/* Branch Dropdown */}
           {isDropdownOpen && (
             <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900 border border-white/15 rounded-xl p-1.5 shadow-2xl z-30 flex flex-col gap-1 animate-in fade-in">
               <button 
@@ -116,7 +109,6 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
           )}
         </div>
 
-        {/* Navigation Items */}
         <nav className="flex flex-col gap-1.5 overflow-y-auto max-h-[calc(100vh-250px)] pr-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -157,7 +149,6 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
         </nav>
       </div>
 
-      {/* Footer User Badge & Logout */}
       <div className="flex items-center justify-between p-2.5 win11-card rounded-xl border border-white/5">
         <div className="flex items-center gap-2 overflow-hidden">
           <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
@@ -177,7 +168,6 @@ export default function FusionSidebar({ activeTab, setActiveTab, session, onLogo
           <LogOut size={13} />
         </button>
       </div>
-
     </aside>
   );
 }

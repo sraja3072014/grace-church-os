@@ -1,9 +1,9 @@
+// src/components/layout/TaskbarDock.jsx
 import React, { useState } from 'react';
 import { 
   LayoutGrid, LayoutDashboard, CheckSquare, Users, 
   Receipt, MessageSquare, BarChart3, HeartHandshake, 
-  CalendarDays, Radio, BookOpen, HeartPulse, 
-  Settings, Search, Sparkles, X
+  CalendarDays, Radio, BookOpen, Settings, Search, Sparkles, X
 } from 'lucide-react';
 
 export default function TaskbarDock({ activeTab, setActiveTab }) {
@@ -15,11 +15,10 @@ export default function TaskbarDock({ activeTab, setActiveTab }) {
     { id: 'attendance', label: 'Attendance', desc: 'Service Check-in & QR Desk', icon: CheckSquare, pinned: true },
     { id: 'members', label: 'Members Registry', desc: 'Family & Soul Directory', icon: Users, pinned: true },
     { id: 'finance', label: 'Finance & 80G', desc: 'Tithe Counter & Tax Receipts', icon: Receipt, pinned: true },
-    { id: 'community', label: 'Community Feed', desc: 'Broadcasts & Group Circles', icon: MessageSquare, pinned: true },
-    { id: 'prayer_wall', label: 'Prayer Wall', desc: 'Intercession & Healing Requests', icon: HeartHandshake, pinned: true },
-    { id: 'events_hub', label: 'Events Hub', desc: 'Service Schedules & Meetings', icon: CalendarDays, pinned: true },
+    { id: 'broadcast', label: 'Broadcast Hub', desc: 'Broadcasts & Group Circles', icon: MessageSquare, pinned: true },
+    { id: 'prayer', label: 'Prayer Wall', desc: 'Intercession & Healing Requests', icon: HeartHandshake, pinned: true },
+    { id: 'events', label: 'Events Hub', desc: 'Service Schedules & Meetings', icon: CalendarDays, pinned: true },
     { id: 'livestream', label: 'Live Desk', desc: 'Stage Flow & Countdown Timers', icon: Radio, pinned: true },
-    { id: 'bible_engine', label: 'Bible Engine', desc: 'Scripture Search & Projection', icon: BookOpen, pinned: true },
     { id: 'reports', label: 'Reports & Audits', desc: 'Analytics & Financial Statements', icon: BarChart3, pinned: true },
     { id: 'settings', label: 'Settings Studio', desc: 'Theme, Language & System Setup', icon: Settings, pinned: true },
   ];
@@ -32,9 +31,7 @@ export default function TaskbarDock({ activeTab, setActiveTab }) {
   );
 
   return (
-    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center">
-      
-      {/* 🌟 Windows 11 Full Start Menu Popup */}
+    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center[cite: 34]">
       {startOpen && (
         <div
           style={{
@@ -62,7 +59,7 @@ export default function TaskbarDock({ activeTab, setActiveTab }) {
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search Reports, Prayer Wall, Events, Bible..."
+              placeholder="Search Reports, Prayer Wall, Events..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full bg-slate-950/80 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 font-medium"
@@ -103,7 +100,6 @@ export default function TaskbarDock({ activeTab, setActiveTab }) {
         </div>
       )}
 
-      {/* 🌟 Windows 11 Adaptive Floating Taskbar */}
       <div
         style={{
           background: 'rgba(10, 15, 30, 0.65)',
@@ -128,34 +124,33 @@ export default function TaskbarDock({ activeTab, setActiveTab }) {
 
         <div className="flex items-center gap-1">
           {pinnedApps.map((app) => {
-          const Icon = app.icon;
-          const isActive = activeTab === app.id;
-          return (
-            <button
-              key={app.id}
-              onClick={() => {
-                setActiveTab(app.id);
-                setStartOpen(false);
-              }}
-              title={app.label}
-              style={{ color: isActive ? 'var(--card-glow-color, #06b6d4)' : 'inherit' }}
-              className={`p-2.5 rounded-xl transition relative group cursor-pointer shrink-0 ${
-                isActive ? 'bg-white/15 shadow-inner' : 'hover:bg-white/10 opacity-75 hover:opacity-100'
-              }`}
-            >
-              <Icon size={17} />
-              {isActive && (
-                <div
-                  style={{ backgroundColor: 'var(--card-glow-color, #06b6d4)' }}
-                  className="absolute bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-0.5 rounded-full shadow-sm"
-                />
-              )}
-            </button>
-          );
+            const Icon = app.icon;
+            const isActive = activeTab === app.id;
+            return (
+              <button
+                key={app.id}
+                onClick={() => {
+                  setActiveTab(app.id);
+                  setStartOpen(false);
+                }}
+                title={app.label}
+                style={{ color: isActive ? 'var(--card-glow-color, #06b6d4)' : 'inherit' }}
+                className={`p-2.5 rounded-xl transition relative group cursor-pointer shrink-0 ${
+                  isActive ? 'bg-white/15 shadow-inner' : 'hover:bg-white/10 opacity-75 hover:opacity-100'
+                }`}
+              >
+                <Icon size={17} />
+                {isActive && (
+                  <div
+                    style={{ backgroundColor: 'var(--card-glow-color, #06b6d4)' }}
+                    className="absolute bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-0.5 rounded-full shadow-sm"
+                  />
+                )}
+              </button>
+            );
           })}
         </div>
       </div>
-
     </div>
   );
 }

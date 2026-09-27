@@ -1,0 +1,189 @@
+// src/components/settings/church/LandLeaseVaultTab.jsx
+import React, { useState, useEffect } from 'react';
+import { Building2, Plus, MapPin, Clock, DollarSign, Trash2, CheckCircle2 } from 'lucide-react';
+import { getVaultData, setVaultData } from '../../../utils/vaultStore';
+
+export default function LandLeaseVaultTab() {
+  const [properties, setProperties] = useState([]);
+  const [toast, setToast] = useState('');
+  
+  const [propertyForm, setPropertyForm] = useState({
+    title: '',
+    ownershipType: 'RENTED',
+    location: '',
+    landArea: '',
+    docNo: '',
+    surveyNo: '',
+    pattaNo: '',
+    trustName: 'Grace Cathedral Charitable Trust',
+    landlordName: '',
+    landlordPhone: '',
+    monthlyRent: '',
+    advanceDeposit: '',
+    leaseExpiryDate: '',
+    ebConsumerNo: ''
+  });
+
+  useEffect(() => {
+    async function loadProperties() {
+      const dbProps = await getVaultData('properties', []);
+      setProperties(Array.isArray(dbProps) ? dbProps : []);
+    }
+    loadProperties();
+  }, []);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  };
+
+  const saveProperties = async (updated) => {
+    setProperties(updated);
+    await setVaultData('properties', updated, true);
+  };
+
+  const handleAddProperty = async (e) => {
+    e.preventDefault();
+    if (!propertyForm.title.trim() || !propertyForm.location.trim()) return;
+
+    const newProperty = {
+      id: `PROP-${Date.now().toString().slice(-3)}`,
+      ...propertyForm,
+      monthlyRent: Number(propertyForm.monthlyRent) || 0,
+      advanceDeposit: Number(propertyForm.advanceDeposit) || 0
+    };
+
+    const updated = [newProperty, ...properties];
+    await saveProperties(updated);
+    setPropertyForm({
+      title: '', ownershipType: 'RENTED', location: '', landArea: '',
+      docNo: '', surveyNo: '', pattaNo: '', trustName: 'Grace Cathedral Charitable Trust',
+      landlordName: '', landlordPhone: '', monthlyRent: '', advanceDeposit: '', leaseExpiryDate: '', ebConsumerNo: ''
+    });
+    showToast('Real estate property & lease dossier saved successfully.');
+  };
+
+  const totalAdvanceDeposits = properties.filter(p => p.ownershipType === 'RENTED').reduce((sum, p) => sum + (Number(p.advanceDeposit) || 0), 0);
+
+  return (
+    <div className="space-y-6 max-w-5xl select-none text-slate-100 pb-12 animate-in fade-in">
+      {toast && (
+        <div className="fixed top-6 right-6 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 backdrop-blur-md shadow-2xl z-50">
+          <CheckCircle2 size={15} />
+          <span className="font-semibold">{toast}</span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Building2 size={22} />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white">Land, Lease &amp; Trust Property Vault</h4>
+            <p className="text-xs text-slate-400">Manage church freeholds, lease contracts, title deeds, and trust real estate dossiers.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
+        <div className="p-4 rounded-2xl bg-slate-900 border border-white/10">
+          <span className="text-[10px] text-slate-400 block uppercase">Registered Campuses</span>
+          <span className="text-xl font-black text-white font-sans mt-0.5">{properties.length} Facilities</span>
+        </div>
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+          <span className="text-[10px] text-amber-300 block uppercase">Lease Advance Deposits</span>
+          <span className="text-xl font-black text-amber-400 mt-0.5">₹ {totalAdvanceDeposits.toLocaleString()}</span>
+        </div>
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+          <span className="text-[10px] text-emerald-300 block uppercase">Trust Legal Standing</span>
+          <span className="text-xs font-bold text-emerald-300 block mt-2">✓ Sections 12A &amp; 80G Certified</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
+          <h4 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+            <Plus size={15} className="text-amber-400" />
+            <span>Register Facility / Lease</span>
+          </h4>
+
+          <form onSubmit={handleAddProperty} className="space-y-3">
+            <input
+              type="text"
+              required
+              placeholder="Facility Name (e.g. North Campus)"
+              value={propertyForm.title}
+              onChange={(e) => setPropertyForm({ ...propertyForm, title: e.target.value })}
+              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            />
+            <select
+              value={propertyForm.ownershipType}
+              onChange={(e) => setPropertyForm({ ...propertyForm, ownershipType: e.target.value })}
+              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-amber-300 font-bold focus:outline-none cursor-pointer"
+            >
+              <option value="RENTED">Leased / Rented Facility</option>
+              <option value="OWNED">Freehold Cathedral Owned</option>
+              <option value="TRUST_LEASE">Trust Endowment Property</option>
+            </select>
+            <input
+              type="text"
+              required
+              placeholder="Location Address"
+              value={propertyForm.location}
+              onChange={(e) => setPropertyForm({ ...propertyForm, location: e.target.value })}
+              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            />
+            {propertyForm.ownershipType === 'RENTED' && (
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  placeholder="Monthly Rent (₹)"
+                  value={propertyForm.monthlyRent}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, monthlyRent: e.target.value })}
+                  className="bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none"
+                />
+                <input
+                  type="number"
+                  placeholder="Deposit (₹)"
+                  value={propertyForm.advanceDeposit}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, advanceDeposit: e.target.value })}
+                  className="bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none"
+                />
+              </div>
+            )}
+            <button
+              type="submit"
+              className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition cursor-pointer shadow-lg shadow-amber-500/20"
+            >
+              Save Facility to Vault
+            </button>
+          </form>
+        </div>
+
+        <div className="lg:col-span-2 space-y-4 max-h-[520px] overflow-y-auto pr-1">
+          {properties.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 text-xs font-mono bg-slate-900 rounded-3xl border border-white/10">
+              No real estate properties registered in administration.
+            </div>
+          ) : (
+            properties.map((prop) => (
+              <div key={prop.id} className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h5 className="text-sm font-bold text-white">{prop.title}</h5>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    {prop.ownershipType}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 flex items-center gap-1">
+                  <MapPin size={13} className="text-rose-400" /> {prop.location}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

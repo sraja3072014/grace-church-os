@@ -1,3 +1,4 @@
+// src/components/dashboard/MainDashboard.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { soundFX } from '../../utils/audioEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
@@ -6,15 +7,15 @@ import {
   CalendarCheck, ArrowUpRight, Sparkles, Receipt, 
   HeartHandshake, X, Search, Check, 
   Clock, Phone, AlertCircle, Info, Landmark, MapPin, 
-  QrCode, UserPlus, Database, CheckCircle2, Tv
+  QrCode, UserPlus, Database, CheckCircle2, Navigation
 } from 'lucide-react';
-import SanctuaryLiveScreen from '../display/SanctuaryLiveScreen';
 import CelebrationDispatcherWidget from '../widgets/CelebrationDispatcherWidget';
+import CellLeaderSyncWidget from './CellLeaderSyncWidget';
 
 export default function MainDashboard({ setActiveTab, session }) {
-  const [showProjector, setShowProjector] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [isAuraKioskModalOpen, setIsAuraKioskModalOpen] = useState(false);
   const [directInputId, setDirectInputId] = useState('');
   const [qrCheckinFeedback, setQrCheckinFeedback] = useState(null);
   const [isRegisterFamilyModalOpen, setIsRegisterFamilyModalOpen] = useState(false);
@@ -22,6 +23,7 @@ export default function MainDashboard({ setActiveTab, session }) {
   const [modalTab, setModalTab] = useState('existing');
   const [searchMember, setSearchMember] = useState('');
   const [selectedService, setSelectedService] = useState('Sunday 1st Morning Service (07:00 AM)');
+  const [gpsStatus, setGpsStatus] = useState('Scanning Church Geofence...');
   const todayDate = new Date().toISOString().split('T')[0];
 
   const dynamicSettings = { fontFamily: 'Inter, sans-serif', fontSize: '13px', currency: '₹' };
@@ -46,6 +48,7 @@ export default function MainDashboard({ setActiveTab, session }) {
     campus: 'Main Cathedral Sanctuary'
   });
 
+  // Updated Visitor Form with Address Field
   const [newVisitorForm, setNewVisitorForm] = useState({
     name: '',
     phone: '',
@@ -76,6 +79,12 @@ export default function MainDashboard({ setActiveTab, session }) {
       }
     }
     hydrateDashboardFromDisk();
+    
+    // Simulate GPS Geofence Check
+    const timer = setTimeout(() => {
+      setGpsStatus('Connected to Sanctuary Geofence (Radius < 50m)');
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [session]);
 
   const nextIds = useMemo(() => {
@@ -270,16 +279,15 @@ export default function MainDashboard({ setActiveTab, session }) {
 
     setNewVisitorForm({ name: '', phone: '', area: '', address: '', broughtBy: '', prayerRequest: '' });
     setModalTab('existing');
+    showToast('New Seeker registered & marked present successfully!');
   };
 
-  // விடுபட்ட விட்ஜெட் 1: Critical Care Alerts List[cite: 13]
   const criticalCareList = [
     { name: 'Bro. Sarah Jenkins', missed: 'Missed 4 Services (Last seen 1 month ago)', phone: '+91 98765 11001' },
     { name: 'Bro. David Miller', missed: 'Missed 3 Services (Calling Pending)', phone: '+91 98765 11002' },
     { name: 'Sister Marcus Thompson', missed: 'Missed 5 Services (Home Visit Needed)', phone: '+91 98765 11003' }
   ];
 
-  // விடுபட்ட விட்ஜெட் 2: Multi-Branch Treasury Split[cite: 13]
   const treasuryBranches = [
     { name: 'Main Cathedral Treasury (SBI - 4401)', tithe: '65%', offering: '25%', building: '10%', total: '₹ 1,85,000' },
     { name: 'North Campus Building (HDFC - 8812)', tithe: '40%', offering: '40%', building: '20%', total: '₹ 95,000' },
@@ -319,13 +327,14 @@ export default function MainDashboard({ setActiveTab, session }) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Aura Kiosk & GPS Check-in Button */}
           <button
             type="button"
-            onClick={() => setShowProjector(true)}
-            className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-2 transition cursor-pointer shadow-lg"
+            onClick={() => setIsAuraKioskModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center gap-2 transition cursor-pointer shadow-lg"
           >
-            <Tv size={15} />
-            <span>Live Screen (F11)</span>
+            <Navigation size={15} />
+            <span>Aura Kiosk &amp; GPS</span>
           </button>
 
           <button
@@ -421,10 +430,10 @@ export default function MainDashboard({ setActiveTab, session }) {
         })}
       </div>
 
-      {/* 🌟 4. 3-IN-1 CORE OPERATIONAL GRID (முன்பு விடுபட்ட விட்ஜெட்டுகள் முழுமையாக சேர்க்கப்பட்டுள்ளன) */}
+      {/* 4. Core Operational Grid (Including CellLeaderSyncWidget & CelebrationDispatcherWidget) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         
-        {/* 1. Visitor Engagement Pipeline[cite: 13] */}
+        {/* 1. Visitor Engagement Pipeline */}
         <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -465,7 +474,7 @@ export default function MainDashboard({ setActiveTab, session }) {
           </p>
         </div>
 
-        {/* 2. Critical Care Alerts[cite: 13] */}
+        {/* 2. Critical Care Alerts */}
         <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
             <div className="flex items-center gap-2 text-rose-400">
@@ -500,7 +509,7 @@ export default function MainDashboard({ setActiveTab, session }) {
           </div>
         </div>
 
-        {/* 3. Multi-Branch Treasury Split[cite: 13] */}
+        {/* 3. Multi-Branch Treasury Split */}
         <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
             <div className="flex items-center gap-2 text-amber-400">
@@ -531,6 +540,10 @@ export default function MainDashboard({ setActiveTab, session }) {
           </p>
         </div>
 
+        {/* 4. Cell Leader Live Sync Widget */}
+        <CellLeaderSyncWidget session={session} />
+
+        {/* 5. Celebration Dispatcher */}
         <CelebrationDispatcherWidget />
       </div>
 
@@ -687,9 +700,54 @@ export default function MainDashboard({ setActiveTab, session }) {
               </div>
             ) : (
               <form onSubmit={handleSaveNewVisitor} className="space-y-3">
-                <input type="text" required placeholder="Seeker Name" value={newVisitorForm.name} onChange={(e) => setNewVisitorForm({ ...newVisitorForm, name: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" />
-                <input type="text" required placeholder="Phone Number" value={newVisitorForm.phone} onChange={(e) => setNewVisitorForm({ ...newVisitorForm, phone: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono" />
-                <button type="submit" className="w-full py-2.5 bg-amber-500 text-slate-950 rounded-xl text-xs font-bold shadow-md cursor-pointer">Save Seeker to Disk</button>
+                <div>
+                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Seeker Name *</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="e.g. Bro. Michael Raj" 
+                    value={newVisitorForm.name} 
+                    onChange={(e) => setNewVisitorForm({ ...newVisitorForm, name: e.target.value })} 
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-bold" 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Mobile Number *</label>
+                    <input 
+                      type="tel" 
+                      required 
+                      placeholder="98430XXXXX" 
+                      value={newVisitorForm.phone} 
+                      onChange={(e) => setNewVisitorForm({ ...newVisitorForm, phone: e.target.value })} 
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Area / Locality</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. RS Puram" 
+                      value={newVisitorForm.area} 
+                      onChange={(e) => setNewVisitorForm({ ...newVisitorForm, area: e.target.value })} 
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Full Residential Address *</label>
+                  <textarea 
+                    required
+                    rows="2"
+                    placeholder="Door No, Street Name, City, Pincode..." 
+                    value={newVisitorForm.address} 
+                    onChange={(e) => setNewVisitorForm({ ...newVisitorForm, address: e.target.value })} 
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white resize-none" 
+                  />
+                </div>
+                <button type="submit" className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-md cursor-pointer transition">
+                  Save Seeker &amp; Check In
+                </button>
               </form>
             )}
           </div>
@@ -701,7 +759,7 @@ export default function MainDashboard({ setActiveTab, session }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
           <div className="w-full max-w-md p-6 rounded-3xl bg-slate-900 border border-white/20 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-bold text-white">Instant QR & ID Check-in Desk</h3>
+              <h3 className="text-sm font-bold text-white">Instant QR &amp; ID Check-in Desk</h3>
               <button type="button" onClick={() => setIsQRModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer"><X size={18} /></button>
             </div>
             {qrCheckinFeedback && (
@@ -724,7 +782,42 @@ export default function MainDashboard({ setActiveTab, session }) {
         </div>
       )}
 
-      {showProjector && <SanctuaryLiveScreen onClose={() => setShowProjector(false)} />}
+      {/* 8. Aura Kiosk & GPS Check-in Modal */}
+      {isAuraKioskModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-slate-900 border border-white/20 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Navigation className="text-cyan-400" size={18} />
+                <h3 className="text-sm font-bold text-white">Aura Kiosk &amp; GPS Geofence Check-in</h3>
+              </div>
+              <button type="button" onClick={() => setIsAuraKioskModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer"><X size={18} /></button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs space-y-2">
+              <div className="font-bold flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                <span>Sanctuary Geofence Status:</span>
+              </div>
+              <p className="font-mono text-[11px] text-slate-300">{gpsStatus}</p>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Aura Kiosk mode allows members carrying authorized mobile devices or smart badges to automatically check-in upon entering the sanctuary perimeter without manual scanning.
+            </p>
+
+            <div className="flex justify-end pt-2 border-t border-white/10">
+              <button 
+                type="button" 
+                onClick={() => setIsAuraKioskModalOpen(false)} 
+                className="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-bold cursor-pointer transition"
+              >
+                Close Kiosk Desk
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
