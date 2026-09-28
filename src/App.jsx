@@ -21,7 +21,6 @@ import BulkBroadcastMessenger from './components/broadcast/BulkBroadcastMessenge
 import QuickWidgetBar from './components/widgets/QuickWidgetBar';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import MinistriesHubDesk from './components/ministry/MinistriesHubDesk';
-import ChurchInventoryDesk from './components/inventory/ChurchInventoryDesk';
 import { getLargeWallpaper } from './utils/storageDB';
 import { LayoutDashboard, Lock, Mail, ArrowRight, Church, Globe, QrCode } from 'lucide-react';
 
@@ -140,6 +139,7 @@ export default function App() {
     localStorage.setItem('graceos_lang', next);
   };
 
+  // 1. Unauthenticated Login Screen
   if (!session) {
     return (
       <div className="min-h-screen bg-[#07050d] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans select-none">
@@ -147,6 +147,7 @@ export default function App() {
         <div className="absolute bottom-1/6 right-1/5 w-96 h-96 bg-cyan-500/15 rounded-full blur-[140px] pointer-events-none" />
 
         <button
+          type="button"
           onClick={toggleLanguage}
           className="absolute top-6 right-6 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-semibold text-cyan-400 backdrop-blur-xl transition cursor-pointer"
         >
@@ -216,6 +217,7 @@ export default function App() {
     );
   }
 
+  // 2. Authenticated Main Application
   const dynamicTextColor = theme?.textColor || '#ffffff';
   const wallpaperDim = theme?.wallpaperDim ?? 20;
   const wallpaperBrightness = theme?.wallpaperBrightness ?? 100;
@@ -226,21 +228,29 @@ export default function App() {
   const rainbowHoverClass = theme?.enableRainbowHover ? 'rainbow-hover-card' : '';
 
   return (
-    <div 
-      style={{
-        backgroundColor: dynamicBgColor,
-        color: dynamicTextColor,
-        '--dynamic-text-color': dynamicTextColor,
-        '--card-glow-color': glassGlow,
-        '--shadow-depth': `rgba(0, 0, 0, ${shadowAlpha})`
-      }}
-      className={`relative flex h-screen w-screen overflow-hidden select-none font-sans transition-colors duration-300 ${rainbowHoverClass}`}
-    >
-      <RainCanvas 
-        enableRain={theme?.enableRainFX} 
-        enableThunder={theme?.enableThunderPulse} 
-        enableHolyDust={theme?.enableHolyDustFX} 
-      />
+  <div 
+    style={{
+      backgroundColor: dynamicBgColor,
+      color: dynamicTextColor,
+      '--dynamic-text-color': dynamicTextColor,
+      '--card-glow-color': glassGlow,
+      '--shadow-depth': `rgba(0, 0, 0, ${shadowAlpha})`
+    }}
+    className={`relative flex h-screen w-screen overflow-hidden select-none font-sans transition-colors duration-300 ${rainbowHoverClass}`}
+  >
+    {/* 🌟 4 வண்ணங்கள் மாறி மாறி மிதந்து ஒளிரும் Ambient Mesh Blobs */}
+    <div className="ambient-glow-container">
+      <div className="ambient-glow-orb orb-1" />
+      <div className="ambient-glow-orb orb-2" />
+      <div className="ambient-glow-orb orb-3" />
+      <div className="ambient-glow-orb orb-4" />
+    </div>
+
+    <RainCanvas 
+      enableRain={theme?.enableRainFX} 
+      enableThunder={theme?.enableThunderPulse} 
+      enableHolyDust={theme?.enableHolyDustFX} 
+    />
 
       {wallpaperData && (
         <div 
@@ -259,7 +269,7 @@ export default function App() {
 
       {/* Permanent Fusion Sidebar */}
       {!isDockLayout && (
-        <div className={rainbowHoverClass}>
+        <div className={`relative z-20 ${rainbowHoverClass}`}>
           <FusionSidebar 
             activeTab={activeTab} 
             setActiveTab={setActiveTab} 
@@ -287,7 +297,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setIsScannerOpen(true)}
-                    className="px-3.5 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-500/20"
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-500/20 active:scale-95"
                   >
                     <QrCode size={14} />
                     <span>Scan Aura Check-In</span>
@@ -296,7 +306,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('dashboard')}
-                  className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white border border-white/10 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer backdrop-blur-md"
+                  className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white border border-white/10 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer backdrop-blur-md active:scale-95"
                 >
                   <LayoutDashboard size={14} />
                   <span>Dashboard</span>
@@ -313,7 +323,6 @@ export default function App() {
               )}
               {activeTab === 'members' && <MembersDesk session={session} />}
               {activeTab === 'ministries' && <MinistriesHubDesk session={session} />}
-              {activeTab === 'inventory' && <ChurchInventoryDesk session={session} />}
               {activeTab === 'finance' && <FinanceDesk session={session} />}
               {activeTab === 'broadcast' && <BulkBroadcastMessenger />}
               {activeTab === 'community' && <CommunityHub session={session} />}
@@ -329,7 +338,7 @@ export default function App() {
       </div>
 
       {isDockLayout && (
-        <div className={rainbowHoverClass}>
+        <div className={`relative z-30 ${rainbowHoverClass}`}>
           <TaskbarDock activeTab={activeTab || 'dashboard'} setActiveTab={setActiveTab} />
         </div>
       )}
