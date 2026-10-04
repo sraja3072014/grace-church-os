@@ -251,7 +251,6 @@ export default function MembersDesk({ session }) {
         }
         return f;
       });
-      showToast('Family record updated successfully!');
     } else {
       const nextIdNum = families.length + 101;
       const newFamily = {
@@ -273,10 +272,12 @@ export default function MembersDesk({ session }) {
         }))
       };
       updatedFamilies = [newFamily, ...families];
-      showToast('New Believer Household registered!');
     }
 
     await syncFamilies(updatedFamilies);
+    showToast(editingFamilyId
+      ? 'Family record updated and saved to the local vault!'
+      : 'New believer household saved to the local vault!');
     setIsHeadModalOpen(false);
   };
 
@@ -320,14 +321,14 @@ export default function MembersDesk({ session }) {
     await syncFamilies(updatedFamilies);
     setExpandedFamilyId(targetFamilyForSubMember.familyId);
     setIsSubMemberModalOpen(false);
-    showToast(`Added ${newSubMember.name} to family tree!`);
+    showToast(`Added ${newSubMember.name} and saved to the local vault!`);
   };
 
   const handleDeleteFamily = async (familyId) => {
     if (window.confirm("Are you sure you want to remove this family record?")) {
       const updated = families.filter(f => f.familyId !== familyId);
       await syncFamilies(updated);
-      showToast('Family record deleted.');
+      showToast('Family record deleted and the local vault updated.');
     }
   };
 
@@ -343,7 +344,7 @@ export default function MembersDesk({ session }) {
         return f;
       });
       await syncFamilies(updated);
-      showToast('Member removed from family unit.');
+      showToast('Member removed and the local vault updated.');
     }
   };
 

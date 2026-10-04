@@ -22,7 +22,17 @@ import QuickWidgetBar from './components/widgets/QuickWidgetBar';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import MinistriesHubDesk from './components/ministry/MinistriesHubDesk';
 import { getLargeWallpaper } from './utils/storageDB';
+import { NATURE_PRESETS } from './components/settings/system/ThemeDisplayTab';
+import { syncLocalVaultToCloud } from './utils/cloudSyncEngine';
 import { LayoutDashboard, Lock, Mail, ArrowRight, Church, Globe, QrCode } from 'lucide-react';
+
+const DEFAULT_STYLE_WALLPAPERS = {
+  glassmorphism: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
+  aero_liquid: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
+  naturemorphism: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
+  neumorphism: 'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?q=80&w=1920&auto=format&fit=crop',
+  minimal_flat: ''
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -52,13 +62,17 @@ export default function App() {
       const parsed = local ? JSON.parse(local) : {};
       return {
         preset: parsed.preset || 'aurora_cosmic',
+        styleModel: parsed.styleModel || 'glassmorphism',
+        bgMode: parsed.bgMode || 'nature_wallpaper',
+        natureWallpaperUrl: parsed.natureWallpaperUrl || (NATURE_PRESETS && NATURE_PRESETS[0]?.url) || 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
         bgColor: parsed.bgColor || '#07050d',
         textColor: parsed.textColor || '#ffffff',
         autoContrast: parsed.autoContrast ?? true,
         activeTextColor: parsed.textColor || '#ffffff',
-        wallpaperDim: parsed.wallpaperDim ?? 20,
+        wallpaperDim: parsed.wallpaperDim ?? 35,
         wallpaperBrightness: parsed.wallpaperBrightness ?? 100,
-        glassGlowColor: parsed.glassGlowColor || '#06b6d4',
+        auraOpacity: parsed.auraOpacity ?? 32,
+        glassGlowColor: parsed.glassGlowColor || 'rgba(14, 116, 144, 0.4)',
         shadowIntensity: parsed.shadowIntensity ?? 40,
         layoutStyle: parsed.layoutStyle || 'windows_dock',
         enableRainFX: parsed.enableRainFX || false,
@@ -69,13 +83,17 @@ export default function App() {
     } catch {
       return {
         preset: 'aurora_cosmic',
+        styleModel: 'glassmorphism',
+        bgMode: 'nature_wallpaper',
+        natureWallpaperUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
         bgColor: '#07050d',
         textColor: '#ffffff',
         autoContrast: true,
         activeTextColor: '#ffffff',
-        wallpaperDim: 20,
+        wallpaperDim: 35,
         wallpaperBrightness: 100,
-        glassGlowColor: '#06b6d4',
+        auraOpacity: 32,
+        glassGlowColor: 'rgba(14, 116, 144, 0.4)',
         shadowIntensity: 40,
         layoutStyle: 'windows_dock',
         enableRainFX: false,
@@ -109,6 +127,17 @@ export default function App() {
     };
   }, []);
 
+  // 🌟 30 நிமிடத்திற்கு ஒருமுறை தானியங்கி கிளவுட் பேக்கப் (Auto Relay Interval)
+  useEffect(() => {
+    const syncTimer = setInterval(() => {
+      if (navigator.onLine && session) {
+        syncLocalVaultToCloud().catch((err) => console.warn('Periodic sync notice:', err));
+      }
+    }, 30 * 60 * 1000);
+
+    return () => clearInterval(syncTimer);
+  }, [session]);
+
   const handleLogin = (e) => {
     e.preventDefault();
     setAuthError('');
@@ -128,7 +157,15 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  // 🌟 ஒரே ஒரு முறை மட்டுமே அறிவிக்கப்பட்ட Logout + Cloud Backup ஃபங்க்ஷன்
+  const handleLogout = async () => {
+    if (navigator.onLine) {
+      try {
+        await syncLocalVaultToCloud();
+      } catch (err) {
+        console.warn('Logout sync warning:', err);
+      }
+    }
     localStorage.removeItem('graceos_session');
     setSession(null);
   };
@@ -139,12 +176,13 @@ export default function App() {
     localStorage.setItem('graceos_lang', next);
   };
 
-  // 1. Unauthenticated Login Screen
   if (!session) {
     return (
       <div className="min-h-screen bg-[#07050d] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans select-none">
-        <div className="absolute top-1/6 left-1/5 w-96 h-96 bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute bottom-1/6 right-1/5 w-96 h-96 bg-cyan-500/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="ambient-glow-container" style={{ opacity: 0.25 }}>
+          <div className="ambient-glow-orb orb-1" />
+          <div className="ambient-glow-orb orb-2" />
+        </div>
 
         <button
           type="button"
@@ -217,46 +255,56 @@ export default function App() {
     );
   }
 
-  // 2. Authenticated Main Application
+  // 2. Authenticated Shell
   const dynamicTextColor = theme?.textColor || '#ffffff';
-  const wallpaperDim = theme?.wallpaperDim ?? 20;
+  const wallpaperDim = theme?.wallpaperDim ?? 35;
   const wallpaperBrightness = theme?.wallpaperBrightness ?? 100;
-  const glassGlow = theme?.glassGlowColor || '#06b6d4';
+  const glassGlow = theme?.glassGlowColor || 'rgba(14, 116, 144, 0.4)';
   const shadowAlpha = (theme?.shadowIntensity ?? 40) / 100;
   const isDockLayout = theme?.layoutStyle === 'windows_dock';
   const dynamicBgColor = theme?.bgColor || '#07050d';
-  const rainbowHoverClass = theme?.enableRainbowHover ? 'rainbow-hover-card' : '';
+  const currentModel = theme?.styleModel || 'glassmorphism';
+  const activeBgMode = theme?.bgMode || 'nature_wallpaper';
+
+  const activeWallpaper = activeBgMode === 'custom_upload'
+    ? wallpaperData
+    : activeBgMode === 'nature_wallpaper'
+      ? (theme.natureWallpaperUrl || (NATURE_PRESETS && NATURE_PRESETS[0]?.url) || 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop')
+      : (wallpaperData || DEFAULT_STYLE_WALLPAPERS[currentModel]);
 
   return (
-  <div 
-    style={{
-      backgroundColor: dynamicBgColor,
-      color: dynamicTextColor,
-      '--dynamic-text-color': dynamicTextColor,
-      '--card-glow-color': glassGlow,
-      '--shadow-depth': `rgba(0, 0, 0, ${shadowAlpha})`
-    }}
-    className={`relative flex h-screen w-screen overflow-hidden select-none font-sans transition-colors duration-300 ${rainbowHoverClass}`}
-  >
-    {/* 🌟 4 வண்ணங்கள் மாறி மாறி மிதந்து ஒளிரும் Ambient Mesh Blobs */}
-    <div className="ambient-glow-container">
-      <div className="ambient-glow-orb orb-1" />
-      <div className="ambient-glow-orb orb-2" />
-      <div className="ambient-glow-orb orb-3" />
-      <div className="ambient-glow-orb orb-4" />
-    </div>
+    <div 
+      data-theme={currentModel}
+      style={{
+        backgroundColor: dynamicBgColor,
+        color: dynamicTextColor,
+        '--dynamic-text-color': dynamicTextColor,
+        '--card-glow-color': glassGlow,
+        '--shadow-depth': `rgba(0, 0, 0, ${shadowAlpha})`,
+        '--ambient-glow-opacity': (theme.auraOpacity || 32) / 100
+      }}
+      className="relative flex h-screen w-screen overflow-hidden select-none font-sans transition-colors duration-300"
+    >
+      {/* அமைதியான 4 வண்ண ஆரா */}
+      <div className="ambient-glow-container">
+        <div className="ambient-glow-orb orb-1" />
+        <div className="ambient-glow-orb orb-2" />
+        <div className="ambient-glow-orb orb-3" />
+        <div className="ambient-glow-orb orb-4" />
+      </div>
 
-    <RainCanvas 
-      enableRain={theme?.enableRainFX} 
-      enableThunder={theme?.enableThunderPulse} 
-      enableHolyDust={theme?.enableHolyDustFX} 
-    />
+      <RainCanvas 
+        enableRain={theme?.enableRainFX} 
+        enableThunder={theme?.enableThunderPulse} 
+        enableHolyDust={theme?.enableHolyDustFX} 
+      />
 
-      {wallpaperData && (
+      {/* பின்னணி வால்பேப்பர் */}
+      {activeBgMode !== 'dynamic_glow' && activeWallpaper && (
         <div 
-          className="fixed inset-0 bg-cover bg-center pointer-events-none z-[0] transition-all duration-300"
+          className="fixed inset-0 bg-cover bg-center pointer-events-none z-[0] transition-all duration-700 ease-in-out"
           style={{ 
-            backgroundImage: `url(${wallpaperData})`,
+            backgroundImage: `url(${activeWallpaper})`,
             filter: `brightness(${wallpaperBrightness}%)`,
           }}
         >
@@ -267,9 +315,9 @@ export default function App() {
         </div>
       )}
 
-      {/* Permanent Fusion Sidebar */}
+      {/* Fusion Sidebar */}
       {!isDockLayout && (
-        <div className={`relative z-20 ${rainbowHoverClass}`}>
+        <div className="relative z-20">
           <FusionSidebar 
             activeTab={activeTab} 
             setActiveTab={setActiveTab} 
@@ -279,16 +327,14 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Desktop Container */}
+      {/* Main Container */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
-        <div className={rainbowHoverClass}>
-          <Header />
-        </div>
+        <Header />
 
         <main className={`flex-1 overflow-y-auto ${isDockLayout ? 'pb-24' : 'p-5'}`}>
-          <div className={`relative p-2 sm:p-4 animate-in fade-in zoom-in-95 duration-200 ${rainbowHoverClass}`}>
+          <div className="relative p-2 sm:p-4 animate-in fade-in zoom-in-95 duration-200">
             
-            <div className={`flex items-center justify-between mb-4 p-3 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl shadow-lg ${rainbowHoverClass}`}>
+            <div className="flex items-center justify-between mb-4 p-3 rounded-2xl win11-card shadow-lg">
               <span className="text-xs font-mono uppercase tracking-widest text-slate-300">
                 Active Module: <strong className="text-cyan-400">{activeTab.replace('_', ' ')}</strong>
               </span>
@@ -314,7 +360,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className={rainbowHoverClass}>
+            <div>
               {activeTab === 'dashboard' && <MainDashboard setActiveTab={setActiveTab} session={session} />}
               {activeTab === 'attendance' && (
                 <div className="space-y-6">
@@ -338,7 +384,7 @@ export default function App() {
       </div>
 
       {isDockLayout && (
-        <div className={`relative z-30 ${rainbowHoverClass}`}>
+        <div className="relative z-30">
           <TaskbarDock activeTab={activeTab || 'dashboard'} setActiveTab={setActiveTab} />
         </div>
       )}

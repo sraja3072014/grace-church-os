@@ -4,10 +4,11 @@
 
 @layer base {
   :root {
-    --card-glow-color: #06b6d4;
-    --glow-accent: #06b6d4;
-    --shadow-depth: rgba(0, 0, 0, 0.6);
+    --card-glow-color: rgba(14, 116, 144, 0.4);
+    --glow-accent: rgba(14, 116, 144, 0.4);
+    --shadow-depth: rgba(0, 0, 0, 0.5);
     --dynamic-text-color: #ffffff;
+    --ambient-glow-opacity: 0.32;
   }
 
   html,
@@ -15,7 +16,7 @@
     margin: 0;
     padding: 0;
     min-height: 100vh;
-    background-color: #05030a !important; /* ஆழமான டார்க் பேஸ் */
+    background-color: #07050d !important;
     color: #f1f5f9;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     overflow-x: hidden;
@@ -23,69 +24,98 @@
 }
 
 /* =========================================================
-   1. Ultra-Vibrant Ambient Background Glow Aura (4 மூலைகள் & மையம்)
+   1. Dynamic UI Theme Tokens (Glass, Nature, Neumorphism, Flat)
    ========================================================= */
-.ambient-glow-aura {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background: 
-    radial-gradient(circle at 15% 15%, var(--card-glow-color, #06b6d4) 0%, transparent 40%),
-    radial-gradient(circle at 85% 15%, var(--card-glow-color, #06b6d4) 0%, transparent 40%),
-    radial-gradient(circle at 15% 85%, var(--card-glow-color, #06b6d4) 0%, transparent 40%),
-    radial-gradient(circle at 85% 85%, var(--card-glow-color, #06b6d4) 0%, transparent 40%),
-    radial-gradient(circle at 50% 50%, var(--card-glow-color, #06b6d4) 0%, transparent 60%);
-  opacity: 0.45;
-  filter: blur(40px);
-  animation: ambientAuraPulse 8s ease-in-out infinite alternate;
+
+/* A. Frosted Liquid Glass (Glassmorphism) */
+[data-theme="glassmorphism"] {
+  --theme-card-bg: rgba(15, 23, 42, 0.45);
+  --theme-card-blur: none;
+  --theme-card-border: 1px solid rgba(255, 255, 255, 0.12);
+  --theme-card-radius: 1.5rem;
+  --theme-card-shadow: 0 16px 36px 0 var(--shadow-depth, rgba(0, 0, 0, 0.5));
 }
 
-@keyframes ambientAuraPulse {
-  0% {
-    opacity: 0.35;
-    transform: scale(0.98);
-  }
-  100% {
-    opacity: 0.55;
-    transform: scale(1.02);
-  }
+/* B. Naturemorphism (Organic Earth / Forest Eco) */
+[data-theme="naturemorphism"] {
+  --theme-card-bg: rgba(6, 20, 15, 0.55);
+  --theme-card-blur: none;
+  --theme-card-border: 1px solid rgba(16, 185, 129, 0.18);
+  --theme-card-radius: 1.5rem;
+  --theme-card-shadow: 0 16px 36px 0 rgba(2, 44, 34, 0.6);
+}
+
+/* C. Soft Neumorphism (Soft 3D Dark) */
+[data-theme="neumorphism"] {
+  --theme-card-bg: #0f172a;
+  --theme-card-blur: none;
+  --theme-card-border: 1px solid rgba(255, 255, 255, 0.05);
+  --theme-card-radius: 1.5rem;
+  --theme-card-shadow: 8px 8px 18px #070b14, -8px -8px 18px #172340;
+}
+
+/* D. Minimal Flat (Clean Executive Look) */
+[data-theme="minimal_flat"] {
+  --theme-card-bg: #0c1220;
+  --theme-card-blur: none;
+  --theme-card-border: 1px solid #1e293b;
+  --theme-card-radius: 0.85rem;
+  --theme-card-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* =========================================================
-   2. Translucent Glass Panels (பின்னணி வெளிச்சம் கார்டுகள் வழியாகத் தெரியும்)
+   E. Windows Aero / Liquid Glass Model (Specular Refraction)
    ========================================================= */
+[data-theme="aero_liquid"] {
+  --theme-card-bg: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.03) 40%,
+    rgba(15, 23, 42, 0.4) 100%
+  );
+  --theme-card-blur: blur(0px); /* 0px Crystal Clear Glass */
+  --theme-card-border: 1px solid rgba(255, 255, 255, 0.28);
+  --theme-card-radius: 1.25rem;
+  --theme-card-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Liquid Glass Hover Effect */
+[data-theme="aero_liquid"] .win11-card:hover,
+[data-theme="aero_liquid"] .crystal-card:hover {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 
+    0 24px 48px rgba(0, 0, 0, 0.6),
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.6),
+    0 0 20px rgba(6, 182, 212, 0.35) !important;
+}
+
+/* அனைத்து கார்டுகளுக்கும் பொதுவான இணைப்பு */
 .win11-card,
 .crystal-card,
 .glass-panel {
-  background: rgba(15, 23, 42, 0.45) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
-  backdrop-filter: blur(20px) saturate(150%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 
-    0 16px 36px 0 var(--shadow-depth, rgba(0, 0, 0, 0.5)),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.2) !important;
+  background: var(--theme-card-bg, rgba(15, 23, 42, 0.45)) !important;
+  -webkit-backdrop-filter: var(--theme-card-blur, blur(20px) saturate(140%)) !important;
+  backdrop-filter: var(--theme-card-blur, blur(20px) saturate(140%)) !important;
+  border: var(--theme-card-border, 1px solid rgba(255, 255, 255, 0.12)) !important;
+  border-radius: var(--theme-card-radius, 1.5rem) !important;
+  box-shadow: var(--theme-card-shadow, 0 16px 36px 0 rgba(0, 0, 0, 0.5)) !important;
+  color: var(--dynamic-text-color, #ffffff) !important;
   position: relative;
   z-index: 10;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .win11-card:hover,
 .crystal-card:hover,
 .glass-panel:hover {
-  border-color: var(--card-glow-color, #06b6d4) !important;
-  box-shadow: 
-    0 20px 48px 0 var(--shadow-depth, rgba(0, 0, 0, 0.7)),
-    0 0 25px -2px var(--card-glow-color, #06b6d4) !important;
-}
-
-@media print {
-  .ambient-glow-aura {
-    display: none !important;
-  }
+  border-color: var(--card-glow-color, rgba(14, 116, 144, 0.6)) !important;
 }
 
 /* =========================================================
-   1. Multi-Color Fluid Circular Aurora (4-Color Moving Blobs)
+   2. Calm Muted Fluid Aurora (கண்களை உறுத்தாத மென்மையான 4 வண்ண ஆரா)
    ========================================================= */
 .ambient-glow-container {
   position: fixed;
@@ -93,121 +123,82 @@
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
-  filter: blur(75px); /* மென்மையான ஆரா தோற்றத்திற்கு */
-  opacity: 0.55;
-  transition: opacity 0.5s ease;
+  filter: blur(100px);
+  opacity: var(--ambient-glow-opacity, 0.32);
+  transition: opacity 0.8s ease-in-out;
 }
 
-/* 4 மிதக்கும் வட்ட வடிவ வண்ண உருண்டைகள் */
 .ambient-glow-orb {
   position: absolute;
   border-radius: 50%;
   mix-blend-mode: screen;
-  will-change: transform, background;
+  will-change: transform, opacity;
 }
 
-/* Orb 1: Cyan / Emerald */
+/* Orb 1: அமைதியான டீல் / ஐஸ் வாட்டர் */
 .orb-1 {
-  width: 50vw;
-  height: 50vw;
-  top: -10vw;
-  left: -10vw;
-  background: radial-gradient(circle, #06b6d4 0%, rgba(6, 182, 212, 0) 70%);
-  animation: moveOrb1 18s ease-in-out infinite alternate;
-}
-
-/* Orb 2: Purple / Indigo */
-.orb-2 {
   width: 55vw;
   height: 55vw;
+  top: -15vw;
+  left: -10vw;
+  background: radial-gradient(circle, rgba(14, 116, 144, 0.55) 0%, rgba(14, 116, 144, 0) 70%);
+  animation: calmFloat1 26s ease-in-out infinite alternate;
+}
+
+/* Orb 2: மெல்லிய லாவெண்டர் / இண்டிகோ */
+.orb-2 {
+  width: 60vw;
+  height: 60vw;
   top: -5vw;
-  right: -10vw;
-  background: radial-gradient(circle, #8b5cf6 0%, rgba(139, 92, 246, 0) 70%);
-  animation: moveOrb2 22s ease-in-out infinite alternate;
+  right: -15vw;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.45) 0%, rgba(99, 102, 241, 0) 70%);
+  animation: calmFloat2 32s ease-in-out infinite alternate;
 }
 
-/* Orb 3: Rose / Pink */
+/* Orb 3: அமைதியான ரோஸ் கோல்ட் */
 .orb-3 {
-  width: 48vw;
-  height: 48vw;
-  bottom: -10vw;
+  width: 50vw;
+  height: 50vw;
+  bottom: -15vw;
   left: 10vw;
-  background: radial-gradient(circle, #ec4899 0%, rgba(236, 72, 153, 0) 70%);
-  animation: moveOrb3 20s ease-in-out infinite alternate;
+  background: radial-gradient(circle, rgba(190, 24, 93, 0.35) 0%, rgba(190, 24, 93, 0) 70%);
+  animation: calmFloat3 28s ease-in-out infinite alternate;
 }
 
-/* Orb 4: Amber / Gold */
+/* Orb 4: கதகதப்பான மெழுகுவர்த்தி தங்கம் (Candlelight Amber) */
 .orb-4 {
-  width: 52vw;
-  height: 52vw;
+  width: 55vw;
+  height: 55vw;
   bottom: -10vw;
-  right: -5vw;
-  background: radial-gradient(circle, #f59e0b 0%, rgba(245, 158, 11, 0) 70%);
-  animation: moveOrb4 24s ease-in-out infinite alternate;
+  right: -10vw;
+  background: radial-gradient(circle, rgba(180, 83, 9, 0.4) 0%, rgba(180, 83, 9, 0) 70%);
+  animation: calmFloat4 34s ease-in-out infinite alternate;
 }
 
-/* மிதந்து கொண்டே கலர் மற்றும் நிலையை மாற்றும் கீபிரேம்கள் */
-@keyframes moveOrb1 {
-  0% {
-    transform: translate(0, 0) scale(1);
-    background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
-  }
-  50% {
-    transform: translate(25vw, 20vh) scale(1.15);
-    background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
-  }
-  100% {
-    transform: translate(10vw, 35vh) scale(0.9);
-    background: radial-gradient(circle, #10b981 0%, transparent 70%);
-  }
+@keyframes calmFloat1 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(15vw, 15vh) scale(1.08); }
+  100% { transform: translate(5vw, 25vh) scale(0.95); }
 }
 
-@keyframes moveOrb2 {
-  0% {
-    transform: translate(0, 0) scale(1);
-    background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
-  }
-  50% {
-    transform: translate(-20vw, 25vh) scale(1.2);
-    background: radial-gradient(circle, #d946ef 0%, transparent 70%);
-  }
-  100% {
-    transform: translate(-30vw, 10vh) scale(0.95);
-    background: radial-gradient(circle, #6366f1 0%, transparent 70%);
-  }
+@keyframes calmFloat2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-15vw, 20vh) scale(1.1); }
+  100% { transform: translate(-20vw, 8vh) scale(0.92); }
 }
 
-@keyframes moveOrb3 {
-  0% {
-    transform: translate(0, 0) scale(1);
-    background: radial-gradient(circle, #ec4899 0%, transparent 70%);
-  }
-  50% {
-    transform: translate(30vw, -20vh) scale(1.1);
-    background: radial-gradient(circle, #f43f5e 0%, transparent 70%);
-  }
-  100% {
-    transform: translate(15vw, -30vh) scale(1);
-    background: radial-gradient(circle, #a855f7 0%, transparent 70%);
-  }
+@keyframes calmFloat3 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20vw, -15vh) scale(1.06); }
+  100% { transform: translate(10vw, -25vh) scale(0.98); }
 }
 
-@keyframes moveOrb4 {
-  0% {
-    transform: translate(0, 0) scale(1);
-    background: radial-gradient(circle, #f59e0b 0%, transparent 70%);
-  }
-  50% {
-    transform: translate(-25vw, -25vh) scale(1.18);
-    background: radial-gradient(circle, #fb923c 0%, transparent 70%);
-  }
-  100% {
-    transform: translate(-10vw, -15vh) scale(0.9);
-    background: radial-gradient(circle, #eab308 0%, transparent 70%);
-  }
+@keyframes calmFloat4 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-18vw, -18vh) scale(1.12); }
+  100% { transform: translate(-8vw, -10vh) scale(0.94); }
 }
 
-/* பிரிண்ட் எடுக்கும் போது இந்த அனிமேஷன் வராமல் இருக்க */
 @media print {
   .ambient-glow-container {
     display: none !important;

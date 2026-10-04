@@ -2,9 +2,37 @@
 import React, { useState, useRef } from 'react';
 import {
   Palette, SunMedium, Layers, Type, LayoutGrid, Volume2, MousePointer, 
-  Image as ImageIcon, Sparkles, CheckCircle2, Upload, Trash2, CloudRain, Zap
+  ImageIcon, Sparkles, CheckCircle2, Upload, Trash2, CloudRain, Zap, Sliders, Droplets
 } from 'lucide-react';
 import { saveLargeWallpaper, deleteLargeWallpaper } from '../../../utils/storageDB';
+
+// 🌿 4K / Real Full HD நேச்சுரல் வால்பேப்பர்கள் பட்டியல்
+export const NATURE_PRESETS = [
+  {
+    id: 'lone_tree',
+    name: 'Serene Lone Tree & Meadow',
+    desc: 'அமைதியான தனி மரம் மற்றும் பரந்த பச்சை புல்வெளி',
+    url: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop'
+  },
+  {
+    id: 'forest_sunlight',
+    name: 'Sunlight Forest & Grass',
+    desc: 'மரங்கள் வழியே பாயும் காலைக் கதிரவன் ஒளி',
+    url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=2560&auto=format&fit=crop'
+  },
+  {
+    id: 'green_mountain',
+    name: 'Green Meadow Hills',
+    desc: 'பசுமையான மலைச்சரிவு புல்வெளி மற்றும் மரங்கள்',
+    url: 'https://images.unsplash.com/photo-1470240731273-7821a6eeb6bd?q=80&w=2560&auto=format&fit=crop'
+  },
+  {
+    id: 'park_canopy',
+    name: 'Peaceful Tree Canopy',
+    desc: 'பசுஞ்சோலை நிழல் தரும் பெரிய மரக்கூட்டம்',
+    url: 'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=2560&auto=format&fit=crop'
+  }
+];
 
 export default function ThemeDisplayTab() {
   const [activeSubSection, setActiveSubSection] = useState('background');
@@ -16,6 +44,9 @@ export default function ThemeDisplayTab() {
     const parsed = local ? JSON.parse(local) : {};
     return {
       preset: parsed.preset || 'aurora_cosmic',
+      styleModel: parsed.styleModel || 'glassmorphism',
+      bgMode: parsed.bgMode || 'nature_wallpaper',
+      natureWallpaperUrl: parsed.natureWallpaperUrl || NATURE_PRESETS[0].url,
       bgColor: parsed.bgColor || '#07050d',
       textColor: parsed.textColor || '#ffffff',
       autoContrast: parsed.autoContrast ?? true,
@@ -23,107 +54,34 @@ export default function ThemeDisplayTab() {
       sidebarTextColor: parsed.sidebarTextColor || '#f8fafc',
       layoutStyle: parsed.layoutStyle || 'windows_dock',
       hasCustomWallpaper: parsed.hasCustomWallpaper || false,
-      wallpaperDim: parsed.wallpaperDim ?? 20,
+      wallpaperDim: parsed.wallpaperDim ?? 35,
       wallpaperBrightness: parsed.wallpaperBrightness ?? 100,
-      glassGlowColor: parsed.glassGlowColor || '#06b6d4',
+      auraOpacity: parsed.auraOpacity ?? 32,
+      glassGlowColor: parsed.glassGlowColor || 'rgba(14, 116, 144, 0.4)',
       shadowIntensity: parsed.shadowIntensity ?? 40,
       enableRainFX: parsed.enableRainFX || false,
       enableThunderPulse: parsed.enableThunderPulse || false,
       enableHolyDustFX: parsed.enableHolyDustFX || false,
       enableSoundWaves: parsed.enableSoundWaves || false,
-      enableRainbowHover: parsed.enableRainbowHover || false,
-      ambientGlow: parsed.ambientGlow || 'cyan',
-      glassOpacity: parsed.glassOpacity || 'high',
     };
   });
-
-  const themeCategories = [
-    {
-      categoryTitle: '1. Aurora Gradient (Lumina) - 3 Styles',
-      styles: [
-        { id: 'aurora_cosmic', name: 'Cosmic Violet & Cyan', desc: 'Deep cosmic purple base with electric cyan aura glow.', defaultBg: '#07050d', glow: '#06b6d4', glowType: 'cyan', accent: 'from-cyan-500 to-purple-600' },
-        { id: 'aurora_sunset', name: 'Sunset Amber Wave', desc: 'Obsidian warm base with glowing orange-amber highlights.', defaultBg: '#1c1917', glow: '#f59e0b', glowType: 'emerald', accent: 'from-orange-500 to-amber-600' },
-        { id: 'aurora_midnight', name: 'Midnight Neon Pink', desc: 'Deep midnight blue with vibrant neon pink radiance.', defaultBg: '#1e1b4b', glow: '#ec4899', glowType: 'royal', accent: 'from-rose-500 to-indigo-600' }
-      ]
-    },
-    {
-      categoryTitle: '2. Glassmorphism Pro (Mac & Win Fluent) - 3 Styles',
-      styles: [
-        { id: 'glass_frosted', name: 'Pure Frosted Acrylic', desc: 'Translucent glass with clean crystal-blue borders.', defaultBg: '#0f172a', glow: '#38bdf8', glowType: 'cyan', accent: 'from-blue-500 to-slate-700' },
-        { id: 'glass_obsidian', name: 'Dark Obsidian Glass', desc: 'Pitch dark sleek glass finish with ultra-sharp reflections.', defaultBg: '#09090b', glow: '#a855f7', glowType: 'royal', accent: 'from-purple-500 to-zinc-800' },
-        { id: 'glass_platinum', name: 'Platinum Silver Mist', desc: 'Bright silver-tinted glass surface for corporate look.', defaultBg: '#18181b', glow: '#e2e8f0', glowType: 'cyan', accent: 'from-zinc-400 to-slate-600' }
-      ]
-    },
-    {
-      categoryTitle: '3. Organic Earth & Moss (Bio-Minimalism) - 3 Styles',
-      styles: [
-        { id: 'earth_forest', name: 'Deep Forest Pine', desc: 'Calming dark forest greens with emerald moss glow.', defaultBg: '#06130b', glow: '#10b981', glowType: 'emerald', accent: 'from-emerald-600 to-teal-800' },
-        { id: 'earth_stone', name: 'Warm Stone & Clay', desc: 'Earthy brown and stone mineral tones for eye comfort.', defaultBg: '#1c1917', glow: '#d97706', glowType: 'emerald', accent: 'from-amber-700 to-stone-800' },
-        { id: 'earth_sage', name: 'Sage & Olive Mist', desc: 'Soft olive haze with natural muted green atmosphere.', defaultBg: '#111815', glow: '#84cc16', glowType: 'emerald', accent: 'from-lime-600 to-emerald-900' }
-      ]
-    },
-    {
-      categoryTitle: '4. Rainbow Liquid Spectrum - 3 Styles',
-      styles: [
-        { id: 'rainbow_neon', name: 'Neon Prism Spectrum', desc: 'Continuous multi-color shifting spectrum bubbles.', defaultBg: '#0a0a0f', glow: '#ec4899', glowType: 'royal', accent: 'from-rose-500 via-purple-500 to-cyan-500' },
-        { id: 'rainbow_aurora', name: 'Aurora Borealis Wave', desc: 'Flowing shifting rainbow lights across obsidian base.', defaultBg: '#090d16', glow: '#34d399', accent: 'from-emerald-400 via-cyan-500 to-purple-600' },
-        { id: 'rainbow_sunset', name: 'Holographic Sunset Glow', desc: 'Vibrant shifting warm sunset chromatic radiance.', defaultBg: '#18121a', glow: '#f43f5e', glowType: 'royal', accent: 'from-amber-400 via-rose-500 to-indigo-600' }
-      ]
-    }
-  ];
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
   };
 
-  const calculateSmartTextColor = (hexColor) => {
-    if (!hexColor || !hexColor.startsWith('#')) return '#ffffff';
-    const r = parseInt(hexColor.slice(1, 3), 16) || 0;
-    const g = parseInt(hexColor.slice(3, 5), 16) || 0;
-    const b = parseInt(hexColor.slice(5, 7), 16) || 0;
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.6 ? '#0f172a' : '#ffffff';
-  };
-
   const updateConfig = (newConfig) => {
-    let finalTextColor = newConfig.textColor;
-    if (newConfig.autoContrast) {
-      finalTextColor = calculateSmartTextColor(newConfig.bgColor);
-      newConfig.textColor = finalTextColor;
-    }
-
     setThemeConfig(newConfig);
     localStorage.setItem('graceos_theme_config', JSON.stringify(newConfig));
 
     const root = document.documentElement;
     root.style.setProperty('--app-bg-color', newConfig.bgColor);
-    root.style.setProperty('--dynamic-text-color', finalTextColor);
+    root.style.setProperty('--dynamic-text-color', newConfig.textColor);
     root.style.setProperty('--card-glow-color', newConfig.glassGlowColor);
-
-    document.body.style.backgroundColor = newConfig.bgColor;
-    document.body.style.color = finalTextColor;
-
-    if (newConfig.ambientGlow) {
-      document.body.className = `ambient-glow-${newConfig.ambientGlow} text-slate-100 min-h-screen`;
-    }
+    root.style.setProperty('--ambient-glow-opacity', (newConfig.auraOpacity / 100).toString());
 
     window.dispatchEvent(new Event('graceos_theme_updated'));
-  };
-
-  const handleSubStyleSelect = (subStyle) => {
-    const smartText = themeConfig.autoContrast ? calculateSmartTextColor(subStyle.defaultBg) : '#ffffff';
-    const updated = {
-      ...themeConfig,
-      preset: subStyle.id,
-      bgColor: subStyle.defaultBg,
-      glassGlowColor: subStyle.glow,
-      ambientGlow: subStyle.glowType || 'cyan', // Automatically triggers corresponding background ambient glow aura
-      textColor: smartText,
-      hasCustomWallpaper: false
-    };
-    updateConfig(updated);
-    showToast(`Theme Applied: ${subStyle.name} (Glow Enabled) ✓`);
   };
 
   const handleImageUpload = (e) => {
@@ -136,18 +94,26 @@ export default function ThemeDisplayTab() {
     const reader = new FileReader();
     reader.onloadend = async () => {
       await saveLargeWallpaper(reader.result);
-      const updated = { ...themeConfig, hasCustomWallpaper: true };
+      const updated = { 
+        ...themeConfig, 
+        hasCustomWallpaper: true,
+        bgMode: 'custom_upload'
+      };
       updateConfig(updated);
-      showToast('Custom wallpaper loaded successfully!');
+      showToast('Custom wallpaper applied successfully!');
     };
     reader.readAsDataURL(file);
   };
 
   const handleRemoveWallpaper = async () => {
     await deleteLargeWallpaper();
-    const updated = { ...themeConfig, hasCustomWallpaper: false };
+    const updated = { 
+      ...themeConfig, 
+      hasCustomWallpaper: false, 
+      bgMode: 'nature_wallpaper' 
+    };
     updateConfig(updated);
-    showToast('Custom wallpaper removed.');
+    showToast('Wallpaper removed. Switched to Nature Wallpaper.');
   };
 
   return (
@@ -159,10 +125,10 @@ export default function ThemeDisplayTab() {
         </div>
       )}
 
-      {/* Windows 11 Left Navigation Sub-Menu */}
+      {/* Left Sub-Menu */}
       <div className="w-full md:w-64 win11-card rounded-2xl p-3 flex flex-col gap-1.5 shrink-0 border border-white/[0.08] h-fit">
         <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 px-3 mb-1">
-          Personalization
+          Theme &amp; Visual Studio
         </span>
 
         <button
@@ -173,7 +139,18 @@ export default function ThemeDisplayTab() {
           }`}
         >
           <ImageIcon size={16} className="text-cyan-400" />
-          <span>Background &amp; Tint</span>
+          <span>Background &amp; Aura</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubSection('style_models')}
+          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer text-left ${
+            activeSubSection === 'style_models' ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Layers size={16} className="text-cyan-400" />
+          <span>UI Models &amp; Styles</span>
         </button>
 
         <button
@@ -184,18 +161,7 @@ export default function ThemeDisplayTab() {
           }`}
         >
           <Palette size={16} className="text-cyan-400" />
-          <span>Colors &amp; Contrast</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveSubSection('themes')}
-          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer text-left ${
-            activeSubSection === 'themes' ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'
-          }`}
-        >
-          <LayoutGrid size={16} className="text-cyan-400" />
-          <span>Themes &amp; Sub-Styles</span>
+          <span>Accent Colors &amp; Dock</span>
         </button>
 
         <button
@@ -206,106 +172,289 @@ export default function ThemeDisplayTab() {
           }`}
         >
           <Sparkles size={16} className="text-cyan-400" />
-          <span>Atmospheric FX Studio</span>
+          <span>Atmospheric FX</span>
         </button>
       </div>
 
-      {/* Windows 11 Right Dynamic Viewport */}
+      {/* Right Content Area */}
       <div className="flex-1 win11-card rounded-2xl p-6 border border-white/[0.08] space-y-6">
         
-        {/* 1. Background Section */}
+        {/* 1. Background & Aura Modes[cite: 16] */}
         {activeSubSection === 'background' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <div className="border-b border-white/10 pb-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <ImageIcon size={18} className="text-cyan-400" />
-                Personalize your background
+                பின்னணி பாணி &amp; வால்பேப்பர் ஸ்டுடியோ
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">Choose a picture, upload wallpaper, or adjust dark room dimming exposure.</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                உங்களுக்கு விருப்பமான Real Full HD இயற்கை வால்பேப்பரை அல்லது சொந்தப் படங்களைத் தேர்ந்தெடுக்கவும்.
+              </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between gap-4">
-              <div>
-                <h4 className="text-xs font-bold text-white">Custom Wallpaper Image</h4>
-                <p className="text-[11px] text-slate-400">Supports high-resolution PNG, JPG up to 10MB</p>
+            {/* முறைமைத் தேர்வு[cite: 16] */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => updateConfig({ ...themeConfig, bgMode: 'nature_wallpaper' })}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer ${
+                  themeConfig.bgMode === 'nature_wallpaper' 
+                    ? 'bg-emerald-500/15 border-emerald-400 text-white shadow-lg shadow-emerald-500/10' 
+                    : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                }`}
+              >
+                <div className="text-xs font-bold mb-1">🌿 Nature Wallpaper</div>
+                <div className="text-[11px] opacity-70">பசுமையான புல்வெளி மற்றும் மரங்கள் கேலரி</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => updateConfig({ ...themeConfig, bgMode: 'dynamic_glow' })}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer ${
+                  themeConfig.bgMode === 'dynamic_glow' 
+                    ? 'bg-cyan-500/15 border-cyan-400 text-white shadow-lg shadow-cyan-500/10' 
+                    : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                }`}
+              >
+                <div className="text-xs font-bold mb-1">✨ Dynamic Fluid Glow</div>
+                <div className="text-[11px] opacity-70">வால்பேப்பர் இன்றி மென்மையாக நகரும் 4-வண்ண ஆரா</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => updateConfig({ ...themeConfig, bgMode: 'custom_upload' })}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer ${
+                  themeConfig.bgMode === 'custom_upload' 
+                    ? 'bg-cyan-500/15 border-cyan-400 text-white shadow-lg shadow-cyan-500/10' 
+                    : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                }`}
+              >
+                <div className="text-xs font-bold mb-1">🖼️ Custom Wallpaper</div>
+                <div className="text-[11px] opacity-70">உங்கள் சொந்த தேவாலயப் படத்தை அப்லோட் செய்தல்</div>
+              </button>
+            </div>
+
+            {/* 🌟 4K Real Full HD Nature Wallpaper Gallery Picker[cite: 16] */}
+            {themeConfig.bgMode === 'nature_wallpaper' && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    🌿 Select Full HD Grass &amp; Tree Wallpaper
+                  </h4>
+                  <span className="text-[10px] text-emerald-400 font-mono">Real Full HD Presets</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {NATURE_PRESETS.map((item) => {
+                    const isCurrent = (themeConfig.natureWallpaperUrl || NATURE_PRESETS[0].url) === item.url;
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          const updated = {
+                            ...themeConfig,
+                            bgMode: 'nature_wallpaper',
+                            natureWallpaperUrl: item.url,
+                            hasCustomWallpaper: false
+                          };
+                          updateConfig(updated);
+                          showToast(`Applied: ${item.name} ✓`);
+                        }}
+                        className={`p-3 rounded-2xl border cursor-pointer transition relative overflow-hidden group ${
+                          isCurrent
+                            ? 'border-emerald-400 bg-emerald-500/10 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-400'
+                            : 'border-white/10 bg-black/40 hover:border-white/30'
+                        }`}
+                      >
+                        <div 
+                          className="w-full h-28 rounded-xl bg-cover bg-center mb-2.5 transition group-hover:scale-[1.02] duration-300 border border-white/10"
+                          style={{ backgroundImage: `url(${item.url})` }}
+                        />
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white truncate">{item.name}</span>
+                          {isCurrent && <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />}
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">{item.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 cursor-pointer transition"
-                >
-                  <Upload size={13} className="inline mr-1.5" /> {themeConfig.hasCustomWallpaper ? 'Change Image' : 'Browse Photos'}
-                </button>
-                {themeConfig.hasCustomWallpaper && (
-                  <button type="button" onClick={handleRemoveWallpaper} className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl cursor-pointer">
-                    <Trash2 size={14} />
+            )}
+
+            {/* Custom Upload Card[cite: 16] */}
+            {themeConfig.bgMode === 'custom_upload' && (
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-xs font-bold text-white">Upload Church / Sanctuary Photo</h4>
+                  <p className="text-[11px] text-slate-400">Supports PNG, JPG up to 10MB</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer transition active:scale-95"
+                  >
+                    <Upload size={13} className="inline mr-1.5" /> Browse Image
                   </button>
-                )}
+                  {themeConfig.hasCustomWallpaper && (
+                    <button type="button" onClick={handleRemoveWallpaper} className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl cursor-pointer">
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-300 font-medium">Background Dark Tint (Dimming Exposure)</span>
-                <span className="font-mono text-cyan-400 font-bold">{themeConfig.wallpaperDim}%</span>
+            {/* Sliders[cite: 16] */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-slate-300">மென்மையான ஆரா வெளிச்சம் (Aura Softness)</span>
+                  <span className="text-cyan-400 font-mono">{themeConfig.auraOpacity}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="65"
+                  value={themeConfig.auraOpacity}
+                  onChange={(e) => updateConfig({ ...themeConfig, auraOpacity: Number(e.target.value) })}
+                  className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                />
+                <span className="text-[10px] text-slate-500 block">குறைவான சதவீதம் கண்களைப் பாதுகாக்க உதவும்</span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="85"
-                value={themeConfig.wallpaperDim}
-                onChange={(e) => updateConfig({ ...themeConfig, wallpaperDim: Number(e.target.value) })}
-                className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
-              />
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-slate-300">வால்பேப்பர் இருட்டடிப்பு (Wallpaper Dim)</span>
+                  <span className="text-cyan-400 font-mono">{themeConfig.wallpaperDim}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="85"
+                  value={themeConfig.wallpaperDim}
+                  onChange={(e) => updateConfig({ ...themeConfig, wallpaperDim: Number(e.target.value) })}
+                  className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                />
+                <span className="text-[10px] text-slate-500 block">எழுத்துக்கள் தெளிவாகத் தெரிய இருட்டடிப்பை அதிகரிக்கலாம்</span>
+              </div>
             </div>
           </div>
         )}
 
-        {/* 2. Colors Section */}
+        {/* 2. UI Models & Architectural Styles[cite: 16] */}
+        {activeSubSection === 'style_models' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="border-b border-white/10 pb-4">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Layers size={18} className="text-cyan-400" />
+                Dynamic UI Design Models
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Switch the entire application layout architecture without losing data.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* 1. Frosted Glassmorphism (0px Blur Crystal)[cite: 16] */}
+              <div
+                onClick={() => updateConfig({ ...themeConfig, styleModel: 'glassmorphism' })}
+                className={`p-4 rounded-2xl border cursor-pointer transition relative overflow-hidden ${
+                  themeConfig.styleModel === 'glassmorphism'
+                    ? 'border-cyan-400 bg-cyan-500/10 shadow-xl ring-1 ring-cyan-400'
+                    : 'border-white/10 bg-black/30 hover:border-white/20'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-xs font-bold text-white">✨ Frosted Liquid Glass (0px Blur Crystal)</h4>
+                  {themeConfig.styleModel === 'glassmorphism' && <CheckCircle2 size={16} className="text-cyan-400" />}
+                </div>
+                <p className="text-[11px] text-slate-400">Pure crystal transparency without blurring background grass and trees.</p>
+              </div>
+
+              {/* 2. Windows Aero / Liquid Glass Model */}
+              <div
+                onClick={() => updateConfig({ ...themeConfig, styleModel: 'aero_liquid' })}
+                className={`p-4 rounded-2xl border cursor-pointer transition relative overflow-hidden ${
+                  themeConfig.styleModel === 'aero_liquid'
+                    ? 'border-cyan-400 bg-cyan-500/10 shadow-xl ring-1 ring-cyan-400'
+                    : 'border-white/10 bg-black/30 hover:border-white/20'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    💧 Windows Aero / Liquid Glass
+                  </h4>
+                  {themeConfig.styleModel === 'aero_liquid' && <CheckCircle2 size={16} className="text-cyan-400" />}
+                </div>
+                <p className="text-[11px] text-slate-400">Glossy specular refraction with top-edge liquid highlights and crisp 0px blur transparency.</p>
+              </div>
+
+              {/* 3. Naturemorphism[cite: 16] */}
+              <div
+                onClick={() => updateConfig({ ...themeConfig, styleModel: 'naturemorphism', bgMode: 'nature_wallpaper' })}
+                className={`p-4 rounded-2xl border cursor-pointer transition relative overflow-hidden ${
+                  themeConfig.styleModel === 'naturemorphism'
+                    ? 'border-emerald-400 bg-emerald-500/10 shadow-xl ring-1 ring-emerald-400'
+                    : 'border-white/10 bg-black/30 hover:border-white/20'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-xs font-bold text-white">🌿 Eco Naturemorphism</h4>
+                  {themeConfig.styleModel === 'naturemorphism' && <CheckCircle2 size={16} className="text-emerald-400" />}
+                </div>
+                <p className="text-[11px] text-slate-400">Deep forest greens and misty natural tones designed for eye relaxation.</p>
+              </div>
+
+              {/* 4. Neumorphism[cite: 16] */}
+              <div
+                onClick={() => updateConfig({ ...themeConfig, styleModel: 'neumorphism' })}
+                className={`p-4 rounded-2xl border cursor-pointer transition relative overflow-hidden ${
+                  themeConfig.styleModel === 'neumorphism'
+                    ? 'border-indigo-400 bg-indigo-500/10 shadow-xl ring-1 ring-indigo-400'
+                    : 'border-white/10 bg-black/30 hover:border-white/20'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-xs font-bold text-white">🪨 Dark Neumorphism (Soft 3D)</h4>
+                  {themeConfig.styleModel === 'neumorphism' && <CheckCircle2 size={16} className="text-indigo-400" />}
+                </div>
+                <p className="text-[11px] text-slate-400">Soft tactile shadows, matte slate cards, and extruded card surfaces.</p>
+              </div>
+
+              {/* 5. Minimal Flat[cite: 16] */}
+              <div
+                onClick={() => updateConfig({ ...themeConfig, styleModel: 'minimal_flat' })}
+                className={`p-4 rounded-2xl border cursor-pointer transition relative overflow-hidden ${
+                  themeConfig.styleModel === 'minimal_flat'
+                    ? 'border-cyan-400 bg-cyan-500/10 shadow-xl ring-1 ring-cyan-400'
+                    : 'border-white/10 bg-black/30 hover:border-white/20'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-xs font-bold text-white">⚡ Clean Minimal Flat</h4>
+                  {themeConfig.styleModel === 'minimal_flat' && <CheckCircle2 size={16} className="text-cyan-400" />}
+                </div>
+                <p className="text-[11px] text-slate-400">Ultra-fast, zero-blur interface optimized for maximum speed and lower RAM usage.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. Colors & Dock Section[cite: 16] */}
         {activeSubSection === 'colors' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <div className="border-b border-white/10 pb-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Palette size={18} className="text-cyan-400" />
-                Colors &amp; Smart Contrast Engine
+                Colors &amp; Navigation Layout
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">Accent colors, glass card edge glow, and automatic luminance typography.</p>
-            </div>
-
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-black/40 border border-white/10">
-              <div>
-                <h4 className="text-xs font-bold text-white">Auto-Adjust Typography Contrast</h4>
-                <p className="text-[11px] text-slate-400">Calculates RGB luminance for perfect text readability</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={themeConfig.autoContrast}
-                onChange={(e) => updateConfig({ ...themeConfig, autoContrast: e.target.checked })}
-                className="w-5 h-5 accent-cyan-400 rounded cursor-pointer"
-              />
             </div>
 
             <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white">Glass Card Edge Luminous Color</span>
-                <span className="font-mono text-cyan-300 text-xs">{themeConfig.glassGlowColor}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={themeConfig.glassGlowColor}
-                  onChange={(e) => updateConfig({ ...themeConfig, glassGlowColor: e.target.value })}
-                  className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                />
-                <span className="text-xs text-slate-400">Select custom neon border highlight for desktop windows</span>
-              </div>
-            </div>
-
-            {/* Desktop Layout Style */}
-            <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3">
-              <h4 className="text-xs font-bold text-white">Desktop Navigation Layout Style</h4>
+              <h4 className="text-xs font-bold text-white">Desktop Navigation Layout</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -330,75 +479,14 @@ export default function ThemeDisplayTab() {
           </div>
         )}
 
-        {/* 3. Themes Section (With Integrated Ambient Glow Aura) */}
-        {activeSubSection === 'themes' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            <div className="border-b border-white/10 pb-4">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <LayoutGrid size={18} className="text-cyan-400" />
-                Themes &amp; Sub-Styles (With Ambient Background Glow)
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">Select any theme style below. It automatically activates the matching background ambient glow aura!</p>
-            </div>
-
-            <div className="flex flex-col gap-6">
-              {themeCategories.map((cat, idx) => (
-                <div key={idx} className="space-y-3">
-                  <h5 className="text-xs font-bold uppercase tracking-wider text-cyan-400">{cat.categoryTitle}</h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {cat.styles.map((sub) => {
-                      const isSelected = themeConfig.preset === sub.id && !themeConfig.hasCustomWallpaper;
-                      return (
-                        <div
-                          key={sub.id}
-                          onClick={() => handleSubStyleSelect(sub)}
-                          className={`p-3.5 rounded-xl border flex flex-col justify-between gap-2.5 cursor-pointer transition relative overflow-hidden group ${
-                            isSelected 
-                              ? 'border-cyan-400 bg-white/10 shadow-xl shadow-cyan-500/10 ring-1 ring-cyan-400' 
-                              : 'border-white/10 bg-black/30 hover:bg-white/5 hover:border-white/25'
-                          }`}
-                        >
-                          {/* Subtle background glow indicator on card */}
-                          <div 
-                            className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full blur-2xl opacity-40 transition group-hover:opacity-75 pointer-events-none"
-                            style={{ backgroundColor: sub.glow }}
-                          />
-
-                          <div className="flex items-center justify-between relative z-10">
-                            <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${sub.accent} shadow-md`} />
-                            {isSelected && <CheckCircle2 size={16} className="text-cyan-400" />}
-                          </div>
-
-                          <div className="relative z-10 space-y-0.5">
-                            <h6 className="text-xs font-bold text-white flex items-center gap-1.5">
-                              {sub.name}
-                            </h6>
-                            <p className="text-[10px] text-slate-400 leading-tight">{sub.desc}</p>
-                          </div>
-
-                          <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono relative z-10">
-                            <span className="text-slate-400">Glow Aura</span>
-                            <span className="font-bold uppercase" style={{ color: sub.glow }}>{sub.glowType || 'Active'}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 4. Atmospheric FX Studio Section */}
+        {/* 4. Atmospheric FX Section[cite: 16] */}
         {activeSubSection === 'fx_studio' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <div className="border-b border-white/10 pb-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Sparkles size={18} className="text-cyan-400" />
-                Atmospheric FX &amp; Live Sound Waves Engine
+                Atmospheric FX
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">Manage rain effects, thunder lightning pulse, sanctuary dust, and live audio waves.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -415,17 +503,6 @@ export default function ThemeDisplayTab() {
 
               <button
                 type="button"
-                onClick={() => updateConfig({ ...themeConfig, enableThunderPulse: !themeConfig.enableThunderPulse })}
-                className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition ${
-                  themeConfig.enableThunderPulse ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-white/10 bg-black/30 text-slate-400'
-                }`}
-              >
-                <span className="text-xs font-bold flex items-center gap-2"><Zap size={15} /> Thunder Pulse FX</span>
-                <span className="text-xs font-mono">{themeConfig.enableThunderPulse ? 'ON' : 'OFF'}</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => updateConfig({ ...themeConfig, enableHolyDustFX: !themeConfig.enableHolyDustFX })}
                 className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition ${
                   themeConfig.enableHolyDustFX ? 'border-yellow-400 bg-yellow-500/10 text-yellow-300' : 'border-white/10 bg-black/30 text-slate-400'
@@ -433,17 +510,6 @@ export default function ThemeDisplayTab() {
               >
                 <span className="text-xs font-bold flex items-center gap-2"><Sparkles size={15} /> Sanctuary Dust</span>
                 <span className="text-xs font-mono">{themeConfig.enableHolyDustFX ? 'ON' : 'OFF'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => updateConfig({ ...themeConfig, enableSoundWaves: !themeConfig.enableSoundWaves })}
-                className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition ${
-                  themeConfig.enableSoundWaves ? 'border-pink-400 bg-pink-500/10 text-pink-300' : 'border-white/10 bg-black/30 text-slate-400'
-                }`}
-              >
-                <span className="text-xs font-bold flex items-center gap-2"><Volume2 size={15} /> Sound Waves</span>
-                <span className="text-xs font-mono">{themeConfig.enableSoundWaves ? 'ACTIVE' : 'OFF'}</span>
               </button>
             </div>
           </div>
