@@ -1,19 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- PWA Manifest & Mobile Styling -->
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="GraceOS" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self' 'unsafe-inline' data: blob: ws://localhost:* http://localhost:* https://*; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; connect-src 'self' ws://localhost:* http://localhost:* https://*;"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GraceOS - Church Management System</title>
+    <title>GraceOS</title>
   </head>
-  <body class="bg-slate-950 text-slate-100 overflow-hidden select-none">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -1,38 +1,45 @@
 {
-  "name": "grace-os",
-  "version": "0.1.0",
+  "name": "grace-church-os",
+  "private": true,
+  "version": "1.0.0",
   "type": "module",
   "description": "Grace Church OS Desktop Suite",
   "author": "Raja",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-  "preview": "vite preview",
-  "tauri": "tauri"
-},
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron": "electron ./electron/main.cjs",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:3000 && electron ./electron/main.cjs\""
+  },
   "dependencies": {
     "@capacitor-mlkit/barcode-scanning": "^8.0.0",
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
-    "@supabase/supabase-js": "^2.49.1",
+    "@capacitor/haptics": "^8.0.0",
+    "@supabase/supabase-js": "^2.117.3",
+    "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
-    "lucide-react": "^1.16.0",
+    "lucide-react": "^0.439.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.2"
   },
-    "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
-    "concurrently": "^9.1.2",
-    "electron": "^34.2.0",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^34.5.8",
     "electron-builder": "^26.15.3",
-    "postcss": "^8.5.3",
-    "tailwindcss": "^3.4.17",
-    "vite": "^5.4.14",
-    "wait-on": "^8.0.2"
+    "postcss": "^8.4.45",
+    "tailwindcss": "^3.4.10",
+    "vite": "^5.4.2",
+    "wait-on": "^7.2.0"
   },
   "build": {
     "appId": "com.gracechurch.os",

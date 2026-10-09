@@ -1,13 +1,21 @@
 // src/utils/vaultStore.js
-import { isVaultConnected } from './vaultFS';
+import {
+  isVaultConnected,
+  isElectronRuntime,
+  getMountedVaultPath,
+  writeDatabaseFile,
+  readDatabaseFile,
+} from './vaultFS';
 import { syncLocalVaultToCloud } from './cloudSyncEngine';
 
-// ஆப் இயங்கும்போது அதிவேகமாக செயல்படுவதற்கான மெமரி கேச் (In-Memory RAM Cache)
+/* ------------------------------------------------------------------ *
+ * In-memory RAM cache for fast reads during a session
+ * ------------------------------------------------------------------ */
 const memoryCache = new Map();
 
-/**
- * 1. கோர் டேபிள் பெயர்கள் (Core Storage Entity Keys)
- */
+/* ------------------------------------------------------------------ *
+ * 1. Core storage entity keys
+ * ------------------------------------------------------------------ */
 export const VAULT_KEYS = {
   CHURCH: 'graceos_main_church',
   MEMBERS: 'app_members_family_database',
@@ -18,241 +26,362 @@ export const VAULT_KEYS = {
   PRAYERS: 'graceos_prayer_wall_db',
   EVENTS: 'graceos_church_events_db',
   LOCALE: 'graceos_locale_config',
-  ADVANCED_CONFIG: 'app_advanced_config'
+  ADVANCED_CONFIG: 'app_advanced_config',
+  LEASE_VAULT: 'graceos_land_lease_vault',
 };
 
-/**
- * லோக்கல் ஹார்ட் டிஸ்க் (/database/tableName.json) அல்லது localStorage-லிருந்து வாசித்தல்
- */
-export async function getVaultData(tableName, defaultFallback = []) {
-  if (memoryCache.has(tableName)) {
-    return memoryCache.get(tableName);
-  }
+const ELECTRON_VAULT_PATH_KEY = 'graceos_vault_folder_name';
 
-  // 1. லோக்கல் ஹார்ட் டிஸ்க் ரூட் போல்டர் மவுண்ட் செய்யப்பட்டிருந்தால் அங்கிருந்து வாசித்தல்
-  if (isVaultConnected() && window.__vaultRootDirHandle) {
+/* ------------------------------------------------------------------ *
+ * 2. Name resolution — callers may pass 'MEMBERS', 'members',
+ *    or 'app_members_family_database'. All resolve to one slug.
+ * ------------------------------------------------------------------ */
+const TABLE_SLUGS = {
+  CHURCH: 'church',
+  MEMBERS: 'members',
+  VISITORS: 'visitors',
+  FINANCE: 'finance',
+  EXPENSES: 'expenses',
+  ATTENDANCE: 'attendance',
+  PRAYERS: 'prayers',
+  EVENTS: 'events',
+  LOCALE: 'locale',
+  ADVANCED_CONFIG: 'advanced_config',
+  LEASE_VAULT: 'lease_vault',
+};
+
+export function resolveTableSlug(tableName) {
+  if (!tableName) return 'unknown';
+  const raw = String(tableName).trim();
+  const upper = raw.toUpperCase();
+
+  if (TABLE_SLUGS[upper]) return TABLE_SLUGS[upper];
+
+  const matchedKey = Object.keys(VAULT_KEYS).find(
+    (k) => VAULT_KEYS[k] === raw || k === upper || k === raw
+  );
+  if (matchedKey && TABLE_SLUGS[matchedKey]) return TABLE_SLUGS[matchedKey];
+
+  return raw;
+}
+
+function resolveLocalStorageKey(tableName) {
+  const raw = String(tableName);
+  const upper = raw.toUpperCase();
+  if (VAULT_KEYS[upper]) return VAULT_KEYS[upper];
+
+  const byValue = Object.values(VAULT_KEYS).find((v) => v === raw);
+  return byValue || raw;
+}
+
+/* ------------------------------------------------------------------ *
+ * 3. Electron native-FS bridge helpers   ← FIX #5
+ * ------------------------------------------------------------------ */
+function getElectronVaultRoot() {
+  return isElectronRuntime() ? getMountedVaultPath() : null;
+}
+
+/* ------------------------------------------------------------------ *
+ * 4. getVaultData — Electron → FSA → localStorage
+ * ------------------------------------------------------------------ */
+export async function getVaultData(tableName, defaultFallback = []) {
+  const slug = resolveTableSlug(tableName);
+
+  if (memoryCache.has(slug)) return memoryCache.get(slug);
+
+  // 1. Electron native filesystem (desktop app)
+  const mountedPath = getElectronVaultRoot();
+  if (typeof window !== 'undefined' && window.electronAPI?.readFile && mountedPath) {
     try {
-      const dbDir = await window.__vaultRootDirHandle.getDirectoryHandle('database', { create: true });
-      const fileHandle = await dbDir.getFileHandle(`${tableName}.json`, { create: false });
-      const file = await fileHandle.getFile();
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      memoryCache.set(tableName, parsed);
-      return parsed;
+      const diskData = await readDatabaseFile(slug, null);
+      const hasDiskData = Array.isArray(diskData)
+        ? diskData.length > 0
+        : diskData !== null && diskData !== undefined && !!diskData;
+      if (hasDiskData) {
+        memoryCache.set(slug, diskData);
+        return diskData;
+      }
     } catch {
-      // ஃபால்பேக் நிலைக்குச் செல்லுதல்
+      /* fall through to browser or localStorage data */
     }
   }
 
-  // 2. LocalStorage Fallback
+  // 2. Browser File System Access API
+  if (!isElectronRuntime() && isVaultConnected() && window.__vaultRootDirHandle) {
+    try {
+      const dbDir = await window.__vaultRootDirHandle.getDirectoryHandle('database', {
+        create: true,
+      });
+      const fileHandle = await dbDir.getFileHandle(`${slug}.json`, { create: false });
+      const file = await fileHandle.getFile();
+      const parsed = JSON.parse(await file.text());
+      memoryCache.set(slug, parsed);
+      return parsed;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  // 3. localStorage fallback
   try {
-    const localKey = VAULT_KEYS[tableName.toUpperCase()] || tableName;
+    const localKey = resolveLocalStorageKey(tableName);
     const raw = localStorage.getItem(localKey);
     const parsed = raw ? JSON.parse(raw) : defaultFallback;
-    memoryCache.set(tableName, parsed);
+    memoryCache.set(slug, parsed);
     return parsed;
   } catch {
     return defaultFallback;
   }
 }
 
-/**
- * லோக்கல் ஹார்ட் டிஸ்கில் (/database/tableName.json) மற்றும் LocalStorage-ல் எழுதுதல்
- */
+/* ------------------------------------------------------------------ *
+ * 5. setVaultData — memory + Electron + FSA + localStorage + cloud
+ * ------------------------------------------------------------------ */
 export async function setVaultData(tableName, data, triggerCloudRelay = true) {
-  memoryCache.set(tableName, data);
+  const slug = resolveTableSlug(tableName);
+  memoryCache.set(slug, data);
 
-  // 1. LocalStorage-ல் சேமித்தல்
-  const localKey = VAULT_KEYS[tableName.toUpperCase()] || tableName;
+  // 1. LocalStorage mirror first for immediate local durability and fallback.
   try {
-    localStorage.setItem(localKey, JSON.stringify(data));
+    localStorage.setItem(resolveLocalStorageKey(tableName), JSON.stringify(data));
     window.dispatchEvent(new Event('storage'));
   } catch (err) {
-    console.error(`[VaultStore Error] LocalStorage-ல் எழுதுவதில் பிழை:`, err);
+    console.error(`[VaultStore] localStorage write failed for ${slug}:`, err);
   }
 
-  // 2. மவுண்ட் செய்யப்பட்ட ஹார்ட் டிஸ்க்கில் எழுதுதல்
-  if (isVaultConnected() && window.__vaultRootDirHandle) {
+  // 2. Electron native filesystem (primary in the desktop app)
+  if (typeof window !== 'undefined' && window.electronAPI?.writeFile && getElectronVaultRoot()) {
     try {
-      const dbDir = await window.__vaultRootDirHandle.getDirectoryHandle('database', { create: true });
-      const fileHandle = await dbDir.getFileHandle(`${tableName}.json`, { create: true });
+      await writeDatabaseFile(slug, data);
+    } catch (err) {
+      console.error(`[VaultStore] Electron write failed for ${slug}.json:`, err);
+    }
+  }
+
+  // 3. Browser File System Access API
+  if (!isElectronRuntime() && isVaultConnected() && window.__vaultRootDirHandle) {
+    try {
+      const dbDir = await window.__vaultRootDirHandle.getDirectoryHandle('database', {
+        create: true,
+      });
+      const fileHandle = await dbDir.getFileHandle(`${slug}.json`, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(JSON.stringify(data, null, 2));
       await writable.close();
     } catch (err) {
-      console.error(`[VaultStore Error] ${tableName}.json கோப்பில் எழுதுவதில் பிழை:`, err);
+      console.error(`[VaultStore] FSA write failed for ${slug}.json:`, err);
     }
   }
 
-  // 3. கிளவுட் ரிலே
-  if (triggerCloudRelay && navigator.onLine) {
-    syncLocalVaultToCloud().catch(err => {
-      console.warn('[Cloud Sync Notice] பின்னணி கிளவுட் ஒத்திசைவு நிலுவையில் உள்ளது:', err);
+  // 4. Optional cloud relay; avoid delaying the local write on network work.
+  if (triggerCloudRelay && typeof navigator !== 'undefined' && navigator.onLine) {
+    void syncLocalVaultToCloud().catch((err) => {
+      console.warn('[VaultStore] Cloud sync skipped:', err && err.message);
     });
   }
+
+  return true;
 }
 
 export function clearVaultCache() {
   memoryCache.clear();
 }
 
-/**
- * 2. Local File Store Engine (முழுமையான JSON பேக்கப் எக்ஸ்போர்ட் & இம்போர்ட்)
- */
-export const localFileStore = {
-  async exportFullJSONVault(customFileName) {
-    const backupData = {
-      version: '2.0.0',
-      timestamp: new Date().toISOString(),
-      engine: 'GraceOS Dual-Tree Local Vault',
-      data: {}
-    };
+/* ------------------------------------------------------------------ *
+ * 6. Download helper
+ * ------------------------------------------------------------------ */
+function formatDateStamp(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}_${pad(d.getMonth() + 1)}_${pad(d.getDate())}`;
+}
 
-    for (const [entityKey, storageKey] of Object.entries(VAULT_KEYS)) {
-      backupData.data[entityKey] = await getVaultData(entityKey.toLowerCase(), JSON.parse(localStorage.getItem(storageKey) || '[]'));
+function downloadTextFile(text, fileName, mimeType) {
+  try {
+    const blob = new Blob([text], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err) {
+    console.error('[VaultStore] Download failed:', err);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * 7. Full JSON vault export / restore
+ * ------------------------------------------------------------------ */
+export const localFileStore = {
+  async exportFullJSONVault() {
+    const payload = {};
+    for (const key of Object.keys(VAULT_KEYS)) {
+      payload[VAULT_KEYS[key]] = await getVaultData(key, []);
     }
 
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
-    const fileName = customFileName || `GraceOS_LocalVault_${dateStr}.json`;
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
+    const bundle = {
+      version: '2.0.0',
+      engine: 'GraceOS Local Vault',
+      exportedAt: new Date().toISOString(),
+      data: payload,
+    };
+
+    downloadTextFile(
+      JSON.stringify(bundle, null, 2),
+      `GraceOS_LocalVault_${formatDateStamp()}.json`,
+      'application/json'
+    );
+
+    return bundle;
   },
 
-  async restoreFromJSONFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const parsed = JSON.parse(e.target.result);
-          const payload = parsed.data || parsed;
+  async restoreFromJSONFile(fileOrObject) {
+    let bundle = fileOrObject;
 
-          for (const [key, val] of Object.entries(payload)) {
-            const tableKey = key.toLowerCase();
-            await setVaultData(tableKey, val, false);
-          }
+    if (fileOrObject instanceof File || fileOrObject instanceof Blob) {
+      bundle = JSON.parse(await fileOrObject.text());
+    }
 
-          clearVaultCache();
-          window.dispatchEvent(new Event('storage'));
-          resolve(true);
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.readAsText(file);
-    });
-  }
+    const payload = bundle && bundle.data ? bundle.data : bundle;
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('Invalid GraceOS vault backup file.');
+    }
+
+    for (const key of Object.keys(payload)) {
+      await setVaultData(key, payload[key], false);
+    }
+
+    clearVaultCache();
+    window.dispatchEvent(new Event('storage'));
+
+    return { success: true, keys: Object.keys(payload) };
+  },
 };
 
-/**
- * 3. SQL File Store Engine (SQLite / PostgreSQL Schema & Dump Generator)
- */
+/* ------------------------------------------------------------------ *
+ * 8. SQL dump
+ * ------------------------------------------------------------------ */
 export const sqlFileStore = {
-  sanitize(val) {
-    if (val === null || val === undefined) return 'NULL';
-    if (typeof val === 'number') return val;
-    return `'${String(val).replace(/'/g, "''")}'`;
+  sanitize(value) {
+    if (value === null || value === undefined) return 'NULL';
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+    if (typeof value === 'boolean') return value ? '1' : '0';
+    return `'${String(value).replace(/'/g, "''")}'`;
   },
 
   async generateSQLDump() {
-    const church = await getVaultData('church', {});
-    const members = await getVaultData('members', []);
-    const finance = await getVaultData('finance', []);
-    const expenses = await getVaultData('expenses', []);
-    const attendance = await getVaultData('attendance', []);
-    const visitors = await getVaultData('visitors', []);
+    const church = await getVaultData('CHURCH', {});
+    const members = await getVaultData('MEMBERS', []);
+    const finance = await getVaultData('FINANCE', []);
+    const attendance = await getVaultData('ATTENDANCE', []);
 
-    let sql = `-- =========================================================\n`;
-    sql += `-- GraceOS Automated SQL Storage Dump (Offline Archive)\n`;
-    sql += `-- Church: ${church.churchName || 'Grace Central Cathedral'}\n`;
-    sql += `-- Generated on: ${new Date().toISOString()}\n`;
-    sql += `-- =========================================================\n\n`;
+    const lines = [];
+    lines.push('-- ============================================================');
+    lines.push('-- GraceOS Database Dump');
+    lines.push(`-- Church : ${(church && church.name) || 'Unknown'}`);
+    lines.push(`-- Created: ${new Date().toISOString()}`);
+    lines.push('-- ============================================================');
+    lines.push('');
 
-    // 1. Members Table DDL & DML
-    sql += `CREATE TABLE IF NOT EXISTS members (\n`;
-    sql += `  id VARCHAR(64) PRIMARY KEY,\n`;
-    sql += `  full_name VARCHAR(255) NOT NULL,\n`;
-    sql += `  phone VARCHAR(32),\n`;
-    sql += `  email VARCHAR(128),\n`;
-    sql += `  family_role VARCHAR(64),\n`;
-    sql += `  branch_name VARCHAR(128),\n`;
-    sql += `  joined_date DATE\n`;
-    sql += `);\n\n`;
+    lines.push('CREATE TABLE IF NOT EXISTS members (');
+    lines.push('  id INTEGER PRIMARY KEY AUTOINCREMENT,');
+    lines.push('  member_code TEXT,');
+    lines.push('  full_name TEXT NOT NULL,');
+    lines.push('  gender TEXT,');
+    lines.push('  phone TEXT,');
+    lines.push('  email TEXT,');
+    lines.push('  address TEXT,');
+    lines.push('  status TEXT');
+    lines.push(');');
+    lines.push('');
 
-    members.forEach(m => {
-      const id = this.sanitize(m.id || Math.random().toString(36).substr(2, 9));
-      const name = this.sanitize(m.fullName || m.name || 'Member');
-      const phone = this.sanitize(m.phone || '');
-      const email = this.sanitize(m.email || '');
-      const role = this.sanitize(m.familyRole || m.role || 'Member');
-      const branch = this.sanitize(m.branch || church.activeCampus || 'Headquarters');
-      const date = this.sanitize(m.joinedDate || new Date().toISOString().slice(0, 10));
+    lines.push('CREATE TABLE IF NOT EXISTS finance_records (');
+    lines.push('  id INTEGER PRIMARY KEY AUTOINCREMENT,');
+    lines.push('  txn_date TEXT,');
+    lines.push('  txn_type TEXT,');
+    lines.push('  category TEXT,');
+    lines.push('  amount REAL,');
+    lines.push('  payment_mode TEXT,');
+    lines.push('  description TEXT');
+    lines.push(');');
+    lines.push('');
 
-      sql += `INSERT INTO members (id, full_name, phone, email, family_role, branch_name, joined_date) VALUES (${id}, ${name}, ${phone}, ${email}, ${role}, ${branch}, ${date});\n`;
-    });
-    sql += `\n`;
+    lines.push('CREATE TABLE IF NOT EXISTS attendance_logs (');
+    lines.push('  id INTEGER PRIMARY KEY AUTOINCREMENT,');
+    lines.push('  service_date TEXT,');
+    lines.push('  service_type TEXT,');
+    lines.push('  member_id INTEGER,');
+    lines.push('  status TEXT');
+    lines.push(');');
+    lines.push('');
 
-    // 2. Finance Records DDL & DML
-    sql += `CREATE TABLE IF NOT EXISTS finance_records (\n`;
-    sql += `  id VARCHAR(64) PRIMARY KEY,\n`;
-    sql += `  donor_name VARCHAR(255),\n`;
-    sql += `  amount DECIMAL(12, 2) NOT NULL,\n`;
-    sql += `  category VARCHAR(64),\n`;
-    sql += `  payment_mode VARCHAR(32),\n`;
-    sql += `  transaction_date DATE\n`;
-    sql += `);\n\n`;
+    for (const m of Array.isArray(members) ? members : []) {
+      lines.push(
+        'INSERT INTO members (member_code, full_name, gender, phone, email, address, status) VALUES (' +
+          [
+            this.sanitize(m.member_code ?? m.memberCode),
+            this.sanitize(m.full_name ?? m.name),
+            this.sanitize(m.gender),
+            this.sanitize(m.phone),
+            this.sanitize(m.email),
+            this.sanitize(m.address),
+            this.sanitize(m.status ?? 'ACTIVE'),
+          ].join(', ') +
+          ');'
+      );
+    }
+    lines.push('');
 
-    finance.forEach(f => {
-      const id = this.sanitize(f.id || Math.random().toString(36).substr(2, 9));
-      const donor = this.sanitize(f.donorName || f.contributor || 'Anonymous');
-      const amount = Number(f.amount || 0).toFixed(2);
-      const category = this.sanitize(f.category || 'Tithe');
-      const mode = this.sanitize(f.paymentMode || f.mode || 'Cash');
-      const date = this.sanitize(f.date || new Date().toISOString().slice(0, 10));
+    for (const f of Array.isArray(finance) ? finance : []) {
+      lines.push(
+        'INSERT INTO finance_records (txn_date, txn_type, category, amount, payment_mode, description) VALUES (' +
+          [
+            this.sanitize(f.txn_date ?? f.date),
+            this.sanitize(f.txn_type ?? f.type),
+            this.sanitize(f.category),
+            this.sanitize(Number(f.amount) || 0),
+            this.sanitize(f.payment_mode ?? f.mode),
+            this.sanitize(f.description ?? f.notes),
+          ].join(', ') +
+          ');'
+      );
+    }
+    lines.push('');
 
-      sql += `INSERT INTO finance_records (id, donor_name, amount, category, payment_mode, transaction_date) VALUES (${id}, ${donor}, ${amount}, ${category}, ${mode}, ${date});\n`;
-    });
-    sql += `\n`;
+    for (const a of Array.isArray(attendance) ? attendance : []) {
+      lines.push(
+        'INSERT INTO attendance_logs (service_date, service_type, member_id, status) VALUES (' +
+          [
+            this.sanitize(a.service_date ?? a.date),
+            this.sanitize(a.service_type ?? a.service),
+            this.sanitize(Number(a.member_id ?? a.memberId) || null),
+            this.sanitize(a.status ?? 'PRESENT'),
+          ].join(', ') +
+          ');'
+      );
+    }
 
-    // 3. Attendance Logs DDL & DML
-    sql += `CREATE TABLE IF NOT EXISTS attendance_logs (\n`;
-    sql += `  id VARCHAR(64) PRIMARY KEY,\n`;
-    sql += `  member_id VARCHAR(64),\n`;
-    sql += `  service_title VARCHAR(128),\n`;
-    sql += `  checkin_time TIMESTAMP\n`;
-    sql += `);\n\n`;
-
-    attendance.forEach(a => {
-      const id = this.sanitize(a.id || Math.random().toString(36).substr(2, 9));
-      const memId = this.sanitize(a.memberId || '');
-      const title = this.sanitize(a.serviceTitle || a.service || 'Sunday Service');
-      const time = this.sanitize(a.timestamp || new Date().toISOString());
-
-      sql += `INSERT INTO attendance_logs (id, member_id, service_title, checkin_time) VALUES (${id}, ${memId}, ${title}, ${time});\n`;
-    });
-    sql += `\n`;
-
-    return sql;
+    return lines.join('\n');
   },
 
-  async exportToSQLFile(customFileName) {
-    const dump = await this.generateSQLDump();
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
-    const fileName = customFileName || `GraceOS_Database_Dump_${dateStr}.sql`;
-    const blob = new Blob([dump], { type: 'application/sql' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  }
+  async exportToSQLFile() {
+    const sql = await this.generateSQLDump();
+    const fileName = `GraceOS_Database_Dump_${formatDateStamp()}.sql`;
+    downloadTextFile(sql, fileName, 'application/sql');
+    return { success: true, fileName, sql };
+  },
+};
+
+export const ELECTRON_VAULT_KEY = ELECTRON_VAULT_PATH_KEY;
+
+export default {
+  VAULT_KEYS,
+  getVaultData,
+  setVaultData,
+  clearVaultCache,
+  resolveTableSlug,
+  localFileStore,
+  sqlFileStore,
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cloud, CloudCheck, CloudOff, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Cloud, CheckCircle2, CloudOff, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { syncLocalVaultToCloud } from '../../utils/cloudSyncEngine';
 
 export default function CloudSyncStatusWidget() {
@@ -64,7 +64,7 @@ export default function CloudSyncStatusWidget() {
             className="flex items-center gap-1 text-slate-300 hover:text-white transition cursor-pointer"
             title="Click to Force Sync"
           >
-            <CloudCheck size={14} className="text-emerald-400" />
+            <CheckCircle2 size={14} className="text-emerald-400" />
             <span className="text-[10px]">{lastSync ? new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ready'}</span>
           </button>
         ) : (

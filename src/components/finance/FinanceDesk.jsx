@@ -3,12 +3,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   TrendingUp, Wallet, Receipt, FileText, Plus,
   ArrowUpRight, ArrowDownLeft, ShieldCheck, Trash2, 
-  Printer, CheckCircle2, Search, DollarSign, X, FileCheck2, Landmark, Package, Heart
+  Printer, CheckCircle2, Search, DollarSign, FileCheck2, Landmark, Package, Heart
 } from 'lucide-react';
 import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
 import FinanceAnalyticsTab from './FinanceAnalyticsTab';
 import Annual80GCertificateModal from './Annual80GCertificateModal';
+import PrintableReceiptModal from './PrintableReceiptModal';
 import StaffPayrollDesk from './StaffPayrollDesk';
 import AnnualAuditAGMDesk from './AnnualAuditAGMDesk';
 import TreasuryAndAssetDesk from './TreasuryAndAssetDesk';
@@ -37,6 +38,7 @@ export default function FinanceDesk({ session }) {
   const [activeFinanceSubTab, setActiveFinanceSubTab] = useState('income');
   const [toastMessage, setToastMessage] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [churchConfig, setChurchConfig] = useState(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
   // Fellowship & Sponsorships State with Custom Cause Support
@@ -131,8 +133,16 @@ export default function FinanceDesk({ session }) {
     const updated = [newIncome, ...incomeList];
     setIncomeList(updated);
     await setVaultData('finance', updated, true);
+
+    const church = await getVaultData('church', {
+      churchName: 'Grace Cathedral',
+      address: 'Cathedral Campus, Tamil Nadu',
+      phone: '+91 98765 43210'
+    });
+    setChurchConfig(church);
     setIncomeForm({ member: '', panNumber: '', category: DEFAULT_GIVING_CATEGORIES[0], amount: '', mode: 'UPI / GPay' });
     showToast('Tithe / Offering collection recorded successfully!');
+    setSelectedReceipt(newIncome);
   };
 
   const handleAddExpense = async (e) => {
@@ -839,97 +849,12 @@ export default function FinanceDesk({ session }) {
         </div>
       )}
 
-      {/* 80G PRINTABLE MODAL */}
-      {selectedReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-xl bg-white text-slate-900 rounded-3xl p-8 shadow-2xl space-y-6 relative select-text">
-            <button 
-              type="button"
-              onClick={() => setSelectedReceipt(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 cursor-pointer print:hidden"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
-              <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-700 bg-emerald-100 px-3 py-0.5 rounded-full">
-                80G Official Tax Exemption Donation Receipt
-              </span>
-              <h2 className="text-xl font-black uppercase tracking-wider text-slate-900 pt-1">
-                Grace Cathedral Church Trust
-              </h2>
-              <p className="text-xs text-slate-600 font-medium">Registered Public Religious &amp; Charitable Trust • IT Act Sec 80G Valid</p>
-              <p className="text-[11px] font-mono text-slate-500">80G Reg No: AABTG4902RF20214 • 12A Unique ID: DEL-TRUST-2018</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <span className="text-slate-500 font-medium">Receipt Voucher No:</span>
-                <div className="font-mono font-bold text-slate-900">{selectedReceipt.id}</div>
-              </div>
-              <div>
-                <span className="text-slate-500 font-medium">Date of Receipt:</span>
-                <div className="font-mono font-bold text-slate-900">{selectedReceipt.date}</div>
-              </div>
-              <div>
-                <span className="text-slate-500 font-medium">Donated By:</span>
-                <div className="font-bold text-slate-900">{selectedReceipt.member}</div>
-              </div>
-              <div>
-                <span className="text-slate-500 font-medium">Donor PAN / ID:</span>
-                <div className="font-mono font-bold text-slate-900">{selectedReceipt.panNumber || 'Not Quoted'}</div>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex justify-between items-center text-xs">
-              <div>
-                <span className="text-slate-500 block">Contribution Purpose</span>
-                <strong className="text-slate-900 font-bold">{selectedReceipt.category}</strong>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-500 block">Total Donated Amount</span>
-                <span className="text-lg font-black font-mono text-emerald-700">
-                  {currencySymbol} {Number(selectedReceipt.amount).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-slate-500 text-center italic">
-              "Contributions to this trust are eligible for tax deduction under Section 80G of the Income Tax Act, 1961."
-            </p>
-
-            <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
-              <div className="text-center text-[10px]">
-                <div className="w-24 border-b border-slate-400 mb-1" />
-                <span>Authorized Treasurer</span>
-              </div>
-              <div className="text-center text-[10px]">
-                <div className="w-24 border-b border-slate-400 mb-1" />
-                <span>Senior Pastor / Trustee</span>
-              </div>
-              <div className="flex items-center gap-2 print:hidden">
-                <button
-                  type="button"
-                  onClick={() => sendReceiptViaWhatsApp(selectedReceipt)}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer transition active:scale-95"
-                >
-                  <span>Send WhatsApp Receipt</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-slate-800"
-                >
-                  <Printer size={14} />
-                  <span>Print Receipt</span>
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
+      <PrintableReceiptModal
+        transaction={selectedReceipt}
+        churchInfo={churchConfig}
+        onClose={() => setSelectedReceipt(null)}
+        onSendReceipt={() => sendReceiptViaWhatsApp(selectedReceipt)}
+      />
 
       <Annual80GCertificateModal
         isOpen={isCertificateOpen}

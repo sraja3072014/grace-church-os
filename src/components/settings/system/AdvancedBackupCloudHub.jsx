@@ -2,11 +2,14 @@
 import React, { useState } from 'react';
 import { 
   Cloud, HardDrive, Cpu, Save, Plus, Edit2, Trash2, X, Check, 
-  Database, RefreshCw, WifiOff, ShieldCheck, KeyRound, Folder, Download, Upload, Activity, CheckCircle2, Server
+  Database, RefreshCw, WifiOff, ShieldCheck, KeyRound, Folder, Download, Upload, Activity, CheckCircle2, Server, FileJson, FileCode
 } from 'lucide-react';
+import BackupDatabaseTab from './BackupDatabaseTab';
+import { syncLocalVaultToCloud } from '../../../utils/cloudSyncEngine';
 
 export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
-  const [activeSubTab, setActiveSubTab] = useState('cloud_vaults');
+  // Default tab can be 'local_sql' or 'supabase_cloud'
+  const [activeSubTab, setActiveSubTab] = useState('local_sql');
   const [toast, setToast] = useState('');
 
   // 1. Supabase Primary & Multi-Cloud Storage Vaults State
@@ -25,6 +28,9 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
       syncInterval: 'Daily at 02:00 AM'
     };
   });
+  const [testStatus, setTestStatus] = useState(null);
+  const [isTesting, setIsTesting] = useState(false);
+  const [isSyncingLive, setIsSyncingLive] = useState(false);
 
   // Free Cloud Providers List (Supabase, MongoDB Atlas, Cloudflare R2, Google Drive, AWS S3)
   const [cloudProviders, setCloudProviders] = useState(() => {
@@ -106,7 +112,7 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
   const [editingCloudId, setEditingCloudId] = useState(null);
   const [cloudForm, setCloudForm] = useState({
     name: '',
-    providerType: 'Cloudflare R2',
+    providerType: 'Supabase',
     targetFolderOrBucket: '',
     clientEmail: '',
     apiKeyOrSecret: '',
@@ -126,8 +132,51 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
 
   const handleSaveSupabase = (e) => {
     e.preventDefault();
-    localStorage.setItem('graceos_unified_cloud_config', JSON.stringify(cloudConfig));
-    showNotification('Supabase Live Cluster settings saved successfully!');
+    const cleanConfig = {
+      ...cloudConfig,
+      supabaseUrl: cloudConfig.supabaseUrl.trim(),
+      supabaseAnonKey: cloudConfig.supabaseAnonKey.trim()
+    };
+
+    localStorage.setItem('graceos_unified_cloud_config', JSON.stringify(cleanConfig));
+    localStorage.setItem('graceos_supabase_config', JSON.stringify(cleanConfig));
+
+    showNotification('✓ Supabase Cloud Credentials வெற்றிகரமாகச் சேமிக்கப்பட்டது!');
+  };
+
+  const handleTestConnection = async () => {
+    const url = cloudConfig.supabaseUrl?.trim().replace(/\/+$/, '');
+    const key = cloudConfig.supabaseAnonKey?.trim();
+
+    if (!url || !key) {
+      window.alert('Project URL மற்றும் Anon Key இரண்டையும் உள்ளிடவும்!');
+      return;
+    }
+
+    setIsTesting(true);
+    setTestStatus(null);
+
+    try {
+      const res = await fetch(`${url}/rest/v1/`, {
+        method: 'GET',
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`
+        }
+      });
+
+      if (res.ok || res.status === 200 || res.status === 404) {
+        setTestStatus({ success: true, message: '✓ Supabase கிளவுடுடன் வெற்றிகரமாக இணைக்கப்பட்டது!' });
+        showNotification('Supabase Live Handshake Successful! ✓');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `HTTP Status ${res.status}`);
+      }
+    } catch (err) {
+      setTestStatus({ success: false, message: `இணைப்பு தோல்வி: ${err.message}` });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const handleOpenCloudModal = (item = null) => {
@@ -138,7 +187,7 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
       setEditingCloudId(null);
       setCloudForm({
         name: '',
-        providerType: 'Cloudflare R2',
+        providerType: 'Supabase',
         targetFolderOrBucket: '',
         clientEmail: '',
         apiKeyOrSecret: '',
@@ -259,76 +308,96 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
           </div>
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              Advanced Backup &amp; Cloud Hub (Supabase + Free Multi-Cloud Vaults)
+              Advanced Backup &amp; Cloud Hub (All-in-One Engine)
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono">
-                Enterprise Hub Active
+                Full Suite Active
               </span>
             </h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              Manage Supabase live database, free cloud storage providers (Cloudflare R2, MongoDB Atlas), physical disk archives, and offline PWA sync.
+              Manage Local File Store, SQL Scripts, Supabase live DB, Free Multi-Cloud Vaults, Physical Disk Paths, and Offline PWA Sync.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Sub-Tabs Navigation */}
-      <div className="flex items-center gap-2 p-1.5 rounded-2xl win11-card border border-white/10 max-w-xl">
+      {/* Sub-Tabs Navigation (Now with all 5 Sub-Tabs!) */}
+      <div className="flex items-center gap-1.5 p-1.5 rounded-2xl win11-card border border-white/10 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('local_sql')}
+          className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0 ${
+            activeSubTab === 'local_sql'
+              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-md'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Database size={14} />
+          <span>Local File Store &amp; SQL</span>
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveSubTab('supabase_cloud')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
+          className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0 ${
             activeSubTab === 'supabase_cloud'
               ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-md'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <Database size={15} />
+          <Server size={14} />
           <span>Supabase Live DB</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveSubTab('multi_cloud')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
+          className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0 ${
             activeSubTab === 'multi_cloud'
               ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-md'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <Cloud size={15} />
+          <Cloud size={14} />
           <span>Free Multi-Cloud Vaults</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveSubTab('disk_vaults')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
+          className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0 ${
             activeSubTab === 'disk_vaults'
               ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-md'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <HardDrive size={15} />
+          <HardDrive size={14} />
           <span>Physical Disk Vault</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveSubTab('offline_sync')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
+          className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0 ${
             activeSubTab === 'offline_sync'
               ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-md'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <WifiOff size={15} />
+          <WifiOff size={14} />
           <span>Offline Sync</span>
         </button>
       </div>
 
+      {/* Sub-Tab 0: Local File Store, SQL Scripts & Snapshot History */}
+      {activeSubTab === 'local_sql' && (
+        <div className="animate-in fade-in">
+          <BackupDatabaseTab />
+        </div>
+      )}
+
       {/* Sub-Tab 1: Supabase Live Database */}
       {activeSubTab === 'supabase_cloud' && (
-        <form onSubmit={handleSaveSupabase} className="space-y-6 win11-card p-6 sm:p-8 rounded-3xl border border-white/[0.08]">
+        <form onSubmit={handleSaveSupabase} className="space-y-6 win11-card p-6 sm:p-8 rounded-3xl border border-white/[0.08] animate-in fade-in">
           <div className="border-b border-white/10 pb-4 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -339,12 +408,45 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
                 Configure your active Supabase cluster credentials for instant member and finance synchronization across devices.
               </p>
             </div>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/20 cursor-pointer transition"
-            >
-              Save Supabase Settings
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isSyncingLive}
+                onClick={async () => {
+                  setIsSyncingLive(true);
+                  try {
+                    const res = await syncLocalVaultToCloud();
+                    if (res?.success) {
+                      showNotification('✓ லோக்கல் டேட்டா அனைத்தும் Supabase-ல் சின்க் செய்யப்பட்டது!');
+                    } else {
+                      showNotification(`சின்க் செய்வதில் பிழை: ${res?.error || res?.message || 'Unknown'}`);
+                    }
+                  } catch (err) {
+                    showNotification(`Sync Failed: ${err.message}`);
+                  } finally {
+                    setIsSyncingLive(false);
+                  }
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/25 flex items-center gap-2 transition cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={isSyncingLive ? 'animate-spin' : ''} />
+                <span>{isSyncingLive ? 'சின்க் ஆகிறது...' : 'Sync to Cloud Now'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={isTesting}
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-bold rounded-xl border border-white/10 transition cursor-pointer disabled:opacity-50"
+              >
+                {isTesting ? 'சரிபார்க்கிறது...' : 'Test Connection'}
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/20 cursor-pointer transition"
+              >
+                Save Supabase Settings
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -380,13 +482,21 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
                 className="w-4 h-4 accent-cyan-400 cursor-pointer"
               />
             </div>
+            {testStatus && (
+              <p
+                role="status"
+                className={`md:col-span-2 text-xs font-medium ${testStatus.success ? 'text-emerald-300' : 'text-rose-300'}`}
+              >
+                {testStatus.message}
+              </p>
+            )}
           </div>
         </form>
       )}
 
       {/* Sub-Tab 2: Free Multi-Cloud Storage Vaults */}
       {activeSubTab === 'multi_cloud' && (
-        <div className="space-y-6 win11-card p-6 sm:p-8 rounded-3xl border border-white/[0.08]">
+        <div className="space-y-6 win11-card p-6 sm:p-8 rounded-3xl border border-white/[0.08] animate-in fade-in">
           <div className="border-b border-white/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -484,7 +594,7 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
 
       {/* Sub-Tab 3: Physical Disk Vault */}
       {activeSubTab === 'disk_vaults' && (
-        <div className="space-y-6 win11-card p-6 sm:p-8 rounded-3xl border border-white/[0.08]">
+        <div className="space-y-6 win11-card p-6 sm:p-8 rounded-3xl border border-white/[0.08] animate-in fade-in">
           <div className="border-b border-white/10 pb-4 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -553,7 +663,7 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
 
       {/* Sub-Tab 4: Offline Synchronization */}
       {activeSubTab === 'offline_sync' && (
-        <form onSubmit={handleSaveOfflineSync} className="space-y-6 win11-card p-6 sm:p-8 rounded-3xl border border-white/[0.08]">
+        <form onSubmit={handleSaveOfflineSync} className="space-y-6 win11-card p-6 sm:p-8 rounded-3xl border border-white/[0.08] animate-in fade-in">
           <div className="border-b border-white/10 pb-4 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -663,6 +773,7 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
                     onChange={(e) => setCloudForm({ ...cloudForm, providerType: e.target.value })}
                     className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white mt-1 focus:outline-none focus:border-cyan-400 cursor-pointer"
                   >
+                    <option value="Supabase">Supabase PostgreSQL (Free Tier)</option>
                     <option value="Cloudflare R2">Cloudflare R2 (Free 10GB Tier)</option>
                     <option value="MongoDB Atlas">MongoDB Atlas (Free 512MB Cluster)</option>
                     <option value="Google Drive">Google Drive Enterprise</option>

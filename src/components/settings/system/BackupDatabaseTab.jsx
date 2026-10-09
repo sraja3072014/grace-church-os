@@ -144,49 +144,61 @@ export default function BackupDatabaseTab() {
     soundFX?.playClickPop?.();
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    try {
+      const [members, finance, expenses, prayers, visitors, attendance] = await Promise.all([
+        getVaultData('members', []),
+        getVaultData('finance', []),
+        getVaultData('expenses', []),
+        getVaultData('prayers', []),
+        getVaultData('visitors', []),
+        getVaultData('attendance', [])
+      ]);
 
-    const [members, finance, expenses, prayers, visitors] = await Promise.all([
-      getVaultData('members', []),
-      getVaultData('finance', []),
-      getVaultData('expenses', []),
-      getVaultData('prayers', []),
-      getVaultData('visitors', [])
-    ]);
+      let church = {};
+      try {
+        church = JSON.parse(localStorage.getItem('graceos_main_church') || '{}');
+      } catch {
+        church = {};
+      }
 
-    const fullPayload = {
-      timestamp: now.toISOString(),
-      church: JSON.parse(localStorage.getItem('graceos_main_church') || '{}'),
-      members,
-      finance,
-      expenses,
-      prayers,
-      visitors,
-      engine: 'GraceOS Dual-Tree Vault FS'
-    };
+      const fullPayload = {
+        timestamp: now.toISOString(),
+        church,
+        members,
+        finance,
+        expenses,
+        prayers,
+        visitors,
+        attendance,
+        engine: 'GraceOS Dual-Tree Vault FS'
+      };
 
-    let savedFileName = `backup_snapshot_${now.toISOString().slice(0, 10).replace(/-/g, '_')}_${Date.now().toString().slice(-4)}.json`;
+      let savedFileName = `backup_snapshot_${now.toISOString().slice(0, 10).replace(/-/g, '_')}_${Date.now().toString().slice(-4)}.json`;
+      const vaultConnected = isVaultConnected();
+      if (vaultConnected) {
+        savedFileName = await createBackupSnapshot(fullPayload);
+      }
 
-    if (isVaultConnected()) {
-      const generatedName = await createBackupSnapshot(fullPayload);
-      if (generatedName) savedFileName = generatedName;
+      const newBackup = {
+        id: Date.now(),
+        name: savedFileName,
+        path: mountedFolder ? `${mountedFolder}\\backup` : 'Memory Cache',
+        size: `${(JSON.stringify(fullPayload).length / 1024).toFixed(1)} KB`,
+        date: `Today, ${timeStr}`,
+        type: vaultConnected ? 'Physical Disk' : 'Local Cache'
+      };
+
+      const updated = [newBackup, ...backupHistory];
+      syncHistory(updated);
+      localStorage.setItem('graceos_last_backup_time', now.toISOString());
+      setDaysSinceBackup(0);
+      soundFX?.playSuccessChime?.();
+      showToast(`Snapshot written to ${newBackup.path}`);
+    } catch (err) {
+      showToast(`Snapshot failed: ${err.message || 'Unable to create backup.'}`);
+    } finally {
+      setIsBackingUp(false);
     }
-
-    const newBackup = {
-      id: Date.now(),
-      name: savedFileName,
-      path: mountedFolder ? `${mountedFolder}\\backup` : 'Memory Cache',
-      size: `${(JSON.stringify(fullPayload).length / 1024).toFixed(1)} KB`,
-      date: `Today, ${timeStr}`,
-      type: isVaultConnected() ? 'Physical Disk' : 'Local Cache'
-    };
-
-    const updated = [newBackup, ...backupHistory];
-    syncHistory(updated);
-    localStorage.setItem('graceos_last_backup_time', now.toISOString());
-    setDaysSinceBackup(0);
-    setIsBackingUp(false);
-    soundFX?.playSuccessChime?.();
-    showToast(`Snapshot written to ${newBackup.path}`);
   };
 
   // 6. AES-256 Encrypted USB Export (.godb)

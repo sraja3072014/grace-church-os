@@ -7,6 +7,7 @@ import {
   Globe, HardDrive, Save, CheckCircle2, Cloud, Plus, MapPin, Trash2
 } from 'lucide-react';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
+import { VaultSettingsCard } from '../VaultSettingsCard';
 
 // 1. Church Setup
 import MainChurchTab from './church/MainChurchTab';
@@ -37,6 +38,8 @@ import AdvancedSettingsTab from './system/AdvancedSettingsTab';
 import LanguageRegionTab from './system/LanguageRegionTab';
 import AuditTrailViewerDesk from './AuditTrailViewerDesk';
 import AdvancedBackupCloudHub from './system/AdvancedBackupCloudHub';
+import LocalVaultDriveTab from './system/LocalVaultDriveTab';
+import BackupDatabaseTab from './system/BackupDatabaseTab';
 
 // Inline Land, Lease & Trust Vault Component
 function LandLeaseVaultSection() {
@@ -277,6 +280,7 @@ export default function SettingsHub({ session }) {
         { id: 'bible_hub', label: 'Scripture Display Engine', icon: BookOpen },
         { id: 'audit', label: 'Audit Trail & Security Logs', icon: ShieldAlert },
         { id: 'service_req', label: 'Hardware Maintenance', icon: Wrench },
+        { id: 'vault_drive', label: 'Local Drive Vault', icon: HardDrive },
         { id: 'advanced_backup_cloud', label: 'Advanced Backup & Cloud Hub', icon: Cloud },
         { id: 'advanced_cfg', label: 'Advanced Engine Setup', icon: Sliders },
       ]
@@ -355,8 +359,10 @@ export default function SettingsHub({ session }) {
           {activeTab === 'bible_hub' && <BibleHubTab />}
           {activeTab === 'audit' && <AuditTrailViewerDesk />}
           {activeTab === 'service_req' && <ServiceRequestsTab />}
-          {activeTab === 'advanced_backup_cloud' && <AdvancedBackupCloudHub onTriggerSuccess={triggerSuccess} />}
-          {activeTab === 'advanced_cfg' && <AdvancedSettingsTab />}
+          {/* SettingsHub.jsx உள்ளே: */}
+{activeTab === 'vault_drive' && <LocalVaultDriveTab />}
+{activeTab === 'advanced_backup_cloud' && <AdvancedBackupCloudHub onTriggerSuccess={triggerSuccess} />}
+{activeTab === 'advanced_cfg' && <AdvancedSettingsTab />}
         </div>
       </div>
 
