@@ -152,7 +152,9 @@ export async function setVaultData(tableName, data, triggerCloudRelay = true) {
   // 2. Electron native filesystem (primary in the desktop app)
   if (typeof window !== 'undefined' && window.electronAPI?.writeFile && getElectronVaultRoot()) {
     try {
-      await writeDatabaseFile(slug, data);
+      const payloadString = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      await writeDatabaseFile(slug, payloadString);
+      console.log(`[VaultStore] ✓ Successfully wrote ${slug}.json to physical disk.`);
     } catch (err) {
       console.error(`[VaultStore] Electron write failed for ${slug}.json:`, err);
     }
@@ -276,11 +278,12 @@ export const sqlFileStore = {
     const members = await getVaultData('MEMBERS', []);
     const finance = await getVaultData('FINANCE', []);
     const attendance = await getVaultData('ATTENDANCE', []);
+    const leaseVault = await getVaultData('LEASE_VAULT', []);
 
     const lines = [];
     lines.push('-- ============================================================');
-    lines.push('-- GraceOS Database Dump');
-    lines.push(`-- Church : ${(church && church.name) || 'Unknown'}`);
+    lines.push('-- GraceOS Database Dump (Includes Properties & Assets)');
+    lines.push(`-- Church : ${(church && (church.churchName || church.name)) || 'Grace Church'}`);
     lines.push(`-- Created: ${new Date().toISOString()}`);
     lines.push('-- ============================================================');
     lines.push('');
@@ -358,6 +361,42 @@ export const sqlFileStore = {
             this.sanitize(a.service_type ?? a.service),
             this.sanitize(Number(a.member_id ?? a.memberId) || null),
             this.sanitize(a.status ?? 'PRESENT'),
+          ].join(', ') +
+          ');'
+      );
+    }
+    lines.push('');
+
+    lines.push('CREATE TABLE IF NOT EXISTS lease_vault (');
+    lines.push('  id TEXT PRIMARY KEY,');
+    lines.push('  property_name TEXT NOT NULL,');
+    lines.push('  category TEXT,');
+    lines.push('  branch TEXT,');
+    lines.push('  landlord_or_vendor TEXT,');
+    lines.push('  phone TEXT,');
+    lines.push('  monthly_rent REAL DEFAULT 0,');
+    lines.push('  advance_amount REAL DEFAULT 0,');
+    lines.push('  service_due_date TEXT,');
+    lines.push('  terms_and_conditions TEXT,');
+    lines.push('  notes TEXT');
+    lines.push(');');
+    lines.push('');
+
+    for (const lease of Array.isArray(leaseVault) ? leaseVault : []) {
+      lines.push(
+        'INSERT INTO lease_vault (id, property_name, category, branch, landlord_or_vendor, phone, monthly_rent, advance_amount, service_due_date, terms_and_conditions, notes) VALUES (' +
+          [
+            this.sanitize(lease.id),
+            this.sanitize(lease.propertyName || lease.name || 'Asset'),
+            this.sanitize(lease.category || 'Property'),
+            this.sanitize(lease.branch || 'Main Campus'),
+            this.sanitize(lease.landlordName || lease.vendorName || ''),
+            this.sanitize(lease.phone || ''),
+            this.sanitize(Number(lease.monthlyRent) || 0),
+            this.sanitize(Number(lease.advanceAmount) || 0),
+            this.sanitize(lease.serviceDueDate || lease.leaseEnd || ''),
+            this.sanitize(lease.terms || ''),
+            this.sanitize(lease.notes || ''),
           ].join(', ') +
           ');'
       );

@@ -4,9 +4,10 @@ import {
   Building2, GitBranch, Users, UserPlus, ClipboardCheck, ShieldCheck, ShieldAlert,
   CreditCard, HeartHandshake, Receipt, BarChart3,
   Palette, Smartphone, MessageSquare, BookOpen, Wrench, Sliders, 
-  Globe, HardDrive, Save, CheckCircle2, Cloud, Plus, MapPin, Trash2
+  Globe, HardDrive, Save, CheckCircle2, Cloud, Plus, MapPin, Trash2, Edit3
 } from 'lucide-react';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
+import { getSupabase } from '../../utils/supabaseClient';
 import { VaultSettingsCard } from '../VaultSettingsCard';
 
 // 1. Church Setup
@@ -45,6 +46,7 @@ import BackupDatabaseTab from './system/BackupDatabaseTab';
 function LandLeaseVaultSection() {
   const [properties, setProperties] = useState([]);
   const [toast, setToast] = useState('');
+  const [editingId, setEditingId] = useState(null);
   
   const [propertyForm, setPropertyForm] = useState({
     title: '',
@@ -65,7 +67,10 @@ function LandLeaseVaultSection() {
 
   useEffect(() => {
     async function loadProperties() {
-      const dbProps = await getVaultData('properties', []);
+      let dbProps = await getVaultData('lease_vault', []);
+      if (!Array.isArray(dbProps) || dbProps.length === 0) {
+        dbProps = await getVaultData('properties', []);
+      }
       setProperties(Array.isArray(dbProps) ? dbProps : []);
     }
     loadProperties();
@@ -78,31 +83,88 @@ function LandLeaseVaultSection() {
 
   const saveProperties = async (updated) => {
     setProperties(updated);
-    await setVaultData('properties', updated, true);
+    await setVaultData('lease_vault', updated, true);
+    await setVaultData('properties', updated, false);
+  };
+
+  const handleStartEditProperty = (prop) => {
+    setEditingId(prop.id);
+    setPropertyForm({
+      title: prop.title || prop.propertyName || prop.property_name || '',
+      ownershipType: prop.ownershipType || prop.ownership_type || 'RENTED',
+      location: prop.location || '',
+      landArea: prop.landArea || prop.land_area || '',
+      docNo: prop.docNo || prop.doc_no || '',
+      surveyNo: prop.surveyNo || prop.survey_no || '',
+      pattaNo: prop.pattaNo || prop.patta_no || '',
+      trustName: prop.trustName || prop.trust_name || 'Grace Cathedral Charitable Trust',
+      landlordName: prop.landlordName || prop.landlord_name || '',
+      landlordPhone: prop.landlordPhone || prop.phone || '',
+      monthlyRent: prop.monthlyRent ?? prop.monthly_rent ?? '',
+      advanceDeposit: prop.advanceDeposit ?? prop.advance_amount ?? '',
+      leaseExpiryDate: prop.leaseExpiryDate || prop.lease_end || '',
+      ebConsumerNo: prop.ebConsumerNo || prop.eb_consumer_no || ''
+    });
+    showToast('விவரங்கள் எடிட் செய்வதற்கு படிவத்தில் ஏற்றப்பட்டன.');
+  };
+
+  const handleDeleteProperty = async (prop) => {
+    const title = prop.title || prop.propertyName || prop.property_name || 'Property';
+    if (!window.confirm(`"${title}" பதிவை நிரந்தரமாக நீக்க வேண்டுமா?`)) return;
+
+    try {
+      const supabase = getSupabase();
+      if (supabase && typeof navigator !== 'undefined' && navigator.onLine) {
+        const { error } = await supabase.from('lease_vault').delete().eq('id', String(prop.id));
+        if (error) console.warn('[SettingsHub] Cloud property delete failed:', error);
+      }
+    } catch (error) {
+      console.warn('[SettingsHub] Cloud property delete failed:', error);
+    }
+
+    const updated = properties.filter((item) => item.id !== prop.id);
+    await saveProperties(updated);
+    if (editingId === prop.id) {
+      setEditingId(null);
+      setPropertyForm({
+        title: '', ownershipType: 'RENTED', location: '', landArea: '',
+        docNo: '', surveyNo: '', pattaNo: '', trustName: 'Grace Cathedral Charitable Trust',
+        landlordName: '', landlordPhone: '', monthlyRent: '', advanceDeposit: '', leaseExpiryDate: '', ebConsumerNo: ''
+      });
+    }
+    showToast('பதிவு நீக்கப்பட்டது.');
   };
 
   const handleAddProperty = async (e) => {
     e.preventDefault();
     if (!propertyForm.title.trim() || !propertyForm.location.trim()) return;
 
-    const newProperty = {
-      id: `PROP-${Date.now().toString().slice(-3)}`,
+    const propertyData = {
       ...propertyForm,
+      title: propertyForm.title.trim(),
+      propertyName: propertyForm.title.trim(),
+      location: propertyForm.location.trim(),
       monthlyRent: Number(propertyForm.monthlyRent) || 0,
       advanceDeposit: Number(propertyForm.advanceDeposit) || 0
     };
 
-    const updated = [newProperty, ...properties];
+    const updated = editingId
+      ? properties.map((prop) => prop.id === editingId ? { ...prop, ...propertyData, id: editingId } : prop)
+      : [{ id: `PROP-${Date.now().toString().slice(-3)}`, ...propertyData }, ...properties];
     await saveProperties(updated);
+    const wasEditing = Boolean(editingId);
+    setEditingId(null);
     setPropertyForm({
       title: '', ownershipType: 'RENTED', location: '', landArea: '',
       docNo: '', surveyNo: '', pattaNo: '', trustName: 'Grace Cathedral Charitable Trust',
       landlordName: '', landlordPhone: '', monthlyRent: '', advanceDeposit: '', leaseExpiryDate: '', ebConsumerNo: ''
     });
-    showToast('Real estate property & lease dossier saved successfully.');
+    showToast(wasEditing ? 'சொத்து விவரங்கள் புதுப்பிக்கப்பட்டன.' : 'Real estate property & lease dossier saved successfully.');
   };
 
-  const totalAdvanceDeposits = properties.filter(p => p.ownershipType === 'RENTED').reduce((sum, p) => sum + (Number(p.advanceDeposit) || 0), 0);
+  const totalAdvanceDeposits = properties
+    .filter((prop) => (prop.ownershipType || prop.ownership_type) === 'RENTED')
+    .reduce((sum, prop) => sum + (Number(prop.advanceDeposit ?? prop.advance_amount) || 0), 0);
 
   return (
     <div className="space-y-6 max-w-5xl select-none text-slate-100 pb-12 animate-in fade-in">
@@ -142,10 +204,28 @@ function LandLeaseVaultSection() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
-          <h4 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-wider">
-            <Plus size={15} className="text-amber-400" />
-            <span>Register Facility / Lease</span>
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+              {editingId ? <Edit3 size={15} className="text-amber-400" /> : <Plus size={15} className="text-amber-400" />}
+              <span>{editingId ? 'Edit Facility / Lease' : 'Register Facility / Lease'}</span>
+            </h4>
+            {editingId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(null);
+                  setPropertyForm({
+                    title: '', ownershipType: 'RENTED', location: '', landArea: '',
+                    docNo: '', surveyNo: '', pattaNo: '', trustName: 'Grace Cathedral Charitable Trust',
+                    landlordName: '', landlordPhone: '', monthlyRent: '', advanceDeposit: '', leaseExpiryDate: '', ebConsumerNo: ''
+                  });
+                }}
+                className="text-[11px] text-rose-400 hover:underline cursor-pointer"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
 
           <form onSubmit={handleAddProperty} className="space-y-3">
             <input
@@ -195,7 +275,7 @@ function LandLeaseVaultSection() {
               type="submit"
               className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition cursor-pointer shadow-lg shadow-amber-500/20"
             >
-              Save Facility to Vault
+              {editingId ? 'Update Facility in Vault' : 'Save Facility to Vault'}
             </button>
           </form>
         </div>
@@ -207,16 +287,64 @@ function LandLeaseVaultSection() {
             </div>
           ) : (
             properties.map((prop) => (
-              <div key={prop.id} className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h5 className="text-sm font-bold text-white">{prop.title}</h5>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    {prop.ownershipType}
+              <div
+                key={prop.id}
+                className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-3 hover:border-amber-500/30 transition shadow-lg"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h5 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>{prop.title || prop.propertyName || prop.property_name || 'Property'}</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-slate-400">
+                        {prop.id}
+                      </span>
+                    </h5>
+                    <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-1">
+                      <MapPin size={13} className="text-rose-400 shrink-0" />
+                      <span>{prop.location}</span>
+                      {(prop.landArea || prop.land_area) && <span>• ({prop.landArea || prop.land_area})</span>}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                    {prop.ownershipType || prop.ownership_type || 'RENTED'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 flex items-center gap-1">
-                  <MapPin size={13} className="text-rose-400" /> {prop.location}
-                </p>
+
+                {(prop.ownershipType || prop.ownership_type || 'RENTED') === 'RENTED' && (
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-slate-950 p-2.5 rounded-xl border border-white/5">
+                    <div>
+                      <span className="text-[10px] text-slate-500 block">Monthly Rent:</span>
+                      <span className="text-amber-300 font-bold">
+                        ₹ {Number(prop.monthlyRent ?? prop.monthly_rent ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 block">Advance Deposit:</span>
+                      <span className="text-white font-bold">
+                        ₹ {Number(prop.advanceDeposit ?? prop.advance_amount ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => handleStartEditProperty(prop)}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border border-amber-500/40"
+                  >
+                    <Edit3 size={13} />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteProperty(prop)}
+                    className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border border-rose-500/40"
+                  >
+                    <Trash2 size={13} />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             ))
           )}

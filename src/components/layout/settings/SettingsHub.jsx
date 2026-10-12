@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { 
   Building2, GitBranch, Users, UserPlus, ClipboardCheck, ShieldCheck, ShieldAlert,
   CreditCard, HeartHandshake, Receipt, BarChart3,
-  Palette, Smartphone, MessageSquare, BookOpen, Database, Wrench, Save, CheckCircle2
+  Palette, Smartphone, MessageSquare, BookOpen, Database, Wrench, Save, CheckCircle2,
+  Plus, MapPin, Clock, DollarSign, Trash2, Edit3
 } from 'lucide-react';
 
 // Church Setup Sub-Components
 import MainChurchTab from './church/MainChurchTab';
 import BranchesTab from './church/BranchesTab';
+import LandLeaseVaultTab from './church/LandLeaseVaultTab';
 
 export default function SettingsHub() {
   const [activeTab, setActiveTab] = useState('main_church');

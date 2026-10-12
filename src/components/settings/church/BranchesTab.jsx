@@ -68,7 +68,10 @@ export default function BranchesTab() {
 
   const sync = async (data) => {
     setBranches(data);
+    localStorage.setItem('graceos_branches', JSON.stringify(data));
+    await setVaultData('branches', data, true);
     await persistModuleData(MODULE_STORAGE_REGISTRY.BRANCHES, data);
+    showToast('Branch details saved and updated locally!');
   };
 
   const handleToggleGov = async (key) => {

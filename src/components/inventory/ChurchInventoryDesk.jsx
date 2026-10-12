@@ -1,12 +1,14 @@
+// src/components/inventory/ChurchInventoryDesk.jsx அல்லது src/components/layout/inventory/ChurchInventoryDesk.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Package, Wrench, AlertTriangle, CheckCircle2, 
   Plus, Search, Shield, DollarSign, Calendar, 
   Building2, FileText, KeyRound, Clock, MapPin, 
-  Landmark, AlertCircle, Phone, ArrowUpRight, Heart, Gift, Utensils, Trash2, Sparkles
+  Landmark, AlertCircle, Phone, ArrowUpRight, Heart, Gift, Utensils, Trash2, Sparkles, Edit3
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
+import { getSupabase } from '../../utils/supabaseClient';
 
 export default function ChurchInventoryDesk() {
   const [activeSubTab, setActiveSubTab] = useState('EQUIPMENT');
@@ -26,6 +28,7 @@ export default function ChurchInventoryDesk() {
 
   // 2. PROPERTY, LEASE & REAL ESTATE STATE
   const [properties, setProperties] = useState([]);
+  const [editingPropertyId, setEditingPropertyId] = useState(null);
   const [propertyForm, setPropertyForm] = useState({
     title: '',
     ownershipType: 'RENTED',
@@ -63,7 +66,7 @@ export default function ChurchInventoryDesk() {
       try {
         const [diskAssets, diskProperties, diskSponsorships] = await Promise.all([
           getVaultData('assets', []),
-          getVaultData('properties', []),
+          getVaultData('lease_vault', []),
           getVaultData('sponsorships', [])
         ]);
 
@@ -90,7 +93,8 @@ export default function ChurchInventoryDesk() {
 
   const saveProperties = async (updated) => {
     setProperties(updated);
-    await setVaultData('properties', updated, true);
+    await setVaultData('lease_vault', updated, true);
+    await setVaultData('properties', updated, false);
   };
 
   const saveSponsorships = async (updated) => {
@@ -121,28 +125,99 @@ export default function ChurchInventoryDesk() {
     setEquipmentForm({ name: '', category: 'SOUND', quantity: 1, location: '', cost: '', condition: 'EXCELLENT' });
   };
 
+  // PROPERTY: ADD அல்லது EDIT செயல்முறை
   const handleAddProperty = async (e) => {
     e.preventDefault();
     if (!propertyForm.title.trim() || !propertyForm.location.trim()) return;
     soundFX?.playSuccessChime?.();
 
-    const newProperty = {
-      id: `PROP-${Date.now().toString().slice(-3)}`,
-      ...propertyForm,
-      title: propertyForm.title.trim(),
-      location: propertyForm.location.trim(),
-      monthlyRent: Number(propertyForm.monthlyRent) || 0,
-      advanceDeposit: Number(propertyForm.advanceDeposit) || 0,
-      propertyTaxStatus: 'PAID'
-    };
+    let updated = [];
+    if (editingPropertyId) {
+      updated = properties.map((p) =>
+        p.id === editingPropertyId
+          ? {
+              ...p,
+              ...propertyForm,
+              title: propertyForm.title.trim(),
+              propertyName: propertyForm.title.trim(),
+              location: propertyForm.location.trim(),
+              monthlyRent: Number(propertyForm.monthlyRent) || 0,
+              advanceDeposit: Number(propertyForm.advanceDeposit) || 0
+            }
+          : p
+      );
+      setEditingPropertyId(null);
+    } else {
+      const newProperty = {
+        id: `PROP-${Date.now().toString().slice(-4)}`,
+        ...propertyForm,
+        title: propertyForm.title.trim(),
+        propertyName: propertyForm.title.trim(),
+        location: propertyForm.location.trim(),
+        monthlyRent: Number(propertyForm.monthlyRent) || 0,
+        advanceDeposit: Number(propertyForm.advanceDeposit) || 0,
+        propertyTaxStatus: 'PAID'
+      };
+      updated = [newProperty, ...properties];
+    }
 
-    const updated = [newProperty, ...properties];
     await saveProperties(updated);
     setPropertyForm({
       title: '', ownershipType: 'RENTED', location: '', landArea: '',
       docNo: '', surveyNo: '', pattaNo: '', trustName: 'Grace Cathedral Charitable Trust',
       landlordName: '', landlordPhone: '', monthlyRent: '', advanceDeposit: '', leaseExpiryDate: '', ebConsumerNo: ''
     });
+  };
+
+  // PROPERTY: EDIT பட்டன் கிளிக் செய்யும்போது
+  const handleStartEditProperty = (prop) => {
+    soundFX?.playClickPop?.();
+    setEditingPropertyId(prop.id);
+    setPropertyForm({
+      title: prop.title || prop.propertyName || prop.property_name || '',
+      ownershipType: prop.ownershipType || prop.ownership_type || 'RENTED',
+      location: prop.location || '',
+      landArea: prop.landArea || prop.land_area || '',
+      docNo: prop.docNo || prop.doc_no || '',
+      surveyNo: prop.surveyNo || prop.survey_no || '',
+      pattaNo: prop.pattaNo || prop.patta_no || '',
+      trustName: prop.trustName || prop.trust_name || 'Grace Cathedral Charitable Trust',
+      landlordName: prop.landlordName || prop.landlord_name || '',
+      landlordPhone: prop.landlordPhone || prop.phone || '',
+      monthlyRent: prop.monthlyRent ?? prop.monthly_rent ?? '',
+      advanceDeposit: prop.advanceDeposit ?? prop.advance_amount ?? '',
+      leaseExpiryDate: prop.leaseExpiryDate || prop.lease_end || '',
+      ebConsumerNo: prop.ebConsumerNo || prop.eb_consumer_no || ''
+    });
+  };
+
+  // PROPERTY: DELETE பட்டன் கிளிக் செய்யும்போது (Local Vault + Supabase Cloud)
+  const handleDeleteProperty = async (id) => {
+    const target = properties.find((p) => p.id === id);
+    const targetName = target?.title || target?.propertyName || 'Facility';
+    if (!window.confirm(`"${targetName}" பதிவை நிரந்தரமாக நீக்க வேண்டுமா?`)) return;
+
+    soundFX?.playClickPop?.();
+
+    try {
+      const supabase = getSupabase();
+      if (supabase && navigator.onLine) {
+        await supabase.from('lease_vault').delete().eq('id', String(id));
+      }
+    } catch (err) {
+      console.warn('[Supabase Delete Notice]:', err);
+    }
+
+    const updated = properties.filter((p) => p.id !== id);
+    await saveProperties(updated);
+    if (editingPropertyId === id) {
+      setEditingPropertyId(null);
+      setPropertyForm({
+        title: '', ownershipType: 'RENTED', location: '', landArea: '',
+        docNo: '', surveyNo: '', pattaNo: '', trustName: 'Grace Cathedral Charitable Trust',
+        landlordName: '', landlordPhone: '', monthlyRent: '', advanceDeposit: '', leaseExpiryDate: '', ebConsumerNo: ''
+      });
+    }
   };
 
   const handleAddSponsorship = async (e) => {
@@ -176,6 +251,10 @@ export default function ChurchInventoryDesk() {
 
     const updated = [newSponsor, ...sponsorships];
     await saveSponsorships(updated);
+    setFormInit();
+  };
+
+  const setFormInit = () => {
     setSponsorForm({
       cause: 'FELLOWSHIP_MEALS', sponsorName: '', phone: '', frequency: 'ONE_TIME',
       mode: 'IN_KIND', targetDate: '', amountEstimate: '', occasion: ''
@@ -389,7 +468,7 @@ export default function ChurchInventoryDesk() {
         </div>
       )}
 
-      {/* TAB 2: PROPERTIES, LEASE & REAL ESTATE VAULT */}
+      {/* TAB 2: PROPERTIES, LEASE & REAL ESTATE VAULT (EDIT & DELETE INCLUDED) */}
       {activeSubTab === 'PROPERTIES' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
@@ -408,11 +487,30 @@ export default function ChurchInventoryDesk() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Form Column */}
             <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
-              <h4 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-wider">
-                <Plus size={15} className="text-amber-400" />
-                <span>Register Facility / Lease</span>
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+                  {editingPropertyId ? <Edit3 size={15} className="text-amber-400" /> : <Plus size={15} className="text-amber-400" />}
+                  <span>{editingPropertyId ? 'Edit Facility / Lease' : 'Register Facility / Lease'}</span>
+                </h4>
+                {editingPropertyId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingPropertyId(null);
+                      setPropertyForm({
+                        title: '', ownershipType: 'RENTED', location: '', landArea: '',
+                        docNo: '', surveyNo: '', pattaNo: '', trustName: 'Grace Cathedral Charitable Trust',
+                        landlordName: '', landlordPhone: '', monthlyRent: '', advanceDeposit: '', leaseExpiryDate: '', ebConsumerNo: ''
+                      });
+                    }}
+                    className="text-[11px] text-rose-400 hover:underline cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
 
               <form onSubmit={handleAddProperty} className="space-y-3">
                 <div>
@@ -580,11 +678,12 @@ export default function ChurchInventoryDesk() {
                   type="submit"
                   className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-lg shadow-amber-500/20"
                 >
-                  Save Facility to Vault
+                  {editingPropertyId ? 'Update Facility in Vault' : 'Save Facility to Vault'}
                 </button>
               </form>
             </div>
 
+            {/* List Column with Edit & Delete Buttons inside */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between border-b border-white/10 pb-2 text-xs font-mono">
                 <span className="font-bold text-white uppercase tracking-wider">Property Registry &amp; Legal Dossiers ({properties.length})</span>
@@ -598,7 +697,7 @@ export default function ChurchInventoryDesk() {
                   </div>
                 ) : (
                   properties.map((prop) => (
-                    <div key={prop.id} className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4 shadow-xl">
+                    <div key={prop.id} className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4 shadow-xl hover:border-amber-500/25 transition">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2">
@@ -677,10 +776,31 @@ export default function ChurchInventoryDesk() {
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1 border-t border-white/5">
-                        <span>Power Utility ID (EB): <strong className="text-slate-200">{prop.ebConsumerNo || 'N/A'}</strong></span>
-                        <span className="text-emerald-400 font-bold">Audit Verified ✓</span>
+                      {/* கார்டின் கீழே உள்ள EDIT மற்றும் DELETE பட்டன்கள் */}
+                      <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-400 pt-3 border-t border-white/5">
+                        <span>EB Consumer No: <strong className="text-slate-200">{prop.ebConsumerNo || 'N/A'}</strong></span>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditProperty(prop)}
+                            className="px-3 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold font-sans flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <Edit3 size={13} />
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProperty(prop.id)}
+                            className="px-3 py-1 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-bold font-sans flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <Trash2 size={13} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </div>
+
                     </div>
                   ))
                 )}
