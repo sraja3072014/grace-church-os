@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import BackupDatabaseTab from './BackupDatabaseTab';
 import { syncLocalVaultToCloud } from '../../../utils/cloudSyncEngine';
+import { getSupabase } from '../../../utils/supabaseClient';
 
 export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
   // Default tab can be 'local_sql' or 'supabase_cloud'
@@ -145,35 +146,28 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
   };
 
   const handleTestConnection = async () => {
-    const url = cloudConfig.supabaseUrl?.trim().replace(/\/+$/, '');
-    const key = cloudConfig.supabaseAnonKey?.trim();
-
-    if (!url || !key) {
-      window.alert('Project URL மற்றும் Anon Key இரண்டையும் உள்ளிடவும்!');
-      return;
-    }
-
     setIsTesting(true);
     setTestStatus(null);
 
     try {
-      const res = await fetch(`${url}/rest/v1/`, {
-        method: 'GET',
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`
-        }
-      });
-
-      if (res.ok || res.status === 200 || res.status === 404) {
-        setTestStatus({ success: true, message: '✓ Supabase கிளவுடுடன் வெற்றிகரமாக இணைக்கப்பட்டது!' });
-        showNotification('Supabase Live Handshake Successful! ✓');
-      } else {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `HTTP Status ${res.status}`);
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client initialize ஆகவில்லை. URL & Key-ஐ சரிபார்க்கவும்.');
       }
+
+      // நேரடி REST fetch-க்கு பதிலாக உண்மையான Supabase Client மூலம் பிங் செய்கிறோம்
+      const { error } = await supabase.from('members').select('id').limit(1);
+
+      if (error && error.code !== 'PGRST116') {
+        // அட்டவணை காலியாக இருந்தாலும் error வராது; உண்மையான Auth/Network பிழையை மட்டும் பிடிக்கும்
+        throw error;
+      }
+
+      setTestStatus({ success: true, message: '✓ Supabase கிளவுடுடன் வெற்றிகரமாக இணைக்கப்பட்டது!' });
+      showNotification('Supabase Live Handshake Successful! ✓');
     } catch (err) {
-      setTestStatus({ success: false, message: `இணைப்பு தோல்வி: ${err.message}` });
+      console.error('[Supabase Test Error]:', err);
+      setTestStatus({ success: false, message: `இணைப்பு தோல்வி: ${err.message || 'Invalid API Key / URL'}` });
     } finally {
       setIsTesting(false);
     }
