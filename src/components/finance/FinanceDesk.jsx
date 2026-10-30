@@ -1,0 +1,865 @@
+// src/components/finance/FinanceDesk.jsx
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  TrendingUp, Wallet, Receipt, FileText, Plus,
+  ArrowUpRight, ArrowDownLeft, ShieldCheck, Trash2, 
+  Printer, CheckCircle2, Search, DollarSign, FileCheck2, Landmark, Package, Heart
+} from 'lucide-react';
+import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
+import { getVaultData, setVaultData } from '../../utils/vaultStore';
+import FinanceAnalyticsTab from './FinanceAnalyticsTab';
+import Annual80GCertificateModal from './Annual80GCertificateModal';
+import PrintableReceiptModal from './PrintableReceiptModal';
+import StaffPayrollDesk from './StaffPayrollDesk';
+import AnnualAuditAGMDesk from './AnnualAuditAGMDesk';
+import TreasuryAndAssetDesk from './TreasuryAndAssetDesk';
+
+export const DEFAULT_GIVING_CATEGORIES = [
+  'Sunday Tithes (10%)',
+  'General Sunday Offering',
+  'Church Building & Expansion Fund',
+  'Mission & Evangelism Outreach',
+  'Thanksgiving & Special Vows',
+  'Sunday School & Youth Ministry'
+];
+
+const SEED_INCOME = [
+  { id: 'INC-1001', date: '2026-08-26', member: 'Bro. John Doe', panNumber: 'ABCDE1234F', category: 'Sunday Tithes (10%)', amount: 15000, mode: 'UPI / GPay' },
+  { id: 'INC-1002', date: '2026-08-24', member: 'Bro. Samuel David', panNumber: 'BKZPD9921K', category: 'Church Building & Expansion Fund', amount: 25000, mode: 'Bank Transfer' },
+  { id: 'INC-1003', date: '2026-08-22', member: 'Anonymous Believer', panNumber: '', category: 'General Sunday Offering', amount: 8500, mode: 'Cash' }
+];
+
+const SEED_EXPENSES = [
+  { id: 'EXP-101', date: '2026-08-27', category: 'Electricity & Utility Bills', amount: 3450, paymentMode: 'Bank Transfer', notes: 'Main Sanctuary Grid' },
+  { id: 'EXP-102', date: '2026-08-25', category: 'Sound, Media & Instruments', amount: 12000, paymentMode: 'UPI / GPay', notes: 'Wireless Mic System' }
+];
+
+export default function FinanceDesk({ session }) {
+  const [activeFinanceSubTab, setActiveFinanceSubTab] = useState('income');
+  const [toastMessage, setToastMessage] = useState('');
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [churchConfig, setChurchConfig] = useState(null);
+  const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+
+  // Fellowship & Sponsorships State with Custom Cause Support
+  const [sponsorships, setSponsorships] = useState([]);
+  const [isCustomCause, setIsCustomCause] = useState(false);
+  const [customCauseInput, setCustomCauseInput] = useState('');
+
+  const [sponsorForm, setSponsorForm] = useState({
+    cause: 'FELLOWSHIP_MEALS',
+    sponsorName: '',
+    phone: '',
+    location: '',
+    occasion: 'BIRTHDAY',
+    targetDate: '',
+    amountEstimate: ''
+  });
+
+  const currencySymbol = useMemo(() => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('graceos_locale_config') || '{}');
+      return cfg.currencySymbol || '₹';
+    } catch {
+      return '₹';
+    }
+  }, []);
+
+  const [incomeList, setIncomeList] = useState(SEED_INCOME);
+  const [expensesList, setExpensesList] = useState(SEED_EXPENSES);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadFinanceData = async () => {
+      const storedIncome = await getVaultData('finance', SEED_INCOME);
+      const storedExpenses = await getVaultData('expenses', SEED_EXPENSES);
+      const storedSponsorships = await getVaultData('sponsorships', []);
+
+      if (!isMounted) return;
+
+      const normalizedIncome = (Array.isArray(storedIncome) ? storedIncome : []).map((item) => ({
+        ...item,
+        member: item.member || item.donor || 'Anonymous Believer',
+        mode: item.mode || item.paymentMode || 'Cash',
+        panNumber: item.panNumber || ''
+      }));
+      const normalizedExpenses = (Array.isArray(storedExpenses) ? storedExpenses : []).map((item) => ({
+        ...item,
+        category: item.category || item.title || 'General Expense',
+        paymentMode: item.paymentMode || 'Bank Transfer',
+        notes: item.notes || item.paidTo || ''
+      }));
+
+      setIncomeList(normalizedIncome);
+      setExpensesList(normalizedExpenses);
+      setSponsorships(Array.isArray(storedSponsorships) ? storedSponsorships : []);
+    };
+
+    loadFinanceData();
+    return () => { isMounted = false; };
+  }, []);
+
+  const [incomeForm, setIncomeForm] = useState({
+    member: '',
+    panNumber: '',
+    category: DEFAULT_GIVING_CATEGORIES[0],
+    amount: '',
+    mode: 'UPI / GPay'
+  });
+
+  const [expenseForm, setExpenseForm] = useState({
+    category: 'Electricity & Utility Bills',
+    amount: '',
+    paymentMode: 'Bank Transfer',
+    notes: ''
+  });
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const handleAddIncome = async (e) => {
+    e.preventDefault();
+    if (!incomeForm.amount || Number(incomeForm.amount) <= 0) return;
+
+    const newIncome = {
+      id: `INC-${Date.now().toString().slice(-4)}`,
+      date: new Date().toISOString().split('T')[0],
+      ...incomeForm,
+      amount: Number(incomeForm.amount)
+    };
+
+    const updated = [newIncome, ...incomeList];
+    setIncomeList(updated);
+    await setVaultData('finance', updated, true);
+
+    const church = await getVaultData('church', {
+      churchName: 'Grace Cathedral',
+      address: 'Cathedral Campus, Tamil Nadu',
+      phone: '+91 98765 43210'
+    });
+    setChurchConfig(church);
+    setIncomeForm({ member: '', panNumber: '', category: DEFAULT_GIVING_CATEGORIES[0], amount: '', mode: 'UPI / GPay' });
+    showToast('Tithe / Offering collection recorded successfully!');
+    setSelectedReceipt(newIncome);
+  };
+
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
+    if (!expenseForm.amount || Number(expenseForm.amount) <= 0) return;
+
+    const newExp = {
+      id: `EXP-${Date.now().toString().slice(-4)}`,
+      date: new Date().toISOString().split('T')[0],
+      ...expenseForm,
+      amount: Number(expenseForm.amount)
+    };
+
+    const updated = [newExp, ...expensesList];
+    setExpensesList(updated);
+    await setVaultData('expenses', updated, true);
+    setExpenseForm({ category: 'Electricity & Utility Bills', amount: '', paymentMode: 'Bank Transfer', notes: '' });
+    showToast('Expense voucher recorded successfully!');
+  };
+
+  const handleDeleteIncome = async (id) => {
+    const updated = incomeList.filter(item => item.id !== id);
+    setIncomeList(updated);
+    await setVaultData('finance', updated, true);
+    showToast('Income receipt removed.');
+  };
+
+  const handleDeleteExpense = async (id) => {
+    const updated = expensesList.filter(item => item.id !== id);
+    setExpensesList(updated);
+    await setVaultData('expenses', updated, true);
+    showToast('Expense record removed.');
+  };
+
+  const handleAddSponsorship = async (e) => {
+    e.preventDefault();
+    const finalCause = isCustomCause && customCauseInput.trim() ? customCauseInput.trim() : sponsorForm.cause;
+    if (!sponsorForm.sponsorName.trim() || !sponsorForm.targetDate || !finalCause) return;
+
+    const newSponsor = {
+      id: `FSP-${Date.now().toString().slice(-3)}`,
+      ...sponsorForm,
+      cause: finalCause,
+      amountEstimate: Number(sponsorForm.amountEstimate) || 0
+    };
+
+    const updated = [newSponsor, ...sponsorships];
+    setSponsorships(updated);
+    await setVaultData('sponsorships', updated, true);
+    setSponsorForm({
+      cause: 'FELLOWSHIP_MEALS',
+      sponsorName: '',
+      phone: '',
+      location: '',
+      occasion: 'BIRTHDAY',
+      targetDate: '',
+      amountEstimate: ''
+    });
+    setIsCustomCause(false);
+    setCustomCauseInput('');
+    showToast('Detailed fellowship sponsorship registered successfully.');
+  };
+
+  const handleDeleteSponsorship = async (id) => {
+    if (!window.confirm('Delete this sponsorship entry?')) return;
+    const updated = sponsorships.filter(s => s.id !== id);
+    setSponsorships(updated);
+    await setVaultData('sponsorships', updated, true);
+    showToast('Sponsorship removed.');
+  };
+
+  const totalIncome = incomeList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const totalExpenses = expensesList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const netBalance = totalIncome - totalExpenses;
+  const totalSponsorshipValue = sponsorships.reduce((sum, s) => sum + (Number(s.amountEstimate) || 0), 0);
+
+  return (
+    <div className="flex flex-col gap-6 select-none animate-in fade-in duration-200 pb-16 text-slate-100">
+      {toastMessage && (
+        <div className="fixed top-5 right-5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 backdrop-blur-md shadow-2xl z-50 animate-in fade-in">
+          <CheckCircle2 size={15} />
+          <span className="font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Header Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+            <Receipt className="text-emerald-400" size={24} />
+            <span>Finance Desk &amp; 80G Tax Accounting</span>
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Real-time tithe ledger, operational expense vouchers, and automatic 80G tax exemption receipts.
+          </p>
+        </div>
+
+        {/* Sub-tab Navigation */}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/10 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('income')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'income' ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <TrendingUp size={14} />
+              <span>Income &amp; Tithes</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('expenses')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'expenses' ? 'bg-rose-500 text-white shadow-md font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Receipt size={14} />
+              <span>Expense Vouchers</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('receipts_80g')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'receipts_80g' ? 'bg-amber-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileText size={14} />
+              <span>80G Generator</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('sponsorships')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'sponsorships' ? 'bg-pink-500 text-white shadow-md font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Heart size={14} />
+              <span>Fellowship &amp; Sponsorships</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('equipment')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'equipment' ? 'bg-cyan-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Package size={14} />
+              <span>Equipment</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('analytics')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'analytics' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>Audit &amp; Analytics</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('payroll')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'payroll' ? 'bg-sky-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ShieldCheck size={14} />
+              <span>Staff Payroll</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFinanceSubTab('agm_audit')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeFinanceSubTab === 'agm_audit' ? 'bg-amber-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileCheck2 size={14} />
+              <span>AGM Annual Audit</span>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsCertificateOpen(true)}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-cyan-300 border border-white/10 transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <FileCheck2 size={15} />
+            <span>Annual 80G Certificate</span>
+          </button>
+        </div>
+      </div>
+
+      {activeFinanceSubTab === 'analytics' && <FinanceAnalyticsTab />}
+      {activeFinanceSubTab === 'payroll' && <StaffPayrollDesk session={session} />}
+      {activeFinanceSubTab === 'agm_audit' && <AnnualAuditAGMDesk session={session} />}
+      {activeFinanceSubTab === 'equipment' && <TreasuryAndAssetDesk session={session} />}
+
+      {/* 3 Metric Summary Cards */}
+      {activeFinanceSubTab !== 'equipment' && activeFinanceSubTab !== 'sponsorships' && (
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="win11-card p-5 rounded-3xl border border-white/10 space-y-2">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-mono uppercase">Total Giving &amp; Tithes</span>
+            <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+              <ArrowDownLeft size={16} />
+            </span>
+          </div>
+          <div className="text-2xl font-black text-emerald-400 font-mono">
+            {currencySymbol} {totalIncome.toLocaleString()}
+          </div>
+          <span className="text-[10px] text-slate-400 block">{incomeList.length} total tithe receipts issued</span>
+        </div>
+
+        <div className="win11-card p-5 rounded-3xl border border-white/10 space-y-2">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-mono uppercase">Total Expense Outflow</span>
+            <span className="p-2 rounded-xl bg-rose-500/10 text-rose-400">
+              <ArrowUpRight size={16} />
+            </span>
+          </div>
+          <div className="text-2xl font-black text-rose-400 font-mono">
+            {currencySymbol} {totalExpenses.toLocaleString()}
+          </div>
+          <span className="text-[10px] text-slate-400 block">{expensesList.length} vouchers recorded</span>
+        </div>
+
+        <div className="win11-card p-5 rounded-3xl border border-white/10 space-y-2">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-mono uppercase">Net Operating Liquidity</span>
+            <span className="p-2 rounded-xl bg-sky-500/10 text-sky-400">
+              <Wallet size={16} />
+            </span>
+          </div>
+          <div className={`text-2xl font-black font-mono ${netBalance >= 0 ? 'text-sky-400' : 'text-rose-400'}`}>
+            {currencySymbol} {netBalance.toLocaleString()}
+          </div>
+          <span className="text-[10px] text-slate-400 block">Available in bank &amp; cash accounts</span>
+        </div>
+      </div>
+      )}
+
+      {/* TAB 1: INCOME & TITHES */}
+      {activeFinanceSubTab === 'income' && (
+        <div className="space-y-6">
+          <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
+            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2 font-mono">
+              <Plus size={16} />
+              <span>Record New Tithe / Offering Inflow</span>
+            </h3>
+
+            <form onSubmit={handleAddIncome} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Contributor Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Bro. David Miller"
+                  value={incomeForm.member}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, member: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none focus:border-rose-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Giving Category *</label>
+                <select
+                  value={incomeForm.category}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
+                >
+                  {DEFAULT_GIVING_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Amount ({currencySymbol}) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  placeholder="e.g. 10000"
+                  value={incomeForm.amount}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono font-bold mt-1 focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Payment Mode</label>
+                <select
+                  value={incomeForm.mode}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, mode: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
+                >
+                  <option value="UPI / GPay">UPI / GPay / QR</option>
+                  <option value="Bank Transfer">Bank Transfer (NEFT)</option>
+                  <option value="Cash">Cash Offering</option>
+                  <option value="Cheque">Cheque</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-4 flex justify-between items-center pt-2">
+                <input
+                  type="text"
+                  placeholder="PAN / Tax Identification Number (Optional for 80G Receipt)"
+                  value={incomeForm.panNumber}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, panNumber: e.target.value.toUpperCase() })}
+                  className="w-72 bg-slate-950/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none"
+                />
+
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition text-xs"
+                >
+                  <Plus size={15} />
+                  <span>Save Tithe Record</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Income Table */}
+          <div className="win11-card rounded-3xl overflow-hidden border border-white/10">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-white/10 text-slate-400 text-[10px] uppercase font-mono bg-white/[0.02]">
+                  <tr>
+                    <th className="py-3 px-3.5">Receipt ID</th>
+                    <th className="py-3 px-3.5">Date</th>
+                    <th className="py-3 px-3.5">Contributor</th>
+                    <th className="py-3 px-3.5">Category</th>
+                    <th className="py-3 px-3.5">Payment Channel</th>
+                    <th className="py-3 px-3.5 text-right">Amount</th>
+                    <th className="py-3 px-3.5 text-center">80G / Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {incomeList.map((item) => (
+                    <tr key={item.id} className="hover:bg-white/[0.02] transition">
+                      <td className="py-3 px-3.5 font-mono font-bold text-amber-400">{item.id}</td>
+                      <td className="py-3 px-3.5 text-slate-300 font-mono text-[11px]">{item.date}</td>
+                      <td className="py-3 px-3.5 font-semibold text-white">
+                        <div>{item.member}</div>
+                        {item.panNumber && <div className="text-[10px] text-slate-400 font-mono">PAN: {item.panNumber}</div>}
+                      </td>
+                      <td className="py-3 px-3.5 text-emerald-400 font-medium">{item.category}</td>
+                      <td className="py-3 px-3.5 text-slate-400 font-mono text-[11px]">{item.mode}</td>
+                      <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-400">
+                        + {currencySymbol} {Number(item.amount).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-3.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReceipt(item)}
+                            className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                          >
+                            <Printer size={12} />
+                            <span>80G Receipt</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteIncome(item.id)}
+                            className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: EXPENSES */}
+      {activeFinanceSubTab === 'expenses' && (
+        <div className="space-y-6">
+          <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
+            <h3 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2 font-mono">
+              <Plus size={16} />
+              <span>Record Church Expense Outflow Voucher</span>
+            </h3>
+
+            <form onSubmit={handleAddExpense} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Expense Category *</label>
+                <select
+                  value={expenseForm.category}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
+                >
+                  <option value="Electricity & Utility Bills">Electricity &amp; Utility Bills</option>
+                  <option value="Sound, Media & Instruments">Sound, Media &amp; Instruments</option>
+                  <option value="Pastoral Honorarium & Staff">Pastoral Honorarium &amp; Staff</option>
+                  <option value="Charity, Food & Benevolence">Charity, Food &amp; Benevolence</option>
+                  <option value="Church Building Maintenance">Church Building Maintenance</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Amount ({currencySymbol}) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  placeholder="e.g. 4500"
+                  value={expenseForm.amount}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-rose-400 font-mono font-bold mt-1 focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-medium">Payment Mode</label>
+                <select
+                  value={expenseForm.paymentMode}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, paymentMode: e.target.value })}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white mt-1 focus:outline-none cursor-pointer"
+                >
+                  <option value="Bank Transfer">Bank Transfer (NEFT)</option>
+                  <option value="UPI / GPay">UPI / GPay</option>
+                  <option value="Cash">Cash Voucher</option>
+                  <option value="Cheque">Cheque</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-3 flex justify-between items-center gap-4 pt-1">
+                <input
+                  type="text"
+                  placeholder="Description / Bill Invoice Notes (e.g. Main Hall AC Repair)"
+                  value={expenseForm.notes}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })}
+                  className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition text-xs shrink-0"
+                >
+                  <Plus size={15} />
+                  <span>File Voucher</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Expenses Table */}
+          <div className="win11-card rounded-3xl overflow-hidden border border-white/10">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-white/10 text-slate-400 text-[10px] uppercase font-mono bg-white/[0.02]">
+                  <tr>
+                    <th className="py-3 px-3.5">Voucher ID</th>
+                    <th className="py-3 px-3.5">Date</th>
+                    <th className="py-3 px-3.5">Category</th>
+                    <th className="py-3 px-3.5">Description Notes</th>
+                    <th className="py-3 px-3.5">Channel</th>
+                    <th className="py-3 px-3.5 text-right">Amount</th>
+                    <th className="py-3 px-3.5 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {expensesList.map((item) => (
+                    <tr key={item.id} className="hover:bg-white/[0.02] transition">
+                      <td className="py-3 px-3.5 font-mono font-bold text-rose-400">{item.id}</td>
+                      <td className="py-3 px-3.5 text-slate-300 font-mono text-[11px]">{item.date}</td>
+                      <td className="py-3 px-3.5 font-semibold text-white">{item.category}</td>
+                      <td className="py-3 px-3.5 text-slate-400">{item.notes || '-'}</td>
+                      <td className="py-3 px-3.5 text-slate-400 font-mono text-[11px]">{item.paymentMode}</td>
+                      <td className="py-3 px-3.5 text-right font-mono font-bold text-rose-400">
+                        - {currencySymbol} {Number(item.amount).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExpense(item.id)}
+                          className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: 80G RECEIPT DIRECTORY */}
+      {activeFinanceSubTab === 'receipts_80g' && (
+        <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
+          <div className="border-b border-white/10 pb-3">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <FileText className="text-amber-400" size={18} />
+              <span>Direct 80G Tax Exemption Certificate Directory</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">Click any contribution record below to view and print formal 80G receipts.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {incomeList.map((item) => (
+              <div 
+                key={item.id}
+                onClick={() => setSelectedReceipt(item)}
+                className="p-4 rounded-2xl bg-black/40 border border-white/10 hover:border-amber-500/50 cursor-pointer transition space-y-2 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white">{item.member}</span>
+                    <span className="text-[10px] font-mono text-amber-400 font-bold">{item.id}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">{item.category}</div>
+                  {item.panNumber && <div className="text-[10px] font-mono text-slate-500">PAN: {item.panNumber}</div>}
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <span className="text-xs font-mono font-bold text-emerald-400">{currencySymbol} {Number(item.amount).toLocaleString()}</span>
+                  <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+                    <Printer size={12} /> View 80G
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* FELLOWSHIP & SPONSORSHIPS TAB VIEW (Updated without Choir/General Fund & with Custom Cause + Full Address) */}
+      {activeFinanceSubTab === 'sponsorships' && (
+        <div className="space-y-6 animate-in fade-in">
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-white/10 max-w-sm">
+            <span className="text-xs text-slate-400 block uppercase font-mono">Total Sponsorship Valuation</span>
+            <span className="text-2xl font-black text-pink-400 font-mono mt-1 block">₹ {totalSponsorshipValue.toLocaleString()}</span>
+            <span className="text-[11px] text-slate-400 mt-1 block">{sponsorships.length} Registered Fellowship Sponsorships</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Registration Form */}
+            <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
+              <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                <Plus size={15} className="text-pink-400" />
+                <span>Register Fellowship Sponsorship</span>
+              </h4>
+
+              <form onSubmit={handleAddSponsorship} className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-mono">Sponsorship Cause *</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomCause(!isCustomCause)}
+                      className="text-[10px] text-pink-400 hover:underline cursor-pointer font-semibold"
+                    >
+                      {isCustomCause ? 'Select from list' : '+ Add Custom Cause'}
+                    </button>
+                  </div>
+
+                  {isCustomCause ? (
+                    <input
+                      type="text"
+                      required
+                      placeholder="Type custom cause name..."
+                      value={customCauseInput}
+                      onChange={(e) => setCustomCauseInput(e.target.value)}
+                      className="w-full bg-slate-950 border border-pink-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  ) : (
+                    <select
+                      value={sponsorForm.cause}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, cause: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-pink-300 font-bold focus:outline-none cursor-pointer"
+                    >
+                      <option value="FELLOWSHIP_MEALS">Fellowship Meal (அன்பு விருந்து)</option>
+                      <option value="TRUST_KIDS">Trust Kids / Orphanage Aid (சிறுவர் இல்ல உணவு)</option>
+                      <option value="ALTAR_FLOWERS">Altar Flowers (பீட மலர்கள்)</option>
+                      <option value="BENEVOLENCE">Benevolence Aid (தரும உதவி)</option>
+                    </select>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Sponsor Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Bro. / Sis. Name"
+                      value={sponsorForm.sponsorName}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, sponsorName: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Mobile Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="98430XXXXX"
+                      value={sponsorForm.phone}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, phone: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Location / Full Address *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="City / Area / Address"
+                      value={sponsorForm.location}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, location: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Occasion / Milestone</label>
+                    <select
+                      value={sponsorForm.occasion}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, occasion: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-cyan-300 font-bold focus:outline-none cursor-pointer"
+                    >
+                      <option value="BIRTHDAY">Birthday (பிறந்தநாள்)</option>
+                      <option value="ANNIVERSARY">Wedding Anniversary (திருமண நாள்)</option>
+                      <option value="THANKSGIVING">Thanksgiving (நன்றியறிதல்)</option>
+                      <option value="MEMORIAL">Memorial (நினைவு நாள்)</option>
+                      <option value="GENERAL">General Giving</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Target Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={sponsorForm.targetDate}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, targetDate: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-2 py-2 text-xs text-pink-300 font-mono focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Estimated Value (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="5000"
+                      value={sponsorForm.amountEstimate}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, amountEstimate: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-2 py-2 text-xs text-emerald-400 font-mono font-bold focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-lg shadow-pink-600/20"
+                >
+                  Save Detailed Sponsorship Record
+                </button>
+              </form>
+            </div>
+
+            {/* List Display */}
+            <div className="lg:col-span-2 space-y-3 max-h-[520px] overflow-y-auto pr-1">
+              {sponsorships.length === 0 ? (
+                <div className="p-8 text-center text-slate-500 text-xs font-mono bg-slate-900 rounded-3xl border border-white/10">
+                  No fellowship or sponsorships recorded yet.
+                </div>
+              ) : (
+                sponsorships.map((s) => (
+                  <div key={s.id} className="p-4 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h5 className="text-xs font-bold text-white">{s.sponsorName}</h5>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                          {s.occasion || 'GENERAL'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-mono">
+                        {s.cause} • Ph: {s.phone || 'N/A'} • Address: {s.location || 'N/A'} • Date: {s.targetDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-emerald-400 font-mono">₹ {Number(s.amountEstimate || 0).toLocaleString()}</span>
+                      <button onClick={() => handleDeleteSponsorship(s.id)} className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <PrintableReceiptModal
+        transaction={selectedReceipt}
+        churchInfo={churchConfig}
+        onClose={() => setSelectedReceipt(null)}
+        onSendReceipt={() => sendReceiptViaWhatsApp(selectedReceipt)}
+      />
+
+      <Annual80GCertificateModal
+        isOpen={isCertificateOpen}
+        onClose={() => setIsCertificateOpen(false)}
+      />
+    </div>
+  );
+}

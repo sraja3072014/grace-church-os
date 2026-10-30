@@ -1,0 +1,220 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --card-glow-color: rgba(14, 116, 144, 0.4);
+    --glow-accent: rgba(14, 116, 144, 0.4);
+    --shadow-depth: rgba(0, 0, 0, 0.5);
+    --dynamic-text-color: #ffffff;
+    --ambient-glow-opacity: 0.32;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-color: #07050d !important;
+    color: #f1f5f9;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* =========================================================
+   1. Dynamic UI Theme Tokens (Glass, Nature, Neumorphism, Flat)
+   ========================================================= */
+
+/* A. Frosted Liquid Glass (Glassmorphism) */
+[data-theme="glassmorphism"] {
+  --theme-card-bg: rgba(15, 23, 42, 0.45);
+  --theme-card-blur: none;
+  --theme-card-border: 1px solid rgba(255, 255, 255, 0.12);
+  --theme-card-radius: 1.5rem;
+  --theme-card-shadow: 0 16px 36px 0 var(--shadow-depth, rgba(0, 0, 0, 0.5));
+}
+
+/* B. Naturemorphism (Organic Earth / Forest Eco) */
+[data-theme="naturemorphism"] {
+  --theme-card-bg: rgba(6, 20, 15, 0.55);
+  --theme-card-blur: none;
+  --theme-card-border: 1px solid rgba(16, 185, 129, 0.18);
+  --theme-card-radius: 1.5rem;
+  --theme-card-shadow: 0 16px 36px 0 rgba(2, 44, 34, 0.6);
+}
+
+/* C. Soft Neumorphism (Soft 3D Dark) */
+[data-theme="neumorphism"] {
+  --theme-card-bg: #0f172a;
+  --theme-card-blur: none;
+  --theme-card-border: 1px solid rgba(255, 255, 255, 0.05);
+  --theme-card-radius: 1.5rem;
+  --theme-card-shadow: 8px 8px 18px #070b14, -8px -8px 18px #172340;
+}
+
+/* D. Minimal Flat (Clean Executive Look) */
+[data-theme="minimal_flat"] {
+  --theme-card-bg: #0c1220;
+  --theme-card-blur: none;
+  --theme-card-border: 1px solid #1e293b;
+  --theme-card-radius: 0.85rem;
+  --theme-card-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* =========================================================
+   E. Windows Aero / Liquid Glass Model (Specular Refraction)
+   ========================================================= */
+[data-theme="aero_liquid"] {
+  --theme-card-bg: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.03) 40%,
+    rgba(15, 23, 42, 0.4) 100%
+  );
+  --theme-card-blur: blur(0px); /* 0px Crystal Clear Glass */
+  --theme-card-border: 1px solid rgba(255, 255, 255, 0.28);
+  --theme-card-radius: 1.25rem;
+  --theme-card-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Liquid Glass Hover Effect */
+[data-theme="aero_liquid"] .win11-card:hover,
+[data-theme="aero_liquid"] .crystal-card:hover {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 
+    0 24px 48px rgba(0, 0, 0, 0.6),
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.6),
+    0 0 20px rgba(6, 182, 212, 0.35) !important;
+}
+
+/* அனைத்து கார்டுகளுக்கும் பொதுவான இணைப்பு */
+.win11-card,
+.crystal-card,
+.glass-panel {
+  background: var(--theme-card-bg, rgba(15, 23, 42, 0.45)) !important;
+  -webkit-backdrop-filter: var(--theme-card-blur, blur(20px) saturate(140%)) !important;
+  backdrop-filter: var(--theme-card-blur, blur(20px) saturate(140%)) !important;
+  border: var(--theme-card-border, 1px solid rgba(255, 255, 255, 0.12)) !important;
+  border-radius: var(--theme-card-radius, 1.5rem) !important;
+  box-shadow: var(--theme-card-shadow, 0 16px 36px 0 rgba(0, 0, 0, 0.5)) !important;
+  color: var(--dynamic-text-color, #ffffff) !important;
+  position: relative;
+  z-index: 10;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.win11-card:hover,
+.crystal-card:hover,
+.glass-panel:hover {
+  border-color: var(--card-glow-color, rgba(14, 116, 144, 0.6)) !important;
+}
+
+/* =========================================================
+   2. Calm Muted Fluid Aurora (கண்களை உறுத்தாத மென்மையான 4 வண்ண ஆரா)
+   ========================================================= */
+.ambient-glow-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  filter: blur(100px);
+  opacity: var(--ambient-glow-opacity, 0.32);
+  transition: opacity 0.8s ease-in-out;
+}
+
+.ambient-glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+/* Orb 1: அமைதியான டீல் / ஐஸ் வாட்டர் */
+.orb-1 {
+  width: 55vw;
+  height: 55vw;
+  top: -15vw;
+  left: -10vw;
+  background: radial-gradient(circle, rgba(14, 116, 144, 0.55) 0%, rgba(14, 116, 144, 0) 70%);
+  animation: calmFloat1 26s ease-in-out infinite alternate;
+}
+
+/* Orb 2: மெல்லிய லாவெண்டர் / இண்டிகோ */
+.orb-2 {
+  width: 60vw;
+  height: 60vw;
+  top: -5vw;
+  right: -15vw;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.45) 0%, rgba(99, 102, 241, 0) 70%);
+  animation: calmFloat2 32s ease-in-out infinite alternate;
+}
+
+/* Orb 3: அமைதியான ரோஸ் கோல்ட் */
+.orb-3 {
+  width: 50vw;
+  height: 50vw;
+  bottom: -15vw;
+  left: 10vw;
+  background: radial-gradient(circle, rgba(190, 24, 93, 0.35) 0%, rgba(190, 24, 93, 0) 70%);
+  animation: calmFloat3 28s ease-in-out infinite alternate;
+}
+
+/* Orb 4: கதகதப்பான மெழுகுவர்த்தி தங்கம் (Candlelight Amber) */
+.orb-4 {
+  width: 55vw;
+  height: 55vw;
+  bottom: -10vw;
+  right: -10vw;
+  background: radial-gradient(circle, rgba(180, 83, 9, 0.4) 0%, rgba(180, 83, 9, 0) 70%);
+  animation: calmFloat4 34s ease-in-out infinite alternate;
+}
+
+@keyframes calmFloat1 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(15vw, 15vh) scale(1.08); }
+  100% { transform: translate(5vw, 25vh) scale(0.95); }
+}
+
+@keyframes calmFloat2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-15vw, 20vh) scale(1.1); }
+  100% { transform: translate(-20vw, 8vh) scale(0.92); }
+}
+
+@keyframes calmFloat3 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20vw, -15vh) scale(1.06); }
+  100% { transform: translate(10vw, -25vh) scale(0.98); }
+}
+
+@keyframes calmFloat4 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-18vw, -18vh) scale(1.12); }
+  100% { transform: translate(-8vw, -10vh) scale(0.94); }
+}
+
+@media print {
+  .ambient-glow-container {
+    display: none !important;
+  }
+}
+
+.win11-glass {
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: none !important;
+}
+
+.win11-card {
+  background: rgba(30, 41, 59, 0.35) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: none !important;
+}

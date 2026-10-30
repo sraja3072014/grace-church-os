@@ -1,0 +1,8 @@
+{
+  "short_name": "GraceOS",
+  "name": "Grace Church Network OS",
+  "start_url": "/",
+  "background_color": "#07050d",
+  "theme_color": "#06b6d4",
+  "display": "standalone"
+}

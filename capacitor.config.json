@@ -1,0 +1,14 @@
+{
+  "appId": "org.gracechurch.companion",
+  "appName": "GraceOS Mobile",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "BarcodeScanning": {
+      "cameraDirection": "back"
+    }
+  }
+}
