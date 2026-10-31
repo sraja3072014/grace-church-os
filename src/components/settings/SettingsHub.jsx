@@ -32,7 +32,7 @@ import PaymentGatewayConfigTab from './finance/PaymentGatewayConfigTab';
 
 // 4. System & Hardware
 import ThemeDisplayTab from './system/ThemeDisplayTab';
-import MobileSyncTab from './system/MobileSyncTab';
+import MobileAppRelayPanel from './system/MobileAppRelayPanel';
 import WhatsappHubTab from './system/WhatsappHubTab';
 import BibleHubTab from './system/BibleHubTab';
 import ServiceRequestsTab from './system/ServiceRequestsTab';
@@ -506,7 +506,7 @@ export default function SettingsHub({ session, initialSubTab = 'main_church' }) 
           {/* System & Vault Node */}
           {activeTab === 'theme_display' && <ThemeDisplayTab />}
           {activeTab === 'language_region' && <LanguageRegionTab />}
-          {activeTab === 'mobile_sync' && <MobileSyncTab />}
+          {activeTab === 'mobile_sync' && <MobileAppRelayPanel />}
           {activeTab === 'whatsapp_hub' && <WhatsappHubTab />}
           {activeTab === 'bible_hub' && <BibleHubTab />}
           {activeTab === 'audit' && <AuditTrailViewerDesk />}
