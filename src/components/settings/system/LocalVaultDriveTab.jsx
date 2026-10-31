@@ -39,12 +39,12 @@ export default function LocalVaultDriveTab() {
     setLogs(prev => [`[${time}] ${type.toUpperCase()}: ${msg}`, ...prev.slice(0, 20)]);
   };
 
-  // டிஸ்க்கில் கோப்புகள் உள்ளனவா எனச் சரிபார்த்தல் (Browser & Electron Hybrid)
+  // Verify if files exist on disk (Browser & Electron Hybrid)
   const verifyFilesOnDisk = async () => {
-    addLog('கோப்புகளைச் சரிபார்க்கும் செயல்முறை துவங்குகிறது...');
+    addLog('Starting disk files verification process...');
     const statusMap = { schemaSql: false };
 
-    // 1. Electron Runtime-ல் சரிபார்த்தல்
+    // 1. Check in Electron Runtime
     if (window.electronAPI?.readFile && getMountedVaultPath()) {
       try {
         const currentPath = getMountedVaultPath();
@@ -60,14 +60,14 @@ export default function LocalVaultDriveTab() {
         }
 
         setFileStatus(statusMap);
-        addLog('Electron ஹார்ட் டிஸ்க் கோப்புகள் வெற்றிகரமாகச் சரிபார்க்கப்பட்டன!', 'success');
+        addLog('Electron hard drive files verified successfully!', 'success');
         return;
       } catch (err) {
-        addLog(`Electron சரிபார்ப்பில் பிழை: ${err.message}`, 'error');
+        addLog(`Electron verification error: ${err.message}`, 'error');
       }
     }
 
-    // 2. Web Browser File System Handle-ல் சரிபார்த்தல்
+    // 2. Check in Web Browser File System Handle
     if (window.__vaultRootDirHandle) {
       try {
         const dbDir = await window.__vaultRootDirHandle.getDirectoryHandle('database', { create: false });
@@ -87,14 +87,14 @@ export default function LocalVaultDriveTab() {
         }
 
         setFileStatus(statusMap);
-        addLog('உலாவி வழியாக லோக்கல் டிஸ்க் கோப்புகள் சரிபார்க்கப்பட்டன!', 'success');
+        addLog('Local disk files verified via browser successfully!', 'success');
         return;
       } catch (err) {
-        addLog(`Browser Vault அணுக முடியவில்லை: ${err.message}`, 'warn');
+        addLog(`Browser Vault unreachable: ${err.message}`, 'warn');
       }
     }
 
-    addLog('Vault இன்னும் மவுண்ட் செய்யப்படவில்லை அல்லது அணுகல் அனுமதி தேவை.', 'warn');
+    addLog('Vault is not mounted yet or requires access permission.', 'warn');
   };
 
   useEffect(() => {
@@ -103,10 +103,10 @@ export default function LocalVaultDriveTab() {
     }
   }, [mountedPath]);
 
-  // 1. டிரைவ் ஃபோல்டரைத் தேர்ந்தெடுத்து 11 கோப்புகளையும் உண்மையான தரவுகளுடன் உருவாக்குதல்
+  // 1. Select drive folder and create all 11 files with live data
   const handleMountFolder = async () => {
     setLoading(true);
-    addLog('ஃபோல்டர் தேர்ந்தெடுக்கும் சாளரம் திறக்கப்படுகிறது...');
+    addLog('Opening folder selection dialog...');
     try {
       // 🌟 1. Electron Native Desktop Mode
       if (window.electronAPI && window.electronAPI.selectDirectory) {
@@ -116,7 +116,7 @@ export default function LocalVaultDriveTab() {
           addLog(`Electron Vault Mounted: ${chosen}`, 'success');
           await writeAll11ModulesData();
         } else {
-          addLog('ஃபோல்டர் தேர்வு ரத்து செய்யப்பட்டது.', 'warn');
+          addLog('Folder selection was cancelled.', 'warn');
         }
         return;
       }
@@ -131,14 +131,14 @@ export default function LocalVaultDriveTab() {
         window.__vaultRootDirHandle = dirHandle;
         localStorage.setItem('graceos_vault_folder_name', dirHandle.name);
         setMountedPath(dirHandle.name);
-        addLog(`Web Browser Vault இணைக்கப்பட்டது: /${dirHandle.name}`, 'success');
+        addLog(`Web Browser Vault connected: /${dirHandle.name}`, 'success');
 
-        // உடனே அனைத்து 11 கோப்புகளையும் உண்மையான தரவுகளுடன் எழுதுதல்
+        // Immediately write all 11 modules with live data
         await writeAll11ModulesData();
         return;
       }
 
-      alert('இந்த பிரவுசரில் File System API வசதி இல்லை. தயவுசெய்து Google Chrome அல்லது Microsoft Edge உலாவியைப் பயன்படுத்தவும்.');
+      alert('This browser does not support the File System Access API. Please use Google Chrome or Microsoft Edge.');
       addLog('Browser lacks File System API support.', 'error');
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -149,13 +149,13 @@ export default function LocalVaultDriveTab() {
     }
   };
 
-  // 2. அனைத்து 11 ஃபைல்களையும் உண்மையான டேட்டாவுடன் டிஸ்க்கில் எழுதும் முதன்மை செயல்பாடு
+  // 2. Main function to write all 11 files with live data to disk
   const writeAll11ModulesData = async () => {
     setLoading(true);
-    addLog('அனைத்து 11 மாட்யூல்களின் தகவல்களும் டிஸ்க்கில் எழுதப்படுகின்றன...', 'info');
+    addLog('Writing all 11 modules data to disk...', 'info');
 
     try {
-      // முழுமையான SQL Schema உருவாக்கிக்கொள்ளுதல்
+      // Generate complete SQL schema dump
       const generatedSql = await sqlFileStore.generateSQLDump();
 
       // A. Browser File System Access API
@@ -163,25 +163,25 @@ export default function LocalVaultDriveTab() {
         const dbDir = await window.__vaultRootDirHandle.getDirectoryHandle('database', { create: true });
         await window.__vaultRootDirHandle.getDirectoryHandle('backup', { create: true });
 
-        // 1. SQL Dump எழுதுதல்
+        // 1. Write SQL Dump
         const sqlHandle = await dbDir.getFileHandle('schema_init.sql', { create: true });
         const sqlWriter = await sqlHandle.createWritable();
         await sqlWriter.write(generatedSql);
         await sqlWriter.close();
-        addLog('✓ schema_init.sql (முழுமையான SQL அமைப்புடன்) எழுதப்பட்டது.', 'success');
+        addLog('✓ schema_init.sql (with full SQL structure) written successfully.', 'success');
 
-        // 2. 11 JSON கோப்புகளையும் லோக்கல் வோல்ட் தரவோடு எழுதுதல்
+        // 2. Write 11 JSON files with live vault data
         for (const mod of ALL_11_MODULES) {
           const liveData = await getVaultData(mod.key, []);
           const fileHandle = await dbDir.getFileHandle(mod.file, { create: true });
           const writer = await fileHandle.createWritable();
           await writer.write(JSON.stringify(liveData, null, 2));
           await writer.close();
-          addLog(`✓ ${mod.file} (${Array.isArray(liveData) ? liveData.length : 1} பதிவுகள்) எழுதப்பட்டது.`, 'success');
+          addLog(`✓ ${mod.file} (${Array.isArray(liveData) ? liveData.length : 1} records) written.`, 'success');
         }
 
         await verifyFilesOnDisk();
-        addLog('அனைத்து 11 கோப்புகளும் உங்கள் ஹார்ட் டிரைவில் வெற்றிகரமாகச் சேமிக்கப்பட்டன!', 'success');
+        addLog('All 11 files have been successfully saved to your drive!', 'success');
         return;
       }
 
@@ -205,13 +205,13 @@ export default function LocalVaultDriveTab() {
         }
 
         await verifyFilesOnDisk();
-        addLog('Electron: 11 கோப்புகளும் டிஸ்க்கில் முழுமையாக எழுதப்பட்டன!', 'success');
+        addLog('Electron: All 11 files written to disk completely!', 'success');
         return;
       }
 
-      alert('முதலில் "ஃபோல்டரைத் தேர்ந்தெடு" கொடுத்து கம்ப்யூட்டரில் ஒரு ஃபோல்டரைத் தேர்வு செய்யவும்!');
+      alert('Please click "Select Drive Folder" first to choose a folder on your computer!');
     } catch (err) {
-      addLog(`கோப்புகள் எழுதுவதில் பிழை: ${err.message}`, 'error');
+      addLog(`File writing error: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -227,9 +227,9 @@ export default function LocalVaultDriveTab() {
             <HardDrive size={24} />
           </div>
           <div>
-            <h4 className="text-base font-bold text-white">Physical Local Drive Vault (நேரடி வன்வட்டு சேமிப்பு)</h4>
+            <h4 className="text-base font-bold text-white">Physical Local Drive Vault (Direct Disk Storage)</h4>
             <p className="text-xs text-orange-200/60 mt-0.5">
-              11 மாட்யூல்களையும் கணினியின் வன்வட்டில் (C:, D:, E:) நேரடி .json & .sql கோப்புகளாகச் சேமிக்கும் தளம்.
+              Directly stores all 11 church modules on your local drive (C:, D:, E:) as .json & .sql files.
             </p>
           </div>
         </div>
@@ -239,7 +239,7 @@ export default function LocalVaultDriveTab() {
           className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl border border-white/10 transition cursor-pointer"
         >
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-          <span>நிலை சரிபார் (Refresh)</span>
+          <span>Refresh Status</span>
         </button>
       </div>
 
@@ -249,10 +249,10 @@ export default function LocalVaultDriveTab() {
         <div className="p-6 rounded-3xl bg-slate-900 border border-white/10 space-y-5 h-fit">
           <div>
             <span className="text-[11px] font-bold text-orange-400 uppercase tracking-wider block mb-1">
-              தேர்ந்தெடுக்கப்பட்ட பாதை (Active Vault Path)
+              Active Vault Path
             </span>
             <div className="p-3 bg-slate-950 rounded-xl border border-white/10 font-mono text-xs break-all text-orange-300">
-              {mountedPath ? `Local Drive: /${mountedPath}` : 'எந்த ஃபோல்டரும் தேர்ந்தெடுக்கப்படவில்லை'}
+              {mountedPath ? `Local Drive: /${mountedPath}` : 'No folder selected'}
             </div>
           </div>
 
@@ -263,7 +263,7 @@ export default function LocalVaultDriveTab() {
               className="w-full py-3 bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-400 hover:to-rose-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 cursor-pointer disabled:opacity-50"
             >
               <FolderPlus size={16} />
-              <span>{mountedPath ? 'வேறொரு டிரைவ் பாத் மாற்று' : 'கம்ப்யூட்டர் டிரைவ் பாத் தேர்வு செய்'}</span>
+              <span>{mountedPath ? 'Change Drive Folder' : 'Select Computer Drive Folder'}</span>
             </button>
 
             <button
@@ -272,13 +272,13 @@ export default function LocalVaultDriveTab() {
               className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border border-emerald-500/30 cursor-pointer disabled:opacity-40"
             >
               <Save size={15} />
-              <span>11 கோப்புகளையும் உடனே சேமி (Sync to Disk)</span>
+              <span>Sync All 11 Files to Disk</span>
             </button>
           </div>
 
           <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2.5 text-emerald-400 text-xs">
             <ShieldCheck size={18} className="shrink-0" />
-            <span>Browser Native File System API நேரடி இயக்கத்தில் உள்ளது.</span>
+            <span>Browser Native File System API is active and ready.</span>
           </div>
         </div>
 
@@ -288,7 +288,7 @@ export default function LocalVaultDriveTab() {
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <h5 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <FileText size={15} className="text-orange-400" />
-                <span>டிஸ்க்கில் உள்ள கோப்புகளின் நிலை (11 Data Files + SQL)</span>
+                <span>Disk Files Status (11 Data Files + SQL)</span>
               </h5>
               <span className="text-[10px] font-mono text-slate-400">Folder: /database/</span>
             </div>
@@ -298,10 +298,10 @@ export default function LocalVaultDriveTab() {
               <div className="flex items-center gap-2">
                 <Database size={15} className="text-amber-400" />
                 <span className="font-bold text-white">schema_init.sql</span>
-                <span className="text-[10px] text-slate-400 font-mono">(முழுமையான அட்டவணை DDL & RLS)</span>
+                <span className="text-[10px] text-slate-400 font-mono">(Full Table DDL & RLS)</span>
               </div>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${fileStatus.schemaSql ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                {fileStatus.schemaSql ? '✓ உருவாக்கப்பட்டது' : '✗ உருவாக்கப்படவில்லை'}
+                {fileStatus.schemaSql ? '✓ Created' : '✗ Missing'}
               </span>
             </div>
 
@@ -323,7 +323,7 @@ export default function LocalVaultDriveTab() {
                     <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                       isCreated ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-500'
                     }`}>
-                      {isCreated ? '✓ டிஸ்க்கில் உள்ளது' : 'இல்லை'}
+                      {isCreated ? '✓ Present on Disk' : 'Missing'}
                     </span>
                   </div>
                 );
@@ -339,7 +339,7 @@ export default function LocalVaultDriveTab() {
             </div>
             <div className="h-28 overflow-y-auto font-mono text-[11px] text-slate-300 space-y-1 bg-slate-950 p-2.5 rounded-xl border border-white/5">
               {logs.length === 0 ? (
-                <span className="text-slate-600">// இங்கு நடக்கும் நிகழ்வுகள் தானாகப் பதிவாகும்...</span>
+                <span className="text-slate-600">// Live operations will be logged here automatically...</span>
               ) : (
                 logs.map((log, i) => <div key={i}>{log}</div>)
               )}

@@ -24,7 +24,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
     photo: userSession.member?.photo || null
   });
 
-  // குடும்ப உறுப்பினர்கள் பட்டியல் (லோக்கல் ஸ்டோரேஜில் இருந்து நேரடி மேப்பிங்)
+  // Family members list (mapped from local storage)
   const [familyMembers] = useState(() => {
     try {
       const raw = localStorage.getItem('app_members_family_database');
@@ -43,7 +43,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
   const [checkinToken, setCheckinToken] = useState(null);
 
   // Online Offering State
-  const [offeringType, setOfferingType] = useState('தசமபாகம் (Tithe)');
+  const [offeringType, setOfferingType] = useState('Tithe');
   const [amount, setAmount] = useState('');
   const [downloadableReceipt, setDownloadableReceipt] = useState(null);
 
@@ -56,7 +56,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
     setTimeout(() => setToast(''), 3000);
   };
 
-  // 1. சுய செக்-இன் டோக்கன் உருவாக்கம்
+  // 1. Self Check-in Token Generation
   const handleSelfCheckin = () => {
     soundFX.playSuccessChime();
     const tokenNum = Math.floor(100 + Math.random() * 900);
@@ -65,10 +65,10 @@ export default function MemberPortalView({ userSession, onLogout }) {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       hall: 'Main Sanctuary - Hall A'
     });
-    showToast('ஆராதனை வருகை வெற்றிகரமாகப் பதிவானது! ✓');
+    showToast('Service attendance check-in confirmed! ✓');
   };
 
-  // 2. காணிக்கை செலுத்தி ரசீது பெறுதல்
+  // 2. Pay Offering and Generate Receipt
   const handlePayOffering = (e) => {
     e.preventDefault();
     if (!amount || Number(amount) <= 0) return;
@@ -84,11 +84,11 @@ export default function MemberPortalView({ userSession, onLogout }) {
     };
 
     setDownloadableReceipt(newReceipt);
-    showToast('காணிக்கை பதிவு செய்யப்பட்டது! ரசீது தயாராக உள்ளது. ✓');
+    showToast('Offering recorded! Receipt is ready. ✓');
     setAmount('');
   };
 
-  // 3. போட்டோ அப்லோட்
+  // 3. Photo Upload
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -96,12 +96,12 @@ export default function MemberPortalView({ userSession, onLogout }) {
     reader.onloadend = () => {
       setProfileData(prev => ({ ...prev, photo: reader.result }));
       soundFX.playClickPop();
-      showToast('சுயவிவர புகைப்படம் மாற்றப்பட்டது! ✓');
+      showToast('Profile photo updated! ✓');
     };
     reader.readAsDataURL(file);
   };
 
-  // 4. ஜிபிஎஸ் இருப்பிடத்தைப் பெறுதல்
+  // 4. Capture GPS Location
   const handleCaptureLocation = () => {
     soundFX?.playClickPop?.();
     if (navigator.geolocation) {
@@ -110,18 +110,18 @@ export default function MemberPortalView({ userSession, onLogout }) {
           const generatedUrl = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
           setProfileData(prev => ({ ...prev, mapLink: generatedUrl }));
           soundFX?.playSuccessChime?.();
-          showToast('தற்போதைய வீட்டின் ஜிபிஎஸ் இருப்பிடம் பெறப்பட்டது! ✓');
+          showToast('Current residence GPS location captured! ✓');
         },
         () => {
-          showToast('இருப்பிடத்தை எடுக்க முடியவில்லை. மேப் லிங்கை நேரடியாக ஒட்டவும்.');
+          showToast('Could not fetch location. Please paste the map link directly.');
         }
       );
     } else {
-      showToast('இந்த பிரவுசரில் Geolocation வசதி இல்லை.');
+      showToast('Geolocation is not supported in this browser.');
     }
   };
 
-  // 5. சுயவிவர மாற்றக் கோரிக்கையை போதகர் ஒப்புதலுக்கு அனுப்புதல்
+  // 5. Send Profile Update Request for Pastoral Approval
   const handleRequestProfileUpdate = () => {
     soundFX?.playSuccessChime?.();
 
@@ -145,10 +145,10 @@ export default function MemberPortalView({ userSession, onLogout }) {
     const existing = JSON.parse(localStorage.getItem('graceos_pending_profile_updates') || '[]');
     localStorage.setItem('graceos_pending_profile_updates', JSON.stringify([newRequest, ...existing]));
 
-    showToast('சுயவிவரம் மற்றும் இருப்பிட மாற்றக் கோரிக்கை போதகருக்கு அனுப்பப்பட்டது! ⏳');
+    showToast('Profile and residence update request sent to pastor! ⏳');
   };
 
-  // 6. ஜெப விண்ணப்பம் சேமிப்பு
+  // 6. Save Prayer Request
   const handleSubmitPrayer = (e) => {
     e.preventDefault();
     if (!prayerText) return;
@@ -166,7 +166,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
     };
     localStorage.setItem('app_prayer_requests_db', JSON.stringify([newEntry, ...existingPrayers]));
     setPrayerText('');
-    showToast('ஜெபக் குறிப்பு போதகரின் பார்வைக்கு அனுப்பப்பட்டது! 🕊️');
+    showToast('Prayer request sent to pastor! 🕊️');
   };
 
   return (
@@ -213,7 +213,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
         <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-transparent border border-amber-500/30 flex items-center justify-between gap-3 shadow-lg">
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">Sunday Service Check-in</span>
-            <div className="text-xs text-slate-300 mt-0.5">ஆராதனை மண்டபத்திற்குள் வந்ததும் உறுதிப்படுத்தவும்</div>
+            <div className="text-xs text-slate-300 mt-0.5">Please confirm your check-in once you enter the sanctuary hall</div>
           </div>
 
           {checkinToken ? (
@@ -228,7 +228,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
               className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition cursor-pointer"
             >
               <CheckCircle2 size={14} />
-              <span>செக்-இன்</span>
+              <span>Check-in</span>
             </button>
           )}
         </div>
@@ -240,21 +240,21 @@ export default function MemberPortalView({ userSession, onLogout }) {
             onClick={() => setActiveTab('offering')}
             className={`py-2 rounded-xl transition cursor-pointer ${activeTab === 'offering' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400'}`}
           >
-            காணிக்கை & 80G
+            Offering & 80G
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('profile')}
             className={`py-2 rounded-xl transition cursor-pointer ${activeTab === 'profile' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400'}`}
           >
-            சுயவிவரம் & இல்லம்
+            Profile & Home
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('prayer')}
             className={`py-2 rounded-xl transition cursor-pointer ${activeTab === 'prayer' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400'}`}
           >
-            ஜெப விண்ணப்பம்
+            Prayer Request
           </button>
           <button
             type="button"
@@ -272,7 +272,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <span className="text-xs font-bold text-white flex items-center gap-2">
                   <CreditCard size={16} className="text-amber-400" />
-                  ஆன்லைன் காணிக்கை (UPI Direct)
+                  Online Giving (UPI Direct)
                 </span>
                 <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                   80G Exemption
@@ -281,21 +281,21 @@ export default function MemberPortalView({ userSession, onLogout }) {
 
               <form onSubmit={handlePayOffering} className="space-y-3">
                 <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">காணிக்கைப் பிரிவு</label>
+                  <label className="text-[11px] text-slate-400 block mb-1">Offering Category</label>
                   <select
                     value={offeringType}
                     onChange={(e) => setOfferingType(e.target.value)}
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 cursor-pointer"
                   >
-                    <option>தசமபாகம் (Tithe)</option>
-                    <option>ஸ்தோத்திர காணிக்கை (Thanksgiving)</option>
-                    <option>கட்டிட நிதி (Building Fund)</option>
-                    <option>மிஷன் & நற்செய்தி (Missions)</option>
+                    <option>Tithe</option>
+                    <option>Thanksgiving Offering</option>
+                    <option>Building Fund</option>
+                    <option>Missions & Outreach</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">தொகை (₹ Amount)</label>
+                  <label className="text-[11px] text-slate-400 block mb-1">Amount (₹ Amount)</label>
                   <input
                     type="number"
                     required
@@ -311,7 +311,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition cursor-pointer"
                 >
                   <QrCode size={16} />
-                  <span>UPI மூலம் செலுத்தி ரசீது பெறுக</span>
+                  <span>Give via UPI & Get 80G Receipt</span>
                 </button>
               </form>
             </div>
@@ -324,8 +324,8 @@ export default function MemberPortalView({ userSession, onLogout }) {
                   <span className="text-[10px] font-mono text-slate-500">{downloadableReceipt.id}</span>
                 </div>
                 <div className="text-xs space-y-1 font-medium">
-                  <div>பெயர்: <strong>{downloadableReceipt.donor}</strong></div>
-                  <div>பிரிவு: <strong>{downloadableReceipt.category}</strong></div>
+                  <div>Donor: <strong>{downloadableReceipt.donor}</strong></div>
+                  <div>Category: <strong>{downloadableReceipt.category}</strong></div>
                   <div className="text-base font-black text-emerald-800 font-mono pt-1">₹ {downloadableReceipt.amount.toLocaleString()}</div>
                   <div className="text-[9px] text-slate-400 font-mono">{downloadableReceipt.txnId} • {downloadableReceipt.date}</div>
                 </div>
@@ -335,7 +335,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
                   className="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Printer size={13} />
-                  <span>ரசீதை பிரிண்ட் / PDF செய்க</span>
+                  <span>Print / PDF Receipt</span>
                 </button>
               </div>
             )}
@@ -348,7 +348,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <span className="text-xs font-bold text-white flex items-center gap-2">
                 <User size={16} className="text-amber-400" />
-                சுயவிவரம் & இல்ல விவரங்கள்
+                Profile & Household Details
               </span>
               <span className="text-[10px] text-slate-400 font-mono">
                 {userSession.family?.familyId || 'FAM-101'}
@@ -371,14 +371,14 @@ export default function MemberPortalView({ userSession, onLogout }) {
                   className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition cursor-pointer"
                 >
                   <Upload size={13} />
-                  <span>புகைப்படம் மாற்று</span>
+                  <span>Change Photo</span>
                 </button>
               </div>
             </div>
 
             <div className="space-y-3 pt-2">
               <div>
-                <label className="text-[11px] text-slate-400 block mb-1">முழுப் பெயர்</label>
+                <label className="text-[11px] text-slate-400 block mb-1">Full Name</label>
                 <input
                   type="text"
                   value={profileData.name}
@@ -389,7 +389,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">பிறந்த தேதி</label>
+                  <label className="text-[11px] text-slate-400 block mb-1">Date of Birth</label>
                   <input
                     type="date"
                     value={profileData.dob}
@@ -398,7 +398,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">படிப்பு / தொழில்</label>
+                  <label className="text-[11px] text-slate-400 block mb-1">Education / Profession</label>
                   <input
                     type="text"
                     value={profileData.education}
@@ -408,16 +408,16 @@ export default function MemberPortalView({ userSession, onLogout }) {
                 </div>
               </div>
 
-              {/* வீட்டு முகவரி மற்றும் கூகுள் மேப்ஸ் இணைப்பு */}
+              {/* Home Address & Google Maps Location */}
               <div className="space-y-2 pt-2 border-t border-white/10">
                 <label className="text-[11px] text-slate-300 font-semibold flex items-center gap-1">
                   <MapPin size={12} className="text-rose-400" />
-                  <span>வீட்டு முகவரி & கூகுள் மேப் இருப்பிடம்</span>
+                  <span>Residence Address & Google Maps Pin</span>
                 </label>
                 
                 <input
                   type="text"
-                  placeholder="கதவு எண், தெரு, பகுதி..."
+                  placeholder="Door no, street, locality..."
                   value={profileData.address}
                   onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
                   className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
@@ -438,7 +438,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
                     type="button"
                     onClick={handleCaptureLocation}
                     className="px-3 py-2 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-bold flex items-center gap-1 transition shrink-0 cursor-pointer active:scale-95"
-                    title="வீட்டிலிருந்து ஜிபிஎஸ்-ஐப் பெறுக"
+                    title="Pin GPS from home"
                   >
                     <Navigation size={12} />
                     <span>Pin GPS</span>
@@ -453,22 +453,22 @@ export default function MemberPortalView({ userSession, onLogout }) {
                     className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 pt-0.5"
                   >
                     <ExternalLink size={10} />
-                    <span>கூகுள் மேப்பில் சோதனை செய்து பார்க்க (Test Link)</span>
+                    <span>Test Link on Google Maps</span>
                   </a>
                 )}
               </div>
 
-              {/* குடும்ப உறுப்பினர்கள் பட்டியல் பார்வை */}
+              {/* Family Members Directory View */}
               <div className="space-y-2 pt-3 border-t border-white/10">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-300">குடும்ப உறுப்பினர்கள் ({familyMembers.length})</span>
+                  <span className="text-[11px] font-bold text-slate-300">Family Members ({familyMembers.length})</span>
                   <span className="text-[9px] text-slate-500 font-mono">Church Directory</span>
                 </div>
 
                 <div className="space-y-1.5">
                   {familyMembers.length === 0 ? (
                     <div className="p-2 text-[11px] text-slate-500 font-mono text-center">
-                      கூடுதல் உறுப்பினர்கள் பதிவு செய்யப்படவில்லை.
+                      No additional family members registered yet.
                     </div>
                   ) : (
                     familyMembers.map((m, idx) => (
@@ -486,7 +486,7 @@ export default function MemberPortalView({ userSession, onLogout }) {
                 onClick={handleRequestProfileUpdate}
                 className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs mt-3 cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95 transition"
               >
-                விவரங்களை போதகர் ஒப்புதலுக்கு அனுப்பு
+                Submit Updates for Pastoral Approval
               </button>
             </div>
           </div>
@@ -498,17 +498,17 @@ export default function MemberPortalView({ userSession, onLogout }) {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <span className="text-xs font-bold text-white flex items-center gap-2">
                 <HeartHandshake size={16} className="text-rose-400" />
-                ஜெபக் குறிப்பு சமர்ப்பித்தல்
+                Submit Prayer Request
               </span>
               <span className="text-[10px] text-amber-400 flex items-center gap-1">
-                <Lock size={10} /> போதகரின் பார்வைக்கு மட்டும்
+                <Lock size={10} /> Pastoral Confidential Only
               </span>
             </div>
 
             <textarea
               required
               rows={4}
-              placeholder="உங்கள் ஜெபத் தேவைகளை இங்கு பதிவிடவும்..."
+              placeholder="Enter your prayer request and burdens here..."
               value={prayerText}
               onChange={(e) => setPrayerText(e.target.value)}
               className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-400 resize-none leading-relaxed"
@@ -521,14 +521,14 @@ export default function MemberPortalView({ userSession, onLogout }) {
                 onChange={(e) => setIsPrivatePrayer(e.target.checked)}
                 className="w-4 h-4 accent-amber-500 rounded"
               />
-              <span>இதை ரகசிய ஜெபமாக (Pastoral Confidential) வைக்கவும்</span>
+              <span>Keep this prayer request confidential (Pastoral Confidential)</span>
             </label>
 
             <button
               type="submit"
               className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 text-white font-bold text-xs shadow-lg shadow-rose-500/20 active:scale-95 transition cursor-pointer"
             >
-              போதகருக்கு ஜெபக் குறிப்பை அனுப்புக
+              Send Prayer Request to Pastor
             </button>
           </form>
         )}

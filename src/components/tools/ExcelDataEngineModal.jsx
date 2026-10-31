@@ -11,7 +11,7 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
 
   if (!isOpen) return null;
 
-  // 1. மாதிரி CSV படிவத்தை பதிவிறக்குதல் (Sample Template)
+  // 1. Download Sample CSV Template
   const downloadSampleTemplate = () => {
     soundFX.playClickPop();
     const headers = "Name,Phone,RoleInFamily,FamilyName,Area,DOB,Education\n";
@@ -29,7 +29,7 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
     URL.revokeObjectURL(url);
   };
 
-  // 2. CSV கோப்பைப் படித்து லோக்கல் ஸ்டோரேஜில் ஏற்றுதல்
+  // 2. Read CSV File and Import to Local Storage
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -43,7 +43,7 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
         const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
         
         if (lines.length <= 1) {
-          setErrorMessage('கோப்பில் தரவுகள் எதுவும் இல்லை.');
+          setErrorMessage('The file contains no data.');
           return;
         }
 
@@ -59,7 +59,7 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
           const [name, phone, role, familyName, area, dob, education] = cols;
           const assignedFamilyName = familyName || `${name} Household`;
 
-          // குடும்பம் ஏற்கனவே உள்ளதா என சரிபார்த்தல்
+          // Check if family already exists
           let existingFam = currentFamilies.find(f => f.familyName.toLowerCase() === assignedFamilyName.toLowerCase());
 
           const memberObj = {
@@ -96,14 +96,14 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
         setImportStats({ members: importedMembersCount, families: importedFamiliesCount });
         if (onRefreshData) onRefreshData();
       } catch (err) {
-        setErrorMessage('CSV கோப்பைப் படிப்பதில் பிழை ஏற்பட்டது. படிவ அமைப்பைச் சரிபார்க்கவும்.');
+        setErrorMessage('Error reading CSV file. Please verify the template structure.');
       }
     };
 
     reader.readAsText(file);
   };
 
-  // 3. விசுவாசிகள் பட்டியலை CSV ஆக எக்ஸ்போர்ட் செய்தல்
+  // 3. Export Members Directory to CSV
   const exportMembersCSV = () => {
     soundFX.playClickPop();
     const families = JSON.parse(localStorage.getItem('app_members_family_database') || '[]');
@@ -127,7 +127,7 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
     URL.revokeObjectURL(url);
   };
 
-  // 4. 80G வரவு-செலவு லெட்ஜரை எக்ஸ்போர்ட் செய்தல்
+  // 4. Export 80G Financial Ledger to CSV
   const exportFinanceCSV = () => {
     soundFX.playClickPop();
     const ledger = JSON.parse(localStorage.getItem('app_finance_transactions_ledger') || '[]');
@@ -158,7 +158,7 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
             </div>
             <div>
               <h3 className="text-base font-bold text-white">Excel / CSV Data Management Hub</h3>
-              <p className="text-[11px] text-slate-400">மொத்த தரவு பதிவேற்றம் மற்றும் தணிக்கை ஏற்றுமதி பலகை</p>
+              <p className="text-[11px] text-slate-400">Bulk Data Import and Audit Export Console</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-white cursor-pointer">
@@ -171,20 +171,20 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-white flex items-center gap-1.5">
               <Upload size={15} className="text-cyan-400" />
-              எக்செல் / CSV விசுவாசிகள் பதிவேற்றம் (Bulk Import)
+              Excel / CSV Members Bulk Import
             </span>
             <button
               onClick={downloadSampleTemplate}
               className="text-[10px] font-mono text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <Download size={11} />
-              மாதிரி CSV படிவம்
+              Sample CSV Template
             </button>
           </div>
 
           <label className="border-2 border-dashed border-white/10 hover:border-cyan-500/40 rounded-2xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition bg-white/[0.01]">
             <FileSpreadsheet size={28} className="text-slate-500" />
-            <span className="text-xs text-slate-300 font-medium">உங்கள் .csv அல்லது .xlsx கோப்பை இங்கு கிளிக் செய்து தேர்ந்தெடுக்கவும்</span>
+            <span className="text-xs text-slate-300 font-medium">Click here to select your .csv or .xlsx file</span>
             <span className="text-[10px] text-slate-500 font-mono">UTF-8 Encoded CSV Supported</span>
             <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
           </label>
@@ -192,7 +192,7 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
           {importStats && (
             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
               <CheckCircle2 size={15} />
-              <span>வெற்றி! {importStats.members} விசுவாசிகள் மற்றும் {importStats.families} குடும்பங்கள் சேர்க்கப்பட்டன. ✓</span>
+              <span>Success! {importStats.members} members and {importStats.families} families imported. ✓</span>
             </div>
           )}
 
@@ -208,7 +208,7 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
         <div className="space-y-3">
           <span className="text-xs font-bold text-white flex items-center gap-1.5">
             <Download size={15} className="text-amber-400" />
-            தரவு ஏற்றுமதி (Instant CSV Exports)
+            Instant CSV Exports
           </span>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -217,8 +217,8 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
               className="p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-left transition flex items-center justify-between group cursor-pointer"
             >
               <div>
-                <h5 className="text-xs font-bold text-white group-hover:text-amber-300">விசுவாசிகள் பட்டியல்</h5>
-                <span className="text-[10px] text-slate-400">முழு குடும்ப மரம் & போன் எண்கள்</span>
+                <h5 className="text-xs font-bold text-white group-hover:text-amber-300">Members Directory</h5>
+                <span className="text-[10px] text-slate-400">Complete household tree & phone contacts</span>
               </div>
               <Download size={16} className="text-slate-400 group-hover:text-white" />
             </button>
@@ -228,8 +228,8 @@ export default function ExcelDataEngineModal({ isOpen, onClose, onRefreshData })
               className="p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-left transition flex items-center justify-between group cursor-pointer"
             >
               <div>
-                <h5 className="text-xs font-bold text-white group-hover:text-emerald-300">80G தணிக்கை லெட்ஜர்</h5>
-                <span className="text-[10px] text-slate-400">காணிக்கை & தசமபாக ரசீது பதிவுகள்</span>
+                <h5 className="text-xs font-bold text-white group-hover:text-emerald-300">80G Audit Ledger</h5>
+                <span className="text-[10px] text-slate-400">Offerings & tithe receipt logs</span>
               </div>
               <Download size={16} className="text-slate-400 group-hover:text-white" />
             </button>

@@ -11,7 +11,7 @@ export default function WhatsAppDispatchDesk() {
   const [customNote, setCustomNote] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // விசுவாசிகள் பட்டியல்
+  // Members Directory
   const members = useMemo(() => {
     try {
       const raw = localStorage.getItem('app_members_family_database');
@@ -34,7 +34,7 @@ export default function WhatsAppDispatchDesk() {
     }
   }, []);
 
-  // வடிகட்டப்பட்ட பட்டியல்
+  // Filtered Members List
   const filteredMembers = useMemo(() => {
     if (!searchQuery) return members;
     const q = searchQuery.toLowerCase();
@@ -45,50 +45,47 @@ export default function WhatsAppDispatchDesk() {
     );
   }, [members, searchQuery]);
 
-  // மெசேஜ் டெம்ப்ளேட் உருவாக்கும் முறை
+  // Message Template Generator
   const generateMessage = (member) => {
     if (targetType === 'OFFERING_RECEIPT') {
       return (
-`🕊️ *கர்த்தருக்குள் அன்பான ${member.name} அவர்களுக்கு,*
+`🕊️ *Dear ${member.name} in Christ,*
 
-தங்களுடைய தாராளமான தசமபாகம் / காணிக்கை சபையின் கணக்கில் வரவு வைக்கப்பட்டது. கர்த்தர் உங்களை ஆசீர்வதிப்பாராக!
+Your generous offering / tithe has been gratefully received and credited to the church account. May the Lord abundantly bless you!
 
-🧾 *ரசீது எண்:* REC-${Date.now().toString().slice(-6)}
-📅 *தேதி:* ${new Date().toLocaleDateString('en-IN')}
-⛪ *சபை:* Grace Cathedral Church
+🧾 *Receipt No:* REC-${Date.now().toString().slice(-6)}
+📅 *Date:* ${new Date().toLocaleDateString('en-US')}
+⛪ *Church:* Grace Cathedral Church
 
-_"உற்சாகமாய்க் கொடுக்கிறவனிடத்தில் தேவன் பிரியமாயிருக்கிறார்."_ — 2 கொரிந்தியர் 9:7
-
-${customNote ? `\n*சிறப்பு குறிப்பு:* ${customNote}` : ''}
-அன்புடன்,
-*போதகர் & நிர்வாகக் குழு*`
+_"Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver."_ — 2 Corinthians 9:7
+${customNote ? `\n*Note:* ${customNote}` : ''}
+With love & prayers,
+*Pastor & Ministry Board*`
       );
     }
 
     if (targetType === 'EVENT_ALERT') {
       return (
-`🔔 *சபை முக்கிய அறிவிப்பு!*
+`🔔 *Important Church Announcement!*
 
-அன்பான ${member.name},
-வரவிருக்கும் ஞாயிறு ஆராதனை மற்றும் சிறப்பு கூட்டத்தில் குடும்பமாகப் பங்குபெற்று தேவ ஆசீர்வாதத்தைப் பெற்றுக்கொள்ள அன்போடு அழைக்கிறோம்.
+Dear ${member.name},
+You and your family are cordially invited to join us for our upcoming Sunday service and special fellowship gathering to receive God's blessings.
 
-📍 *இடம்:* Main Sanctuary Hall
-⏰ *நேரம்:* காலை 08:30 AM
-
-${customNote ? `\n*விவரம்:* ${customNote}` : ''}
+📍 *Location:* Main Sanctuary Hall
+⏰ *Time:* 08:30 AM
+${customNote ? `\n*Details:* ${customNote}` : ''}
 *Grace Cathedral Church*`
       );
     }
 
     // GENERAL_ANNOUNCEMENT
     return (
-`🕊️ *சபையின் அன்பான வாழ்த்துகள்!*
+`🕊️ *Greetings from Grace Cathedral Church!*
 
-அன்பான ${member.name},
-கர்த்தர் உங்கள் போக்கையும் உங்கள் வரத்தையும் இதுமுதற்கொண்டு என்றென்றைக்கும் காப்பாராக (சங்கீதம் 121:8).
-
-${customNote ? `\n*செய்தி:* ${customNote}` : ''}
-ஜெபங்களுடன்,
+Dear ${member.name},
+May the Lord watch over your coming and going both now and forevermore (Psalm 121:8).
+${customNote ? `\n*Message:* ${customNote}` : ''}
+With prayers,
 *Grace Cathedral Church*`
     );
   };
@@ -97,7 +94,7 @@ ${customNote ? `\n*செய்தி:* ${customNote}` : ''}
     soundFX?.playClickPop?.();
     const cleanPhone = member.phone?.replace(/[^0-9]/g, '');
     if (!cleanPhone) {
-      alert('தொலைபேசி எண் இல்லை!');
+      alert('Phone number missing!');
       return;
     }
     const finalPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
@@ -118,7 +115,7 @@ ${customNote ? `\n*செய்தி:* ${customNote}` : ''}
             </span>
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            காணிக்கை ரசீதுகள், சிறப்பு நிகழ்வுகள் மற்றும் ஜெபக் குறிப்புகளை விசுவாசிகளுக்கு நேரடியாக அனுப்பும் மையம்.
+            Direct dispatch console for official giving receipts, event alerts, and pastoral messages.
           </p>
         </div>
 
@@ -131,7 +128,7 @@ ${customNote ? `\n*செய்தி:* ${customNote}` : ''}
               targetType === 'ALL_MEMBERS' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
             }`}
           >
-            பொது செய்தி
+            General Message
           </button>
           <button
             type="button"
@@ -140,7 +137,7 @@ ${customNote ? `\n*செய்தி:* ${customNote}` : ''}
               targetType === 'OFFERING_RECEIPT' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
             }`}
           >
-            காணிக்கை ரசீது
+            Offering Receipt
           </button>
           <button
             type="button"
@@ -149,47 +146,47 @@ ${customNote ? `\n*செய்தி:* ${customNote}` : ''}
               targetType === 'EVENT_ALERT' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
             }`}
           >
-            கூட்ட அறிவிப்பு
+            Service Announcement
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* இடதுபுறம்: செய்தி தனிப்பயனாக்கம் (Message Customizer) */}
+        {/* Left Column: Message Customizer */}
         <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
           <h4 className="text-xs font-bold text-white flex items-center gap-2">
             <MessageSquare size={15} className="text-emerald-400" />
-            <span>செய்திக் குறிப்பு சேர்த்தல்</span>
+            <span>Message Customizer</span>
           </h4>
 
           <div className="space-y-3">
             <div>
               <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">
-                கூடுதல் செய்தி / வசனம் (Optional Note)
+                Additional Note / Scripture (Optional)
               </label>
               <textarea
                 value={customNote}
                 onChange={(e) => setCustomNote(e.target.value)}
-                placeholder="எ.கா: சிறப்பு உபவாசக் கூட்டம் மாலை 6:30 மணிக்கு நடைபெறும்..."
+                placeholder="e.g. Special fasting prayer will be held at 6:30 PM..."
                 rows={4}
                 className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-400 resize-none leading-relaxed"
               />
             </div>
 
-            {/* நேரடி மாதிரி முன்னோட்டம் (Live Preview Card) */}
+            {/* Live Preview Card */}
             <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/5 space-y-2">
               <span className="text-[10px] text-emerald-400 font-mono font-bold block uppercase tracking-wider">
                 WhatsApp Preview Output:
               </span>
               <p className="text-[11px] text-slate-300 font-sans whitespace-pre-line leading-relaxed italic bg-emerald-950/20 p-2.5 rounded-xl border border-emerald-500/10">
-                {generateMessage({ name: 'விசுவாசி பெயர்' })}
+                {generateMessage({ name: 'Member Name' })}
               </p>
             </div>
           </div>
         </div>
 
-        {/* வலதுபுறம்: விசுவாசிகள் பட்டியல் & அனுப்பும் பலகை */}
+        {/* Right Column: Members Directory & Dispatch Board */}
         <div className="lg:col-span-2 p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
           
           <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
@@ -199,12 +196,12 @@ ${customNote ? `\n*செய்தி:* ${customNote}` : ''}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="பெயர் அல்லது போன் எண் மூலம் தேடுக..."
+                placeholder="Search by member name, phone, or area..."
                 className="w-full bg-slate-950 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-400"
               />
             </div>
             <span className="text-[11px] font-mono text-slate-400 shrink-0">
-              மொத்தம்: <strong className="text-white">{filteredMembers.length}</strong>
+              Total: <strong className="text-white">{filteredMembers.length}</strong>
             </span>
           </div>
 

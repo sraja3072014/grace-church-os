@@ -8,11 +8,92 @@ import {
   Users, UserPlus, Search, Layers, Plus, Trash2, Edit2, 
   Phone, Mail, MapPin, Navigation, Calendar, ShieldCheck, 
   QrCode, X, CheckCircle2, FileSpreadsheet, UserCheck,
-  Droplets, Flame
+  Droplets, Flame, Filter, RotateCcw
 } from 'lucide-react';
 
+const ROLE_FILTERS = [
+  { value: 'ALL', label: 'All Roles', shortLabel: 'All' },
+  { value: 'PASTOR', label: 'Pastor', shortLabel: 'Pastor' },
+  { value: 'LEADER', label: 'Leader / Elder', shortLabel: 'Leader' },
+  { value: 'MEMBER', label: 'Member', shortLabel: 'Member' },
+  { value: 'VOLUNTEER', label: 'Volunteer', shortLabel: 'Volunteer' },
+  { value: 'SUNDAY_SCHOOL_TEACHER', label: 'Sunday School Teacher', shortLabel: 'Sunday School Teacher' }
+];
+
+const AGE_FILTERS = [
+  { value: 'ALL', label: 'All Ages' },
+  { value: 'YOUTH', label: 'Youth (13–30)' },
+  { value: 'KIDS', label: 'Children (≤12)' }
+];
+
+const SPIRITUAL_FILTERS = [
+  { value: 'ALL', label: 'Spiritual Status: All' },
+  { value: 'NOT_BAPTIZED', label: 'Not Baptized' },
+  { value: 'NOT_ANOINTED', label: 'Not Anointed' }
+];
+
+const normalizeFilterText = (value) => String(value || '').trim().toLowerCase();
+
+const getMemberAge = (member) => {
+  const directAge = Number(member?.age);
+  if (Number.isFinite(directAge) && directAge >= 0) return directAge;
+  const dob = member?.dob || member?.date_of_birth;
+  if (!dob) return null;
+  const birthDate = new Date(dob);
+  if (Number.isNaN(birthDate.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const birthdayHasPassed = (
+    today.getMonth() > birthDate.getMonth()
+    || (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate())
+  );
+  if (!birthdayHasPassed) age -= 1;
+  return Math.max(0, age);
+};
+
+const getMemberRoleText = (member) => [
+  member?.role,
+  member?.ministryRole,
+  member?.ministry_role,
+  member?.position,
+  member?.designation,
+  member?.roleInFamily,
+  member?.name,
+  ...(Array.isArray(member?.ministryTalents) ? member.ministryTalents : []),
+  ...(Array.isArray(member?.ministry_talents) ? member.ministry_talents : [])
+].filter(Boolean).map(normalizeFilterText).join(' ');
+
+const memberMatchesRole = (member, roleFilter) => {
+  if (roleFilter === 'ALL') return true;
+  const roleText = getMemberRoleText(member);
+  if (roleFilter === 'PASTOR') return /pastor|பாஸ்டர்|போதகர்/.test(roleText);
+  if (roleFilter === 'LEADER') return /leader|தலைவர்|elder|மூப்பர்|head of family/.test(roleText);
+  if (roleFilter === 'VOLUNTEER') return /volunteer|வாலண்டியர்|hospitality/.test(roleText);
+  if (roleFilter === 'SUNDAY_SCHOOL_TEACHER') return /sunday school|சண்டே ஸ்கூல்|teacher|ஆசிரியர்|kids ministry/.test(roleText);
+  if (roleFilter === 'MEMBER') return !/pastor|பாஸ்டர்|போதகர்|leader|தலைவர்|elder|மூப்பர்|volunteer|வாலண்டியர்|sunday school|teacher|ஆசிரியர்/.test(roleText);
+  return true;
+};
+
+const memberMatchesAge = (member, ageFilter) => {
+  if (ageFilter === 'ALL') return true;
+  const age = getMemberAge(member);
+  if (age === null) return false;
+  if (ageFilter === 'YOUTH') return age >= 13 && age <= 30;
+  if (ageFilter === 'KIDS') return age <= 12;
+  return true;
+};
+
+const isMemberBaptized = (member) => Boolean(
+  (member?.isBaptized ?? member?.is_baptized) !== false
+  && (member?.isBaptized === true || member?.is_baptized === true || member?.baptismDate || member?.baptism_date)
+);
+const isMemberAnointed = (member) => Boolean(
+  (member?.isAnointed ?? member?.is_anointed) !== false
+  && (member?.isAnointed === true || member?.is_anointed === true || member?.holySpiritBaptismDate || member?.holy_spirit_baptism_date)
+);
+
 export default function MembersDesk({ session, registrationRequest, onRegistrationRequestHandled }) {
-  // 9 சபை ஊழியத் தாலந்துகள்
+  // 9 Church Ministry Talents
   const TALENT_OPTIONS = [
     "Worship Team & Vocals",
     "Sunday School & Kids Ministry",
@@ -26,10 +107,10 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
   ];
 
   const HOUSEHOLD_ROLES = [
-    { value: 'Spouse / Wife', label: 'மனைவி / கணவர் (Spouse)', suffix: 'W' },
-    { value: 'Son / Daughter', label: 'பிள்ளை / குழந்தை (Child)', suffix: 'C' },
-    { value: 'Father / Mother', label: 'பெற்றோர் (Dependent Parent)', suffix: 'P' },
-    { value: 'Sibling', label: 'சகோதரன் / சகோதரி (Sibling)', suffix: 'S' }
+    { value: 'Spouse / Wife', label: 'Spouse / Partner (Spouse)', suffix: 'W' },
+    { value: 'Son / Daughter', label: 'Child (Son / Daughter)', suffix: 'C' },
+    { value: 'Father / Mother', label: 'Parent (Dependent Parent)', suffix: 'P' },
+    { value: 'Sibling', label: 'Sibling (Brother / Sister)', suffix: 'S' }
   ];
 
   const defaultFamilies = [
@@ -66,6 +147,9 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
   const [families, setFamilies] = useState(defaultFamilies);
   const [isFamiliesLoaded, setIsFamiliesLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [ageFilter, setAgeFilter] = useState('ALL');
+  const [spiritualFilter, setSpiritualFilter] = useState('ALL');
   const [expandedFamilyId, setExpandedFamilyId] = useState('FAM-101');
   const [toastMessage, setToastMessage] = useState('');
   const [selectedMemberForCard, setSelectedMemberForCard] = useState(null);
@@ -77,12 +161,12 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
   const [isHeadModalOpen, setIsHeadModalOpen] = useState(false);
   const [editingFamilyId, setEditingFamilyId] = useState(null);
 
-  // 🌟 சப்-மெம்பருக்கான முழுமையான படிவ நிலை (Dedicated Member Modal)
+  // Dedicated Member Modal Form State
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [activeFamilyForNewMember, setActiveFamilyForNewMember] = useState(null);
   const [editingMemberId, setEditingMemberId] = useState(null);
 
-  // படிவ உள்ளீடுகள் (Form States)
+  // Form States
   const [headForm, setHeadForm] = useState({
     familyId: '',
     houseId: '',
@@ -156,7 +240,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     return Math.max(0, currentYear - birthYear);
   };
 
-  // 1. குடும்பத் தலைவர் படிவம் திறத்தல்
+  // 1. Open Family Head Modal
   const handleOpenHeadModal = (family = null) => {
     if (family) {
       setEditingFamilyId(family.familyId);
@@ -204,7 +288,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     onRegistrationRequestHandled();
   }, [registrationRequest, isFamiliesLoaded]);
 
-  // 2. 🌟 குடும்ப உறுப்பினர் (Sub-Member) முழு படிவம் திறத்தல்
+  // 2. Open Dedicated Sub-Member Modal
   const handleOpenMemberModal = (family, memberToEdit = null) => {
     setActiveFamilyForNewMember(family);
     if (memberToEdit) {
@@ -243,7 +327,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     setIsMemberModalOpen(true);
   };
 
-  // குடும்பத் தலைவர் படிவம் சேமித்தல்
+  // Save Family Head Form
   const handleSaveHead = async (e) => {
     e.preventDefault();
     if (!headForm.name.trim() || !headForm.phone.trim()) return;
@@ -293,11 +377,11 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     }
 
     await syncFamilies(updatedFamilies);
-    showToast(editingFamilyId ? 'குடும்பத் தலைவர் விவரம் புதுப்பிக்கப்பட்டது!' : 'குடும்பத் தலைவர் பதிவு செய்யப்பட்டது!');
+    showToast(editingFamilyId ? 'Family head details updated successfully!' : 'Family head registered successfully!');
     setIsHeadModalOpen(false);
   };
 
-  // 🌟 குடும்ப உறுப்பினர் படிவம் முழுமையாகச் சேமித்தல்
+  // Save Full Member Profile
   const handleSaveMember = async (e) => {
     e.preventDefault();
     if (!memberForm.name.trim() || !activeFamilyForNewMember) return;
@@ -333,21 +417,55 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     }
 
     await syncFamilies(updatedFamilies);
-    showToast(`${memberData.name} குடும்பத்தில் வெற்றிகரமாகச் சேர்க்கப்பட்டார்!`);
+    showToast(`${memberData.name} has been successfully added to the family!`);
     setIsMemberModalOpen(false);
     setExpandedFamilyId(activeFamilyForNewMember.familyId);
   };
 
-  const filteredFamilies = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return families.filter(f => {
-      const headName = f.headMember?.name?.toLowerCase() || '';
-      const headPhone = f.headMember?.phone || '';
-      const matchesHead = headName.includes(q) || headPhone.includes(q);
-      const matchesMembers = (f.members || []).some(m => (m?.name?.toLowerCase() || '').includes(q));
-      return matchesHead || matchesMembers;
-    });
-  }, [families, searchQuery]);
+  const matchesMemberFilters = (member) => {
+    const query = normalizeFilterText(searchQuery);
+    const searchableText = [
+      member?.name,
+      member?.phone,
+      member?.email,
+      member?.memberId,
+      member?.roleInFamily,
+      member?.role,
+      member?.ministryRole,
+      ...(Array.isArray(member?.ministryTalents) ? member.ministryTalents : [])
+    ].filter(Boolean).map(normalizeFilterText).join(' ');
+    const matchesQuery = !query || searchableText.includes(query);
+    const matchesSpiritual = spiritualFilter === 'ALL'
+      || (spiritualFilter === 'NOT_BAPTIZED' && !isMemberBaptized(member))
+      || (spiritualFilter === 'NOT_ANOINTED' && !isMemberAnointed(member));
+
+    return matchesQuery
+      && memberMatchesRole(member, roleFilter)
+      && memberMatchesAge(member, ageFilter)
+      && matchesSpiritual;
+  };
+
+  const filteredFamilies = useMemo(() => families
+    .map((family) => {
+      const head = family.headMember || {};
+      const members = family.members || [];
+      const matchingHead = matchesMemberFilters(head);
+      const matchingMembers = members.filter(matchesMemberFilters);
+      if (!matchingHead && matchingMembers.length === 0) return null;
+      return {
+        ...family,
+        headMember: head,
+        members: matchingMembers
+      };
+    })
+    .filter(Boolean), [families, searchQuery, roleFilter, ageFilter, spiritualFilter]);
+
+  const activeFilterCount = [roleFilter !== 'ALL', ageFilter !== 'ALL', spiritualFilter !== 'ALL'].filter(Boolean).length;
+  const clearFilters = () => {
+    setRoleFilter('ALL');
+    setAgeFilter('ALL');
+    setSpiritualFilter('ALL');
+  };
 
   return (
     <div className="flex flex-col gap-6 select-none text-slate-100 p-2 sm:p-4">
@@ -364,10 +482,10 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2.5">
             <Users size={26} className="text-cyan-400" />
-            <span>சபை குடும்பங்கள் & விசுவாசிகள் பதிவேடு</span>
+            <span>Church Families & Members Registry</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            குடும்பத் தலைவர் மற்றும் குடும்ப உறுப்பினர்கள் ஒவ்வொருவருக்கும் தனித்தனி ஆவிக்குரிய தாலந்துகள் & விவரங்கள்
+            Individual spiritual milestones, ministry talents, and profile details for every family head and member
           </p>
         </div>
 
@@ -377,7 +495,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 active:scale-95 transition cursor-pointer"
         >
           <UserPlus size={15} />
-          <span>+ புதிய குடும்பத் தலைவர் சேர்க்க</span>
+          <span>+ Add Family Head</span>
         </button>
       </div>
 
@@ -386,11 +504,133 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         <Search size={16} className="text-slate-400" />
         <input
           type="text"
-          placeholder="குடும்பத் தலைவர் அல்லது உறுப்பினரின் பெயர், தொலைபேசியைத் தேடவும்..."
+          placeholder="Search by family head or member name, phone number..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
         />
+      </div>
+
+      {/* Quick Filters & Dropdown Filters */}
+      <div className="p-4 rounded-2xl bg-slate-900/60 border border-white/[0.08] space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Filter size={15} className="text-cyan-400" />
+            <span className="text-[11px] uppercase tracking-wider font-bold text-slate-300">Quick Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[9px] font-bold">
+                {activeFilterCount} active
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={clearFilters}
+            disabled={activeFilterCount === 0}
+            className="text-[10px] text-slate-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+          >
+            <RotateCcw size={11} />
+            <span>Clear filters</span>
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {ROLE_FILTERS.map((filter) => (
+            <button
+              key={filter.value}
+              type="button"
+              onClick={() => setRoleFilter(filter.value)}
+              className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
+                roleFilter === filter.value
+                  ? 'bg-cyan-500/20 border-cyan-400/60 text-cyan-200 shadow-lg shadow-cyan-500/10'
+                  : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setAgeFilter(ageFilter === 'YOUTH' ? 'ALL' : 'YOUTH')}
+            className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
+              ageFilter === 'YOUTH'
+                ? 'bg-violet-500/20 border-violet-400/60 text-violet-200'
+                : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
+            }`}
+          >
+            Youth (13–30)
+          </button>
+          <button
+            type="button"
+            onClick={() => setAgeFilter(ageFilter === 'KIDS' ? 'ALL' : 'KIDS')}
+            className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
+              ageFilter === 'KIDS'
+                ? 'bg-violet-500/20 border-violet-400/60 text-violet-200'
+                : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
+            }`}
+          >
+            Children (≤12)
+          </button>
+          <button
+            type="button"
+            onClick={() => setSpiritualFilter(spiritualFilter === 'NOT_BAPTIZED' ? 'ALL' : 'NOT_BAPTIZED')}
+            className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
+              spiritualFilter === 'NOT_BAPTIZED'
+                ? 'bg-cyan-500/20 border-cyan-400/60 text-cyan-200'
+                : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
+            }`}
+          >
+            Not Baptized
+          </button>
+          <button
+            type="button"
+            onClick={() => setSpiritualFilter(spiritualFilter === 'NOT_ANOINTED' ? 'ALL' : 'NOT_ANOINTED')}
+            className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
+              spiritualFilter === 'NOT_ANOINTED'
+                ? 'bg-amber-500/20 border-amber-400/60 text-amber-200'
+                : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
+            }`}
+          >
+            Not Anointed
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <label className="text-[10px] text-slate-400">
+            Role / Ministry
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="mt-1 w-full bg-slate-950 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+            >
+              {ROLE_FILTERS.map((filter) => <option key={filter.value} value={filter.value}>{filter.label} ({filter.shortLabel})</option>)}
+            </select>
+          </label>
+          <label className="text-[10px] text-slate-400">
+            Age Group
+            <select
+              value={ageFilter}
+              onChange={(e) => setAgeFilter(e.target.value)}
+              className="mt-1 w-full bg-slate-950 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-violet-400"
+            >
+              {AGE_FILTERS.map((filter) => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
+            </select>
+          </label>
+          <label className="text-[10px] text-slate-400">
+            Spiritual Status
+            <select
+              value={spiritualFilter}
+              onChange={(e) => setSpiritualFilter(e.target.value)}
+              className="mt-1 w-full bg-slate-950 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+            >
+              {SPIRITUAL_FILTERS.map((filter) => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div className="text-[10px] text-slate-500 font-mono">
+          {filteredFamilies.length} families • Showing records matching selected filters
+        </div>
       </div>
 
       {/* Families Directory Table */}
@@ -398,12 +638,12 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         <table className="w-full min-w-[760px] text-left border-collapse text-xs">
           <thead>
             <tr className="border-b border-white/[0.06] text-slate-400 uppercase text-[11px] bg-white/[0.04]">
-              <th className="p-3.5 w-12 text-center">அடுக்கு</th>
-              <th className="p-3.5">குடும்பத் தலைவர் (Head)</th>
-              <th className="p-3.5">உறுப்பினர்கள்</th>
-              <th className="p-3.5">தொடர்பு எண்</th>
-              <th className="p-3.5">ஆவிக்குரிய நிலை & தாலந்துகள்</th>
-              <th className="p-3.5 text-center">செயல்கள்</th>
+              <th className="p-3.5 w-12 text-center">No.</th>
+              <th className="p-3.5">Family Head</th>
+              <th className="p-3.5">Members</th>
+              <th className="p-3.5">Phone Number</th>
+              <th className="p-3.5">Spiritual Status & Talents</th>
+              <th className="p-3.5 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04] text-slate-300">
@@ -440,7 +680,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                     <td className="p-3.5">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-semibold text-slate-300">
                         <Users size={11} className="text-cyan-400" />
-                        <span>1 தலைவர் + {subMembers.length} குடும்பத்தினர்</span>
+                        <span>1 Head + {subMembers.length} Family Members</span>
                       </span>
                     </td>
 
@@ -450,12 +690,12 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                       <div className="flex items-center gap-1.5 mb-1">
                         {head.isBaptized && (
                           <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[9px] flex items-center gap-1 font-bold">
-                            <Droplets size={10} /> ஞானஸ்நானம்
+                            <Droplets size={10} /> Water Baptism
                           </span>
                         )}
                         {head.isAnointed && (
                           <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] flex items-center gap-1 font-bold">
-                            <Flame size={10} /> அபிஷேகம்
+                            <Flame size={10} /> Holy Spirit
                           </span>
                         )}
                       </div>
@@ -470,14 +710,14 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
 
                     <td className="p-3.5 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        {/* 🌟 குடும்ப உறுப்பினர் சேர்க்கும் நேரடி பொத்தான் */}
+                        {/* Direct Add Member Button */}
                         <button
                           type="button"
                           onClick={() => handleOpenMemberModal(fam)}
                           className="px-2.5 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-[11px] font-bold flex items-center gap-1 transition cursor-pointer"
                         >
                           <Plus size={13} />
-                          <span>+ உறுப்பினர் சேர்க்க</span>
+                          <span>+ Add Member</span>
                         </button>
 
                         <button
@@ -491,7 +731,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                     </td>
                   </tr>
 
-                  {/* 🌟 விரிவாக்கப்பட்ட குடும்ப உறுப்பினர்கள் பகுதி */}
+                  {/* Expanded Family Members Section */}
                   {isExpanded && (
                     <tr className="bg-black/30 animate-in fade-in">
                       <td colSpan={6} className="p-4 pl-12">
@@ -499,7 +739,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                           <div className="flex items-center justify-between border-b border-white/5 pb-2">
                             <h4 className="text-xs font-bold text-cyan-300 flex items-center gap-2">
                               <Users size={14} />
-                              <span>{head.name} குடும்ப உறுப்பினர்கள் ({subMembers.length})</span>
+                              <span>{head.name}'s Family Members ({subMembers.length})</span>
                             </h4>
                             <button
                               type="button"
@@ -507,13 +747,13 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                               className="text-xs font-bold text-cyan-400 hover:text-white flex items-center gap-1 cursor-pointer"
                             >
                               <Plus size={13} />
-                              <span>+ புதிய குடும்ப உறுப்பினர் சேர்க்க</span>
+                              <span>+ Add Family Member</span>
                             </button>
                           </div>
 
                           {subMembers.length === 0 ? (
                             <p className="text-xs text-slate-500 italic py-2">
-                              குடும்ப உறுப்பினர்கள் யாரும் இன்னும் சேர்க்கப்படவில்லை. மேலே உள்ள "+ புதிய குடும்ப உறுப்பினர் சேர்க்க" பொத்தானை அழுத்தவும்.
+                              No family members added yet. Click "+ Add Family Member" above.
                             </p>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -538,21 +778,21 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                                       </div>
                                     )}
 
-                                    {/* ஆவிக்குரிய தகுதிகள் */}
+                                    {/* Spiritual Status */}
                                     <div className="flex items-center gap-1.5 mt-2">
                                       {member.isBaptized && (
                                         <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[8.5px] font-bold flex items-center gap-0.5">
-                                          <Droplets size={9} /> ஞானஸ்நானம்
+                                          <Droplets size={9} /> Water Baptism
                                         </span>
                                       )}
                                       {member.isAnointed && (
                                         <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[8.5px] font-bold flex items-center gap-0.5">
-                                          <Flame size={9} /> அபிஷேகம்
+                                          <Flame size={9} /> Holy Spirit
                                         </span>
                                       )}
                                     </div>
 
-                                    {/* சபை ஊழிய தாலந்துகள் */}
+                                    {/* Ministry Talents */}
                                     <div className="flex flex-wrap gap-1 mt-2">
                                       {(member.ministryTalents || []).map((t, idx) => (
                                         <span key={idx} className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[8.5px]">
@@ -593,14 +833,14 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         </table>
       </div>
 
-      {/* 🌟 MODAL 1: குடும்பத் தலைவர் சேர்க்கைப் படிவம் */}
+      {/* MODAL 1: Family Head Form */}
       {isHeadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in zoom-in-95 select-none overflow-y-auto">
           <div className="w-full max-w-2xl bg-slate-900 border border-white/15 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-4 max-h-[92vh] flex flex-col justify-between">
             <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <UserPlus size={18} className="text-cyan-400" />
-                <span>{editingFamilyId ? 'குடும்பத் தலைவர் விவரங்களைத் திருத்துக' : 'புதிய குடும்பத் தலைவர் பதிவு'}</span>
+                <span>{editingFamilyId ? 'Edit Family Head Profile' : 'New Family Head Registration'}</span>
               </h3>
               <button onClick={() => setIsHeadModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer"><X size={18} /></button>
             </div>
@@ -608,37 +848,37 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
             <form onSubmit={handleSaveHead} id="head-form" className="overflow-y-auto pr-1 py-2 space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">குடும்ப ஐடி *</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Family ID *</label>
                   <input type="text" readOnly value={headForm.familyId} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-cyan-400 font-mono font-bold" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">தலைவர் House ID</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Head House ID</label>
                   <input type="text" readOnly value={headForm.houseId} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-cyan-400 font-mono font-bold" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">முழுப் பெயர் *</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Full Name *</label>
                   <input type="text" required value={headForm.name} onChange={(e) => setHeadForm({ ...headForm, name: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-bold" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">கைபேசி எண் *</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Mobile Phone *</label>
                   <input type="tel" required value={headForm.phone} onChange={(e) => setHeadForm({ ...headForm, phone: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono" />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">பிறந்த தேதி</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Date of Birth</label>
                   <input type="date" value={headForm.dob} onChange={(e) => setHeadForm({ ...headForm, dob: e.target.value, age: calculateAge(e.target.value) })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-white" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">வயது (Auto)</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Age (Auto)</label>
                   <input type="number" value={headForm.age} readOnly className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-white font-mono" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">இரத்த வகை</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Blood Group</label>
                   <select value={headForm.bloodGroup} onChange={(e) => setHeadForm({ ...headForm, bloodGroup: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-2 py-1.5 text-rose-400 font-bold">
                     {['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'].map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
@@ -647,21 +887,21 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">முகவரி</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Residential Address</label>
                   <input type="text" value={headForm.address} onChange={(e) => setHeadForm({ ...headForm, address: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">பகுதி / ஏரியா</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Area / Ward</label>
                   <input type="text" value={headForm.area} onChange={(e) => setHeadForm({ ...headForm, area: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white" />
                 </div>
               </div>
 
-              {/* ஆவிக்குரிய நிலை */}
+              {/* Spiritual Status */}
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className={`p-3 rounded-xl border ${headForm.isBaptized ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-slate-950 border-white/5'}`}>
                   <label className="flex items-center gap-2 cursor-pointer font-bold text-white">
                     <input type="checkbox" checked={headForm.isBaptized} onChange={(e) => setHeadForm({ ...headForm, isBaptized: e.target.checked })} className="w-4 h-4 accent-cyan-500" />
-                    <span>தண்ணீரில் ஞானஸ்நானம்?</span>
+                    <span>Water Baptism?</span>
                   </label>
                   {headForm.isBaptized && (
                     <input type="date" value={headForm.baptismDate} onChange={(e) => setHeadForm({ ...headForm, baptismDate: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 mt-2 text-white" />
@@ -671,7 +911,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                 <div className={`p-3 rounded-xl border ${headForm.isAnointed ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-950 border-white/5'}`}>
                   <label className="flex items-center gap-2 cursor-pointer font-bold text-white">
                     <input type="checkbox" checked={headForm.isAnointed} onChange={(e) => setHeadForm({ ...headForm, isAnointed: e.target.checked })} className="w-4 h-4 accent-amber-500" />
-                    <span>பரிசுத்த ஆவியின் அபிஷேகம்?</span>
+                    <span>Holy Spirit Anointing?</span>
                   </label>
                   {headForm.isAnointed && (
                     <input type="date" value={headForm.holySpiritBaptismDate} onChange={(e) => setHeadForm({ ...headForm, holySpiritBaptismDate: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 mt-2 text-white" />
@@ -679,9 +919,9 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                 </div>
               </div>
 
-              {/* தாலந்துகள் */}
+              {/* Ministry Talents */}
               <div className="space-y-1.5 pt-1">
-                <label className="text-[10px] text-slate-400 font-bold uppercase">சபை ஊழிய தாலந்துகள்</label>
+                <label className="text-[10px] text-slate-400 font-bold uppercase">Church Ministry Talents</label>
                 <div className="flex flex-wrap gap-1.5">
                   {TALENT_OPTIONS.map((talent) => {
                     const sel = headForm.ministryTalents.includes(talent);
@@ -699,16 +939,16 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
             </form>
 
             <div className="pt-3 border-t border-white/10 flex justify-end gap-2">
-              <button type="button" onClick={() => setIsHeadModalOpen(false)} className="px-4 py-2 text-slate-400 text-xs cursor-pointer">ரத்து</button>
+              <button type="button" onClick={() => setIsHeadModalOpen(false)} className="px-4 py-2 text-slate-400 text-xs cursor-pointer">Cancel</button>
               <button type="submit" form="head-form" className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer">
-                சேமிக்க (Save Head)
+                Save Head Profile
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 🌟🌟 MODAL 2: குடும்ப உறுப்பினருக்கான பிரத்யேக முழு படிவம் (Dedicated Full Member Modal) */}
+      {/* MODAL 2: Dedicated Full Member Modal */}
       {isMemberModalOpen && activeFamilyForNewMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in zoom-in-95 select-none overflow-y-auto">
           <div className="w-full max-w-2xl bg-slate-900 border border-cyan-500/30 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-4 max-h-[92vh] flex flex-col justify-between">
@@ -718,10 +958,10 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <UserPlus size={18} className="text-cyan-400" />
-                  <span>{editingMemberId ? 'உறுப்பினர் விவரங்களைத் திருத்துக' : 'புதிய குடும்ப உறுப்பினர் சேர்க்கைப் படிவம்'}</span>
+                  <span>{editingMemberId ? 'Edit Member Profile' : 'New Family Member Registration'}</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  குடும்பம்: <strong className="text-cyan-400">{activeFamilyForNewMember.familyName}</strong> ({activeFamilyForNewMember.familyId})
+                  Family: <strong className="text-cyan-400">{activeFamilyForNewMember.familyName}</strong> ({activeFamilyForNewMember.familyId})
                 </p>
               </div>
               <button onClick={() => setIsMemberModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer"><X size={18} /></button>
@@ -732,7 +972,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">குடும்பத்தில் உறவுமுறை (Role) *</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Relationship / Role in Family *</label>
                   <select
                     value={memberForm.roleInFamily}
                     onChange={(e) => {
@@ -752,45 +992,45 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">உறுப்பினர் House ID</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Member House ID</label>
                   <input type="text" readOnly value={memberForm.houseId} className="w-full bg-slate-950 border border-cyan-500/30 rounded-xl px-3 py-2 text-cyan-400 font-mono font-bold" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">உறுப்பினர் பெயர் *</label>
-                  <input type="text" required placeholder="எ.கா: Mary Stephen" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-bold" />
+                  <label className="text-[10px] text-slate-400 block mb-1">Member Full Name *</label>
+                  <input type="text" required placeholder="e.g. Mary Stephen" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-bold" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">கைபேசி எண் (விருப்பத்திற்கேற்ப)</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Mobile Phone (Optional)</label>
                   <input type="tel" placeholder="+91 98400..." value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono" />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">பிறந்த தேதி</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Date of Birth</label>
                   <input type="date" value={memberForm.dob} onChange={(e) => setMemberForm({ ...memberForm, dob: e.target.value, age: calculateAge(e.target.value) })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-white" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">வயது (Auto)</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Age (Auto)</label>
                   <input type="number" value={memberForm.age} readOnly className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-white font-mono" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">இரத்த வகை</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">Blood Group</label>
                   <select value={memberForm.bloodGroup} onChange={(e) => setMemberForm({ ...memberForm, bloodGroup: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-2 py-1.5 text-rose-400 font-bold">
                     {['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'].map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
               </div>
 
-              {/* ஆவிக்குரிய தகுதிகள் */}
+              {/* Spiritual Status */}
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className={`p-3 rounded-xl border ${memberForm.isBaptized ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-slate-950 border-white/5'}`}>
                   <label className="flex items-center gap-2 cursor-pointer font-bold text-white">
                     <input type="checkbox" checked={memberForm.isBaptized} onChange={(e) => setMemberForm({ ...memberForm, isBaptized: e.target.checked })} className="w-4 h-4 accent-cyan-500" />
-                    <span>தண்ணீரில் ஞானஸ்நானம்?</span>
+                    <span>Water Baptism?</span>
                   </label>
                   {memberForm.isBaptized && (
                     <input type="date" value={memberForm.baptismDate} onChange={(e) => setMemberForm({ ...memberForm, baptismDate: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 mt-2 text-white" />
@@ -800,7 +1040,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                 <div className={`p-3 rounded-xl border ${memberForm.isAnointed ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-950 border-white/5'}`}>
                   <label className="flex items-center gap-2 cursor-pointer font-bold text-white">
                     <input type="checkbox" checked={memberForm.isAnointed} onChange={(e) => setMemberForm({ ...memberForm, isAnointed: e.target.checked })} className="w-4 h-4 accent-amber-500" />
-                    <span>பரிசுத்த ஆவியின் அபிஷேகம்?</span>
+                    <span>Holy Spirit Anointing?</span>
                   </label>
                   {memberForm.isAnointed && (
                     <input type="date" value={memberForm.holySpiritBaptismDate} onChange={(e) => setMemberForm({ ...memberForm, holySpiritBaptismDate: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 mt-2 text-white" />
@@ -808,9 +1048,9 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                 </div>
               </div>
 
-              {/* 🌟 இந்த உறுப்பினருக்குரிய தனிப்பட்ட ஊழிய தாலந்துகள் */}
+              {/* Member Ministry Talents */}
               <div className="space-y-1.5 pt-1">
-                <label className="text-[10px] text-slate-400 font-bold uppercase">இந்த உறுப்பினரின் சபை தாலந்துகள் & விருப்பங்கள்</label>
+                <label className="text-[10px] text-slate-400 font-bold uppercase">Member Ministry Talents & Interests</label>
                 <div className="flex flex-wrap gap-1.5">
                   {TALENT_OPTIONS.map((talent) => {
                     const sel = (memberForm.ministryTalents || []).includes(talent);
@@ -834,9 +1074,9 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
             </form>
 
             <div className="pt-3 border-t border-white/10 flex justify-end gap-2">
-              <button type="button" onClick={() => setIsMemberModalOpen(false)} className="px-4 py-2 text-slate-400 text-xs cursor-pointer">ரத்து</button>
+              <button type="button" onClick={() => setIsMemberModalOpen(false)} className="px-4 py-2 text-slate-400 text-xs cursor-pointer">Cancel</button>
               <button type="submit" form="submember-form" className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer">
-                உறுப்பினரைச் சேர்க்க (Save Member Profile)
+                Save Member Profile
               </button>
             </div>
           </div>

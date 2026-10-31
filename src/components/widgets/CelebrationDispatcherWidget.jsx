@@ -12,7 +12,7 @@ export default function CelebrationDispatcherWidget() {
     return new Date().toISOString().slice(5, 10); // MM-DD
   }, []);
 
-  // சபை விசுவாசிகள் பட்டியலிலிருந்து இன்றைய விசேஷ நாட்களைக் கண்டறிதல்
+  // Find today's special occasions from the church members database
   const celebrations = useMemo(() => {
     try {
       const raw = localStorage.getItem('app_members_family_database');
@@ -20,7 +20,7 @@ export default function CelebrationDispatcherWidget() {
       const list = [];
 
       families.forEach(fam => {
-        // 1. குடும்பத் தலைவர் பிறந்தநாள்
+        // 1. Family Head Birthday
         if (fam.headMember?.dob?.endsWith(todayMonthDay)) {
           list.push({
             id: `bday-${fam.headMember.memberId}`,
@@ -31,7 +31,7 @@ export default function CelebrationDispatcherWidget() {
             area: fam.area
           });
         }
-        // 2. குடும்ப உறுப்பினர்கள் பிறந்தநாள்
+        // 2. Family Members Birthday
         (fam.members || []).forEach(m => {
           if (m.dob?.endsWith(todayMonthDay)) {
             list.push({
@@ -44,7 +44,7 @@ export default function CelebrationDispatcherWidget() {
             });
           }
         });
-        // 3. திருமண நாள் (Marriage Anniversary)
+        // 3. Wedding Anniversary
         if (fam.anniversaryDate?.endsWith(todayMonthDay)) {
           list.push({
             id: `anni-${fam.familyId}`,
@@ -57,7 +57,7 @@ export default function CelebrationDispatcherWidget() {
         }
       });
 
-      // மாதிரித் தரவு (இன்றைய நாளில் யாரும் இல்லாத போது காட்டிச் சோதிக்க)
+      // Sample fallback data if no events today
       if (list.length === 0) {
         return [
           { id: 'bday-sample-1', type: 'BIRTHDAY', name: 'Bro. Emmanuel Raj', phone: '+91 98401 22334', family: 'Raj Household', area: 'Tambaram' },
@@ -76,12 +76,12 @@ export default function CelebrationDispatcherWidget() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  // WhatsApp வாழ்த்துச் செய்தி அனுப்புதல்
+  // WhatsApp Greeting Dispatch
   const handleSendWish = (item) => {
     soundFX?.playClickPop?.();
     const cleanPhone = item.phone?.replace(/[^0-9]/g, '');
     if (!cleanPhone) {
-      showToast('மொபைல் எண் பதிவு செய்யப்படவில்லை!');
+      showToast('Mobile phone number not registered!');
       return;
     }
 
@@ -90,14 +90,14 @@ export default function CelebrationDispatcherWidget() {
     let message = '';
     if (item.type === 'BIRTHDAY') {
       message = 
-`🎂 *இனிய பிறந்தநாள் வாழ்த்துகள்!* 🕊️\nஅன்பான ${item.name},\nகர்த்தராகிய இயேசு கிறிஸ்துவின் நாமத்தில் உங்களுக்கு எங்களது மனமார்ந்த பிறந்தநாள் வாழ்த்துகளைத் தெரிவித்துக் கொள்கிறோம்!\n\n_"கர்த்தர் உன்னை ஆசீர்வதித்து, உன்னைக் காக்கக்கடவர்; கர்த்தர் தம்முடைய முகத்தை உன்மேல் பிரகாசிக்கப்பண்ணி, உன்மேல் கிருபையாயிருக்கக்கடவர்."_ — எண்ணாகமம் 6:24-25\n\nஅன்புடன்,\n*போதகர் & சபை குடும்பம்*`;
+`🎂 *Happy Birthday & Blessed Wishes!* 🕊️\nDear ${item.name},\nIn the precious name of our Lord Jesus Christ, we wish you a joyous and blessed birthday!\n\n_"The Lord bless you and keep you; the Lord make his face shine on you and be gracious to you."_ — Numbers 6:24-25\n\nWith love & prayers,\n*Pastor & Church Family*`;
     } else {
       message = 
-`💐 *இனிய திருமண நாள் நல்வாழ்த்துகள்!* 💍\nஅன்பான ${item.name},\nஉங்கள் குடும்பத்தை கர்த்தர் மென்மேலும் ஆசீர்வதித்து, சமாதானத்தினாலும் மகிழ்ச்சியினாலும் நிரப்புவாராக!\n\n_"அவர்கள் இருவர் அல்ல, ஒரே மாம்சமாயிருக்கிறார்கள்; ஆகையால், தேவன் இணைத்ததை மனுஷன் பிரிக்காதிருக்கக்கடவன்."_ — மத்தேயு 19:6\n\nஅன்புடன்,\n*போதகர் & சபை குடும்பம்*`;
+`💐 *Happy Wedding Anniversary!* 💍\nDear ${item.name},\nMay the Lord continue to bless your marriage and family abundantly with love, joy, and peace!\n\n_"So they are no longer two, but one flesh. Therefore what God has joined together, let no one separate."_ — Matthew 19:6\n\nWith love & prayers,\n*Pastor & Church Family*`;
     }
 
     window.open(`https://web.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`, '_blank');
-    showToast(`${item.name}-க்கு வாழ்த்து விண்டோ திறக்கப்பட்டது! ✓`);
+    showToast(`WhatsApp greeting opened for ${item.name}! ✓`);
   };
 
   return (
@@ -124,7 +124,7 @@ export default function CelebrationDispatcherWidget() {
                 {celebrations.length}
               </span>
             </h4>
-            <p className="text-[10px] text-slate-400">இன்றைய பிறந்தநாள் & திருமண நாள் விசுவாசிகள்</p>
+            <p className="text-[10px] text-slate-400">Today's birthdays & wedding anniversaries</p>
           </div>
         </div>
       </div>
@@ -147,7 +147,7 @@ export default function CelebrationDispatcherWidget() {
               <div className="overflow-hidden">
                 <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
                 <span className="text-[10px] text-slate-400 font-mono block truncate">
-                  {item.type === 'BIRTHDAY' ? 'பிறந்தநாள்' : 'திருமண நாள்'} • {item.area || item.family}
+                  {item.type === 'BIRTHDAY' ? 'Birthday' : 'Anniversary'} • {item.area || item.family}
                 </span>
               </div>
             </div>
@@ -156,7 +156,7 @@ export default function CelebrationDispatcherWidget() {
               type="button"
               onClick={() => handleSendWish(item)}
               className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
-              title="வாட்ஸ்அப் வாழ்த்து அனுப்புக"
+              title="Send WhatsApp Greeting"
             >
               <MessageSquareShare size={13} />
               <span>Wish</span>

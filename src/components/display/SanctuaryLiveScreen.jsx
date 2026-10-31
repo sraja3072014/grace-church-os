@@ -9,18 +9,18 @@ export default function SanctuaryLiveScreen({ onClose }) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // சபை விவரங்கள்
+  // Church Details
   const churchData = JSON.parse(localStorage.getItem('graceos_main_church') || '{}');
   const churchName = churchData.churchName || 'Grace City Cathedral';
   const campusName = churchData.activeCampus || 'Main Sanctuary Hall';
 
-  // நேரத்தை உடனுக்குடன் புதுப்பித்தல்
+  // Real-time Clock Update
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // இன்றைய பிறந்தநாள் விசுவாசிகள்
+  // Today's Birthday Celebrations
   const todayBirthdays = useMemo(() => {
     try {
       const raw = localStorage.getItem('app_members_family_database');
@@ -48,41 +48,41 @@ export default function SanctuaryLiveScreen({ onClose }) {
     }
   }, []);
 
-  // ஸ்லைடுகள் தொகுப்பு (Slides Deck)
+  // Slides Deck
   const slides = [
     {
       id: 'welcome',
       type: 'WELCOME',
-      title: 'கர்த்தராகிய இயேசு கிறிஸ்துவின் நாமத்தில் நல்வரவு!',
-      sub: `${churchName} • ஞாயிறு ஆராதனை`,
-      tagline: '"தேவன் ஆவியாயிருக்கிறார், அவரைத் தொழுதுகொள்ளுகிறவர்கள் ஆவியோடும் உண்மையோடும் அவரைத் தொழுதுகொள்ளவேண்டும்."'
+      title: 'Welcome in the Precious Name of Jesus Christ!',
+      sub: `${churchName} • Sunday Worship Service`,
+      tagline: '"God is spirit, and his worshipers must worship in the Spirit and in truth." — John 4:24'
     },
     {
       id: 'verse',
       type: 'VERSE',
-      title: 'இன்றைய வாக்குத்தத்த வசனம்',
-      verse: 'ஏசாயா 41:10',
-      text: '"நீ பயப்படாதே, நான் உன்னுடனே இருக்கிறேன்; திகையாதே, நான் உன் தேவன்; நான் உன்னைப் பலப்படுத்தி உனக்குச் சகாயம் பண்ணுவேன்; என் நீதியின் வலதுகரத்தினால் உன்னைத் தாங்குவேன்."'
+      title: "Today's Promise Verse",
+      verse: 'Isaiah 41:10',
+      text: '"So do not fear, for I am with you; do not be dismayed, for I am your God. I will strengthen you and help you; I will uphold you with my righteous right hand."'
     },
     {
       id: 'birthdays',
       type: 'BIRTHDAY',
-      title: 'இனிய பிறந்தநாள் & திருமண நாள் வாழ்த்துகள்! 🎂',
+      title: 'Happy Birthday & Wedding Anniversary Wishes! 🎂',
       people: todayBirthdays
     },
     {
       id: 'announcements',
       type: 'ANNOUNCEMENT',
-      title: 'சபையின் முக்கிய அறிவிப்புகள்',
+      title: 'Weekly Announcements & Ministry Updates',
       items: [
-        'வரும் வெள்ளிக்கிழமை மாலை 6:30 மணிக்கு உபவாசக் கூட்டம் நடைபெறும்.',
-        'இளைஞர் ஐக்கிய கூடுகை வரும் சனிக்கிழமை மாலை 5:00 மணிக்கு தொடங்கும்.',
-        'அடுத்த வாரம் ஞாயிறு ஆராதனையில் விசேஷித்த திருவிருந்து ஆராதனை நடைபெறும்.'
+        'Special Fasting Prayer meeting will be held this Friday at 6:30 PM.',
+        'Youth Fellowship gathering will commence this Saturday at 5:00 PM.',
+        'Next Sunday worship service will feature Holy Communion.'
       ]
     }
   ];
 
-  // தானியங்கி ஸ்லைடு சுழற்சி (Auto-Carousel: ஒவ்வொரு 8 வினாடிக்கும் மாறும்)
+  // Auto-Carousel (rotates every 8 seconds)
   useEffect(() => {
     const slideTimer = setInterval(() => {
       setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
@@ -90,7 +90,7 @@ export default function SanctuaryLiveScreen({ onClose }) {
     return () => clearInterval(slideTimer);
   }, [slides.length]);
 
-  // F11 / Fullscreen முறை
+  // Fullscreen Mode
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -106,10 +106,10 @@ export default function SanctuaryLiveScreen({ onClose }) {
   return (
     <div className="fixed inset-0 z-[100] bg-slate-950 text-white flex flex-col justify-between p-8 sm:p-12 select-none overflow-hidden font-sans">
       
-      {/* பின்னணி ஒளி அலங்காரம் (Ambient Background Glow) */}
+      {/* Ambient Background Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-gradient-to-tr from-amber-500/10 via-rose-500/10 to-indigo-500/10 rounded-full blur-[140px] pointer-events-none" />
 
-      {/* மேல் பட்டை: சபை விபரம் & நேரடி கடிகாரம் */}
+      {/* Header Bar: Church Details & Live Clock */}
       <header className="flex items-center justify-between border-b border-white/10 pb-6 relative z-10">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shadow-xl">
@@ -131,7 +131,7 @@ export default function SanctuaryLiveScreen({ onClose }) {
               {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
             <div className="text-xs text-amber-300/80 font-semibold">
-              {currentTime.toLocaleDateString('ta-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
+              {currentTime.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short' })}
             </div>
           </div>
 
@@ -156,10 +156,10 @@ export default function SanctuaryLiveScreen({ onClose }) {
         </div>
       </header>
 
-      {/* பிரதான ஸ்லைடு காட்சிப் பகுதி (Main Canvas Area) */}
+      {/* Main Canvas Area */}
       <main className="flex-1 flex items-center justify-center py-8 relative z-10 max-w-5xl mx-auto w-full text-center">
         
-        {/* 1. வரவேற்பு ஸ்லைடு */}
+        {/* 1. Welcome Slide */}
         {activeSlide.type === 'WELCOME' && (
           <div className="space-y-6 animate-in zoom-in-95 duration-700">
             <div className="inline-flex p-3 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 mb-2">
@@ -177,7 +177,7 @@ export default function SanctuaryLiveScreen({ onClose }) {
           </div>
         )}
 
-        {/* 2. இன்றைய வாக்குத்தத்த வசனம் */}
+        {/* 2. Scripture Promise Verse */}
         {activeSlide.type === 'VERSE' && (
           <div className="space-y-8 animate-in fade-in duration-700 max-w-4xl">
             <span className="text-sm sm:text-base font-black uppercase tracking-widest px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
@@ -192,7 +192,7 @@ export default function SanctuaryLiveScreen({ onClose }) {
           </div>
         )}
 
-        {/* 3. பிறந்தநாள் & திருமண நாள் வாழ்த்துகள் */}
+        {/* 3. Birthday & Anniversary Wishes */}
         {activeSlide.type === 'BIRTHDAY' && (
           <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-700 w-full">
             <div className="flex items-center justify-center gap-3 text-amber-400">
@@ -219,12 +219,12 @@ export default function SanctuaryLiveScreen({ onClose }) {
             </div>
 
             <p className="text-slate-400 text-sm sm:text-base italic pt-2">
-              "கர்த்தர் உன்னை ஆசீர்வதித்து, உன்னைக் காக்கக்கடவர்!" — எண்ணாகமம் 6:24
+              "The Lord bless you and keep you!" — Numbers 6:24
             </p>
           </div>
         )}
 
-        {/* 4. சபை முக்கிய அறிவிப்புகள் */}
+        {/* 4. Church Announcements */}
         {activeSlide.type === 'ANNOUNCEMENT' && (
           <div className="space-y-8 animate-in fade-in duration-700 w-full max-w-3xl">
             <div className="flex items-center justify-center gap-3 text-rose-400">
@@ -252,7 +252,7 @@ export default function SanctuaryLiveScreen({ onClose }) {
 
       </main>
 
-      {/* கீழ் பட்டை: ஸ்லைடு சுட்டிகள் & வழிகாட்டுதல் */}
+      {/* Footer: Slide Indicators & Navigation */}
       <footer className="flex items-center justify-between border-t border-white/10 pt-6 relative z-10">
         <span className="text-xs text-slate-500 font-mono">
           GraceOS Sanctuary Display Engine • Fullscreen (F11)

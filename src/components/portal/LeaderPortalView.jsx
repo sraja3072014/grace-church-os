@@ -13,7 +13,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
 
   const leaderArea = userSession.area || 'Tambaram';
 
-  // 1. விசுவாசிகள் தரவு (பகுதி வாரியாக வடிகட்டுதல்)
+  // 1. Members Data (Filtered by Area)
   const [families, setFamilies] = useState(() => {
     try {
       const raw = localStorage.getItem('app_members_family_database');
@@ -26,7 +26,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
   const areaMembers = useMemo(() => {
     const list = [];
     families.forEach(fam => {
-      // பகுதி பொருந்துகிறதா எனப் பார்த்தல்
+      // Check if member belongs to area
       if (!fam.area || fam.area.toLowerCase().includes(leaderArea.toLowerCase())) {
         if (fam.headMember) {
           list.push({ ...fam.headMember, familyName: fam.familyName, familyId: fam.familyId, area: fam.area || leaderArea });
@@ -37,7 +37,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
       }
     });
 
-    // மாதிரித் தரவு (பொருந்தும் தகவல்கள் இல்லாத போது)
+    // Sample data (fallback when area has no records)
     if (list.length === 0) {
       return [
         { memberId: 'MBR-201', name: 'Bro. Paul Selvam', phone: '+91 98401 77889', familyName: 'Selvam Household', area: leaderArea, visitedThisMonth: true },
@@ -48,7 +48,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
     return list;
   }, [families, leaderArea]);
 
-  // புதிய விசுவாசி படிவ நிலை
+  // New Member Form State
   const [newMemberForm, setNewMemberForm] = useState({
     name: '',
     phone: '',
@@ -56,12 +56,12 @@ export default function LeaderPortalView({ userSession, onLogout }) {
     address: ''
   });
 
-  // ஸ்பாட் காணிக்கை நிலை
+  // Spot Offering State
   const [offeringForm, setOfferingForm] = useState({
     donorName: '',
     phone: '',
     amount: '',
-    category: 'தசமபாகம் (Tithe)'
+    category: 'Tithe'
   });
 
   const showToast = (msg) => {
@@ -69,7 +69,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
     setTimeout(() => setToast(''), 3000);
   };
 
-  // புதிய விசுவாசியைச் சேர்த்தல்
+  // Add New Member
   const handleAddNewBeliever = (e) => {
     e.preventDefault();
     if (!newMemberForm.name) return;
@@ -92,12 +92,12 @@ export default function LeaderPortalView({ userSession, onLogout }) {
     setFamilies(updated);
     localStorage.setItem('app_members_family_database', JSON.stringify(updated));
 
-    showToast(`புதிய விசுவாசி "${newMemberForm.name}" சேர்க்கப்பட்டார்! ✓`);
+    showToast(`New member "${newMemberForm.name}" added successfully! ✓`);
     setNewMemberForm({ name: '', phone: '', familyType: 'Family Head', address: '' });
     setActiveTab('members');
   };
 
-  // ஸ்பாட் காணிக்கை பதிவு செய்தல்
+  // Record Spot Offering
   const handleRecordSpotOffering = (e) => {
     e.preventDefault();
     if (!offeringForm.amount || Number(offeringForm.amount) <= 0) return;
@@ -115,8 +115,8 @@ export default function LeaderPortalView({ userSession, onLogout }) {
     };
 
     localStorage.setItem('app_finance_transactions_ledger', JSON.stringify([newReceipt, ...ledger]));
-    showToast(`₹${offeringForm.amount} காணிக்கை பதிவு செய்யப்பட்டு ரசீது உருவானது! ✓`);
-    setOfferingForm({ donorName: '', phone: '', amount: '', category: 'தசமபாகம் (Tithe)' });
+    showToast(`₹${offeringForm.amount} offering recorded & receipt generated! ✓`);
+    setOfferingForm({ donorName: '', phone: '', amount: '', category: 'Tithe' });
   };
 
   const filteredMembers = areaMembers.filter(m => 
@@ -146,7 +146,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
               {userSession.name || 'Area Pastor'}
             </h4>
             <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1">
-              <MapPin size={10} /> பகுதி: {leaderArea}
+              <MapPin size={10} /> Area: {leaderArea}
             </span>
           </div>
         </div>
@@ -169,19 +169,19 @@ export default function LeaderPortalView({ userSession, onLogout }) {
             onClick={() => setActiveTab('members')}
             className={`py-2 rounded-xl transition ${activeTab === 'members' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400'}`}
           >
-            விசுவாசிகள் ({areaMembers.length})
+            Members ({areaMembers.length})
           </button>
           <button
             onClick={() => setActiveTab('add_member')}
             className={`py-2 rounded-xl transition ${activeTab === 'add_member' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400'}`}
           >
-            + புதியவர் சேர்ப்பு
+            + Add Member
           </button>
           <button
             onClick={() => setActiveTab('offering')}
             className={`py-2 rounded-xl transition ${activeTab === 'offering' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400'}`}
           >
-            காணிக்கை பதிவு
+            Record Offering
           </button>
         </div>
 
@@ -192,7 +192,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
               <input
                 type="text"
-                placeholder="பெயர் அல்லது போன் மூலம் தேடுக..."
+                placeholder="Search by name or phone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-900 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
@@ -235,17 +235,17 @@ export default function LeaderPortalView({ userSession, onLogout }) {
           <form onSubmit={handleAddNewBeliever} className="p-5 rounded-3xl bg-slate-900/90 border border-white/10 space-y-3.5 animate-in fade-in">
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <UserPlus size={16} className="text-cyan-400" /> புதிய விசுவாசி பதிவு
+                <UserPlus size={16} className="text-cyan-400" /> New Member Registration
               </span>
               <span className="text-[10px] text-slate-400 font-mono">{leaderArea} Zone</span>
             </div>
 
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">முழுப் பெயர் (Full Name)</label>
+              <label className="text-[11px] text-slate-400 block mb-1">Full Name</label>
               <input
                 type="text"
                 required
-                placeholder="எ.கா. Bro. David Raj"
+                placeholder="e.g. Bro. David Raj"
                 value={newMemberForm.name}
                 onChange={(e) => setNewMemberForm({ ...newMemberForm, name: e.target.value })}
                 className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
@@ -253,7 +253,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
             </div>
 
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">மொபைல் எண் (WhatsApp)</label>
+              <label className="text-[11px] text-slate-400 block mb-1">Mobile Phone (WhatsApp)</label>
               <input
                 type="tel"
                 required
@@ -265,15 +265,15 @@ export default function LeaderPortalView({ userSession, onLogout }) {
             </div>
 
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">குடும்பப் பொறுப்பு</label>
+              <label className="text-[11px] text-slate-400 block mb-1">Family Role</label>
               <select
                 value={newMemberForm.familyType}
                 onChange={(e) => setNewMemberForm({ ...newMemberForm, familyType: e.target.value })}
                 className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 cursor-pointer"
               >
-                <option>Family Head (குடும்பத் தலைவர்)</option>
-                <option>Youth (இளைஞர்)</option>
-                <option>New Visitor (புதிய விருந்தினர்)</option>
+                <option>Family Head</option>
+                <option>Youth</option>
+                <option>New Visitor</option>
               </select>
             </div>
 
@@ -282,7 +282,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
               className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-500/20 active:scale-95 transition cursor-pointer mt-2"
             >
               <Plus size={15} />
-              <span>பட்டியலில் சேர்க்கவும்</span>
+              <span>Add to Directory</span>
             </button>
           </form>
         )}
@@ -292,7 +292,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
           <form onSubmit={handleRecordSpotOffering} className="p-5 rounded-3xl bg-slate-900/90 border border-white/10 space-y-3.5 animate-in fade-in">
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <DollarSign size={16} className="text-emerald-400" /> விசிட்டிங் / ஸ்பாட் காணிக்கை
+                <DollarSign size={16} className="text-emerald-400" /> Visiting / Spot Offering
               </span>
               <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                 Direct Ledger
@@ -300,11 +300,11 @@ export default function LeaderPortalView({ userSession, onLogout }) {
             </div>
 
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">கொடுத்தவர் பெயர்</label>
+              <label className="text-[11px] text-slate-400 block mb-1">Donor Name</label>
               <input
                 type="text"
                 required
-                placeholder="விசுவாசி அல்லது புதியவர் பெயர்"
+                placeholder="Member or visitor name"
                 value={offeringForm.donorName}
                 onChange={(e) => setOfferingForm({ ...offeringForm, donorName: e.target.value })}
                 className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400"
@@ -312,10 +312,10 @@ export default function LeaderPortalView({ userSession, onLogout }) {
             </div>
 
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">மொபைல் எண் (ரசீது செல்ல)</label>
+              <label className="text-[11px] text-slate-400 block mb-1">Mobile Phone (For Receipt)</label>
               <input
                 type="tel"
-                placeholder="WhatsApp எண்"
+                placeholder="WhatsApp number"
                 value={offeringForm.phone}
                 onChange={(e) => setOfferingForm({ ...offeringForm, phone: e.target.value })}
                 className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400 font-mono"
@@ -323,20 +323,20 @@ export default function LeaderPortalView({ userSession, onLogout }) {
             </div>
 
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">காணிக்கைப் பிரிவு</label>
+              <label className="text-[11px] text-slate-400 block mb-1">Offering Category</label>
               <select
                 value={offeringForm.category}
                 onChange={(e) => setOfferingForm({ ...offeringForm, category: e.target.value })}
                 className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400 cursor-pointer"
               >
-                <option>தசமபாகம் (Tithe)</option>
-                <option>இல்ல சந்திப்பு காணிக்கை (Cottage Prayer)</option>
-                <option>ஸ்தோத்திர காணிக்கை (Thanksgiving)</option>
+                <option>Tithe</option>
+                <option>Cottage Prayer Offering</option>
+                <option>Thanksgiving Offering</option>
               </select>
             </div>
 
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">தொகை (₹ Amount)</label>
+              <label className="text-[11px] text-slate-400 block mb-1">Amount (₹ Amount)</label>
               <input
                 type="number"
                 required
@@ -351,7 +351,7 @@ export default function LeaderPortalView({ userSession, onLogout }) {
               type="submit"
               className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 active:scale-95 transition cursor-pointer mt-2"
             >
-              <span>காணிக்கையைப் பதிவு செய்</span>
+              <span>Record Offering</span>
               <ArrowRight size={14} />
             </button>
           </form>

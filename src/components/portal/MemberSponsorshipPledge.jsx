@@ -20,7 +20,7 @@ export default function MemberSponsorshipPledge({ userSession }) {
 
   const [submitted, setSubmitted] = useState(false);
 
-  // இந்த விசுவாசி ஏற்கெனவே செய்துள்ள ஸ்பான்சர்ஷிப்கள்
+  // Existing sponsorships by this believer
   const myPledges = useMemo(() => {
     try {
       const raw = localStorage.getItem('graceos_fellowship_sponsorships_db');
@@ -52,7 +52,7 @@ export default function MemberSponsorshipPledge({ userSession }) {
       status: 'CONFIRMED'
     };
 
-    // 1. முதன்மை ஸ்பான்சர்ஷிப் லெட்ஜரில் சேமித்தல்
+    // 1. Save to master sponsorships ledger
     try {
       const raw = localStorage.getItem('graceos_fellowship_sponsorships_db');
       const list = raw ? JSON.parse(raw) : [];
@@ -61,7 +61,7 @@ export default function MemberSponsorshipPledge({ userSession }) {
       console.error(err);
     }
 
-    // 2. Direct Fund ஆக இருந்தால் சபை நிதி லெட்ஜரிலும் வரவு வைத்தல்
+    // 2. If Direct Fund, record inflow into finance transactions ledger
     if (form.mode === 'DIRECT_FUND' && Number(form.amountEstimate) > 0) {
       try {
         const rawFinance = localStorage.getItem('app_finance_transactions_ledger');
@@ -69,7 +69,7 @@ export default function MemberSponsorshipPledge({ userSession }) {
         const newReceipt = {
           id: `REC-MBR-${Date.now().toString().slice(-4)}`,
           date: form.targetDate,
-          category: `ஸ்பான்சர்ஷிப் (${form.cause === 'FELLOWSHIP_MEALS' ? 'அன்பு விருந்து' : 'டிரஸ்ட் உதவி'})`,
+          category: `Sponsorship (${form.cause === 'FELLOWSHIP_MEALS' ? 'Love Feast' : 'Trust Aid'})`,
           amount: Number(form.amountEstimate),
           donor: `${memberName} (${form.occasion || 'Thanksgiving'})`
         };
@@ -92,10 +92,10 @@ export default function MemberSponsorshipPledge({ userSession }) {
   };
 
   const causeOptions = [
-    { id: 'FELLOWSHIP_MEALS', label: 'ஞாயிறு அன்பு விருந்து (Love Feast)', icon: Utensils, desc: 'ஆராதனை முடிந்ததும் சபை விசுவாசிகளுக்கு மதிய உணவு' },
-    { id: 'TRUST_KIDS', label: 'டிரஸ்ட் குழந்தைகள் உதவி (Kids Gifts)', icon: Gift, desc: 'ஆதரவற்ற குழந்தைகள் கல்வி, உடை மற்றும் உணவு உதவி' },
-    { id: 'ALTAR_FLOWERS', label: 'பலிபீட மலர் அலங்காரம் (Altar Flowers)', icon: Sparkles, desc: 'ஞாயிறு ஆராதனை பலிபீட மலர் சேவை' },
-    { id: 'BENEVOLENCE', label: 'ஏழைகள் நற்பணி உதவி (Poor Aid)', icon: Heart, desc: 'மருத்துவ மற்றும் விசேஷ ஏழை எளியோர் ஆதரவு' }
+    { id: 'FELLOWSHIP_MEALS', label: 'Sunday Love Feast (Fellowship Meals)', icon: Utensils, desc: 'Lunch provision for believers following worship service' },
+    { id: 'TRUST_KIDS', label: 'Trust Children Support (Kids Gifts)', icon: Gift, desc: 'Education, clothing, and meal support for underprivileged kids' },
+    { id: 'ALTAR_FLOWERS', label: 'Altar Floral Arrangement', icon: Sparkles, desc: 'Floral decoration and altar service for Sunday service' },
+    { id: 'BENEVOLENCE', label: 'Benevolence & Poor Aid', icon: Heart, desc: 'Medical and essential aid for families in need' }
   ];
 
   return (
@@ -110,24 +110,24 @@ export default function MemberSponsorshipPledge({ userSession }) {
           </span>
         </h3>
         <p className="text-xs text-slate-400 mt-0.5">
-          உங்கள் பிறந்தநாள், திருமண நாள் மற்றும் குடும்ப நன்மைகளுக்காக அன்பு விருந்து அல்லது டிரஸ்ட் உதவிகளை இங்கு முன்பதிவு செய்யலாம்.
+          Pre-book fellowship meals or trust aid offerings for birthdays, wedding anniversaries, and family thanksgivings.
         </p>
       </div>
 
       {submitted && (
         <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2.5 animate-in zoom-in-95">
           <CheckCircle2 size={18} />
-          <span>உங்கள் ஸ்தோத்திர பங்களிப்பு வெற்றிகரமாகப் பதிவு செய்யப்பட்டது! ஞாயிறு ஆராதனையில் விசேஷ ஜெபம் செய்யப்படும்.</span>
+          <span>Your thanksgiving sponsorship has been recorded! A special thanksgiving prayer will be dedicated during Sunday service.</span>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* இடதுபுறம்: முன்பதிவு படிவம் */}
+        {/* Left Column: Booking Form */}
         <div className="lg:col-span-2 p-6 rounded-3xl bg-slate-900 border border-white/10 space-y-5">
           <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
             <Heart size={15} className="text-rose-400" />
-            <span>புதிய பங்களிப்பைத் தேர்வு செய்க</span>
+            <span>Choose a New Sponsorship</span>
           </h4>
 
           <form onSubmit={handlePledgeSubmit} className="space-y-4">
@@ -165,33 +165,33 @@ export default function MemberSponsorshipPledge({ userSession }) {
             {/* Mode & Frequency Selection */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">வழங்கும் முறை (Mode)</label>
+                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Contribution Mode</label>
                 <select
                   value={form.mode}
                   onChange={(e) => setForm({ ...form, mode: e.target.value })}
                   className="w-full bg-slate-950 border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-rose-400"
                 >
-                  <option value="IN_KIND">நாங்களே சமைத்து/வாங்கித் தருகிறோம் (In-Kind)</option>
-                  <option value="DIRECT_FUND">சபைக் கணக்கிற்கு நிதியுதவி (Direct Fund)</option>
+                  <option value="IN_KIND">In-Kind (Self-Prepared / Donated Goods)</option>
+                  <option value="DIRECT_FUND">Direct Fund (Contribution to Church Account)</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">அதிர்வெண் (Frequency)</label>
+                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Frequency</label>
                 <select
                   value={form.frequency}
                   onChange={(e) => setForm({ ...form, frequency: e.target.value })}
                   className="w-full bg-slate-950 border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-rose-400"
                 >
-                  <option value="ONE_TIME">ஒருமுறை மட்டும் (One-Time)</option>
-                  <option value="MONTHLY_RECURRING">மாதந்தோறும் (Monthly)</option>
+                  <option value="ONE_TIME">One-Time Offering</option>
+                  <option value="MONTHLY_RECURRING">Monthly Recurring</option>
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">விருப்பத் தேதி (Date)</label>
+                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Preferred Date</label>
                 <input
                   type="date"
                   value={form.targetDate}
@@ -202,7 +202,7 @@ export default function MemberSponsorshipPledge({ userSession }) {
               </div>
 
               <div>
-                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">தோராய மதிப்பு (₹ Estimate)</label>
+                <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Estimated Amount (₹ Estimate)</label>
                 <input
                   type="number"
                   value={form.amountEstimate}
@@ -214,12 +214,12 @@ export default function MemberSponsorshipPledge({ userSession }) {
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">காரணம் / நிகழ்வு (Occasion)</label>
+              <label className="text-[10px] text-slate-400 block uppercase font-mono mb-1">Occasion / Reason</label>
               <input
                 type="text"
                 value={form.occasion}
                 onChange={(e) => setForm({ ...form, occasion: e.target.value })}
-                placeholder="எ.கா: 10-வது திருமண நாள் ஸ்தோத்திரம் / குழந்தையின் பிறந்தநாள்"
+                placeholder="e.g. 10th Wedding Anniversary Thanksgiving / Child's Birthday"
                 className="w-full bg-slate-950 border border-white/10 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-rose-400"
               />
             </div>
@@ -228,23 +228,23 @@ export default function MemberSponsorshipPledge({ userSession }) {
               type="submit"
               className="w-full py-3 bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-400 hover:to-amber-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-lg shadow-rose-500/20 active:scale-95"
             >
-              <span>பங்களிப்பை உறுதிசெய்க (Pledge Offering)</span>
+              <span>Pledge Sponsorship Offering</span>
               <ArrowRight size={14} />
             </button>
           </form>
         </div>
 
-        {/* வலதுபுறம்: விசுவாசியின் முந்தைய பங்களிப்புகள் */}
+        {/* Right Column: Believer's Previous Pledges */}
         <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4">
           <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
             <History size={15} className="text-amber-400" />
-            <span>உங்கள் பங்களிப்புகள் ({myPledges.length})</span>
+            <span>Your Sponsorships ({myPledges.length})</span>
           </h4>
 
           <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
             {myPledges.length === 0 ? (
               <div className="p-6 text-center text-slate-500 text-xs font-mono">
-                தாங்கள் இன்னும் எந்தப் பங்களிப்பையும் முன்பதிவு செய்யவில்லை.
+                You haven't booked any sponsorships yet.
               </div>
             ) : (
               myPledges.map((item) => (
