@@ -146,7 +146,7 @@ export default function CloudSyncConfigTab() {
             <input 
               type="url"
               required
-              placeholder="https://xyzcompany.supabase.co"
+              placeholder="https://your-project.supabase.co"
               value={config.supabaseUrl}
               onChange={(e) => setConfig({ ...config, supabaseUrl: e.target.value })}
               className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
@@ -160,7 +160,7 @@ export default function CloudSyncConfigTab() {
             <input 
               type="password"
               required
-              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              placeholder="Paste your public API key"
               value={config.supabaseAnonKey}
               onChange={(e) => setConfig({ ...config, supabaseAnonKey: e.target.value })}
               className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"

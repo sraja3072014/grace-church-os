@@ -37,6 +37,7 @@ const DEFAULT_STYLE_WALLPAPERS = {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [settingsInitialSubTab, setSettingsInitialSubTab] = useState('main_church');
   const [memberRegistrationRequest, setMemberRegistrationRequest] = useState(false);
   const [wallpaperData, setWallpaperData] = useState(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -237,6 +238,10 @@ export default function App() {
               setActiveTab('members');
               setMemberRegistrationRequest(true);
             }}
+            onOpenSettings={(subTab = 'main_church') => {
+              setSettingsInitialSubTab(subTab);
+              setActiveTab('settings');
+            }}
           />
         );
       case 'attendance':
@@ -275,7 +280,12 @@ export default function App() {
       case 'report_hub':
         return <ReportDashboard session={session} />;
       case 'settings':
-        return <SettingsHub session={session} />;
+        return (
+          <SettingsHub
+            session={session}
+            initialSubTab={settingsInitialSubTab}
+          />
+        );
       default:
         return null;
     }

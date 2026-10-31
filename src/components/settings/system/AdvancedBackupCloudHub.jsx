@@ -21,9 +21,9 @@ export default function AdvancedBackupCloudHub({ onTriggerSuccess }) {
       if (saved) return JSON.parse(saved);
     } catch (e) { console.error(e); }
     return {
-      supabaseUrl: 'https://xyzcompany.supabase.co',
-      supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVC...',
-      autoSyncSupabase: true,
+      supabaseUrl: '',
+      supabaseAnonKey: '',
+      autoSyncSupabase: false,
       activeProvider: 'Google Drive',
       targetBucketOrFolder: '1A2b3C4d5E6f_ChurchVault2026',
       serviceAccountEmail: 'church-backup-bot@gserviceaccount.com',

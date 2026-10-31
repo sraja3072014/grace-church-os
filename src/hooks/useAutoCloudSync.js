@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { supabase } from '../utils/supabaseClient';
+import { getSupabase } from '../utils/supabaseClient';
 import { getVaultData } from '../utils/vaultStore';
 
 export function useAutoCloudSync() {
@@ -14,6 +14,7 @@ export function useAutoCloudSync() {
       return;
     }
 
+    const supabase = getSupabase();
     if (!supabase) {
       setSyncStatus('idle');
       return;

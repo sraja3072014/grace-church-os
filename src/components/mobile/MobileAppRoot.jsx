@@ -3,7 +3,7 @@ import {
   Home, QrCode, DollarSign, Heart, Shield, Users, 
   Globe, LogOut, CheckCircle2, ChevronRight, X, ArrowUpRight
 } from 'lucide-react';
-import { supabase } from '../../utils/supabaseClient';
+import { getSupabase } from '../../utils/supabaseClient';
 
 export default function MobileAppRoot({ session, onLogout, onSwitchToDesktop }) {
   const [lang, setLang] = useState(() => localStorage.getItem('graceos_lang') || 'ta');
@@ -48,6 +48,7 @@ export default function MobileAppRoot({ session, onLogout, onSwitchToDesktop }) 
     if (!prayerText.trim()) return;
     setSyncNotice('Sending...');
     try {
+      const supabase = getSupabase();
       if (supabase) {
         await supabase.from('prayer_requests').insert([{
           requester_name: session?.name || 'Believer',

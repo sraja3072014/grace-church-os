@@ -372,9 +372,13 @@ function LandLeaseVaultSection() {
   );
 }
 
-export default function SettingsHub({ session }) {
-  const [activeTab, setActiveTab] = useState('main_church');
+export default function SettingsHub({ session, initialSubTab = 'main_church' }) {
+  const [activeTab, setActiveTab] = useState(initialSubTab);
   const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    setActiveTab(initialSubTab);
+  }, [initialSubTab]);
 
   const triggerSuccess = (msg) => {
     setToast(msg);

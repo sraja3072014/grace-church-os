@@ -55,14 +55,17 @@ export function resetSupabaseClient() {
   lastKey = '';
 }
 
-// பழைய இம்போர்ட்டுகளுடன் முரண்படாமல் இருக்க Proxy Export
-export const supabase = new Proxy({}, {
-  get(target, prop) {
-    const client = getSupabase();
-    if (!client) {
-      console.warn(`[SupabaseClient] Supabase credentials not configured yet in Settings. Action "${String(prop)}" ignored.`);
-      return () => Promise.resolve({ data: null, error: new Error('Supabase not configured in Settings') });
-    }
-    return client[prop];
+/**
+ * Return the configured Supabase client or fail explicitly.
+ * Callers should use getSupabase() when an offline/unconfigured state is valid,
+ * and requireSupabase() when the operation cannot proceed without Supabase.
+ */
+export function requireSupabase() {
+  const client = getSupabase();
+
+  if (!client) {
+    throw new Error('Supabase is not configured in Settings.');
   }
-});
+
+  return client;
+}

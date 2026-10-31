@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Camera, CheckCircle2, AlertTriangle, X, ShieldCheck } from 'lucide-react';
-import { supabase } from '../../utils/supabaseClient';
+import { getSupabase } from '../../utils/supabaseClient';
 
 // Harversine distance calculation in meters
 function getDistanceFromChurch(lat1, lon1, lat2, lon2) {
@@ -51,6 +51,11 @@ export default function SmartAttendanceScannerModal({ isOpen, onClose, memberId,
 
         try {
           // Record attendance in Supabase
+          const supabase = getSupabase();
+          if (!supabase) {
+            throw new Error('Supabase is not configured in Settings.');
+          }
+
           const { error: dbError } = await supabase.from('attendance').insert({
             member_id: memberId,
             verified_method: 'aura_pulse_gps',

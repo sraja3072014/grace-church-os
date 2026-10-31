@@ -12,7 +12,12 @@ import {
 import CelebrationDispatcherWidget from '../widgets/CelebrationDispatcherWidget';
 import CellLeaderSyncWidget from './CellLeaderSyncWidget';
 
-export default function MainDashboard({ setActiveTab, session, onRegisterMember }) {
+export default function MainDashboard({
+  setActiveTab,
+  session,
+  onRegisterMember,
+  onOpenSettings
+}) {
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [modalTab, setModalTab] = useState('existing');
@@ -285,7 +290,7 @@ export default function MainDashboard({ setActiveTab, session, onRegisterMember 
           { label: 'Quick Attendance Marker', desc: 'Mark Live Congregation Check-in', icon: CalendarCheck, onClick: () => setIsAttendanceModalOpen(true), color: 'from-amber-500/20 to-orange-500/10 border-amber-500/30 text-amber-300' },
           { label: 'Register Member', desc: 'New Family Tree Intake', icon: UserPlus, onClick: onRegisterMember, color: 'from-rose-500/20 to-amber-500/10 border-rose-500/30 text-rose-300' },
           { label: 'Record Tithe / Giving', desc: 'Issue 80G Receipt', icon: Receipt, target: 'finance', color: 'from-amber-500/20 to-orange-500/10 border-amber-500/30 text-amber-300' },
-          { label: 'System Preferences', desc: 'Physical Storage & Settings', icon: Database, target: 'settings', color: 'from-sky-500/20 to-indigo-500/10 border-sky-500/30 text-sky-300' },
+          { label: 'System Preferences', desc: 'Physical Storage & Settings', icon: Database, onClick: () => onOpenSettings?.('vault_drive'), color: 'from-sky-500/20 to-indigo-500/10 border-sky-500/30 text-sky-300' },
         ].map((action, idx) => {
           const Icon = action.icon;
           return (

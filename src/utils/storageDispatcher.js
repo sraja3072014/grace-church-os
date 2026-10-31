@@ -1,6 +1,6 @@
 import { writeDatabaseFile, isVaultConnected } from './vaultFS';
 import { syncLocalVaultToCloud } from './cloudSyncEngine';
-import { supabase } from './supabaseClient';
+import { getSupabase } from './supabaseClient';
 
 const OFFLINE_QUEUE_PREFIX = 'offline_queue_';
 const queueFlushes = new Map();
@@ -21,6 +21,9 @@ export function flushOfflineQueue(tableName) {
 
   const flushTask = (async () => {
     if (typeof navigator === 'undefined' || !navigator.onLine) return false;
+
+    const supabase = getSupabase();
+    if (!supabase) return false;
 
     const queueKey = `${OFFLINE_QUEUE_PREFIX}${tableName}`;
     try {
@@ -60,6 +63,12 @@ export function flushOfflineQueue(tableName) {
 
 async function pushDeltaToSupabase(tableName, payload) {
   try {
+    const supabase = getSupabase();
+    if (!supabase) {
+      enqueueOfflineRecord(tableName, payload);
+      return false;
+    }
+
     const synced = await flushOfflineQueue(tableName);
     if (!synced) {
       enqueueOfflineRecord(tableName, payload);
@@ -81,6 +90,11 @@ async function pushDeltaToSupabase(tableName, payload) {
 }
 
 async function directSupabaseSave(tableName, payload) {
+  const supabase = getSupabase();
+  if (!supabase) {
+    throw new Error('Supabase is not configured in Settings.');
+  }
+
   const queueSynced = await flushOfflineQueue(tableName);
   if (!queueSynced) {
     throw new Error(`Pending ${tableName} records could not be synced first.`);
