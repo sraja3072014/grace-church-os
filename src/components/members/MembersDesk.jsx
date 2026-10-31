@@ -13,7 +13,7 @@ import {
 
 const ROLE_FILTERS = [
   { value: 'ALL', label: 'All Roles', shortLabel: 'All' },
-  { value: 'PASTOR', label: 'Pastor', shortLabel: 'Pastor' },
+  { value: 'PASTORAL', label: 'Pastoral Ranks', shortLabel: 'Pastoral' },
   { value: 'LEADER', label: 'Leader / Elder', shortLabel: 'Leader' },
   { value: 'MEMBER', label: 'Member', shortLabel: 'Member' },
   { value: 'VOLUNTEER', label: 'Volunteer', shortLabel: 'Volunteer' },
@@ -63,14 +63,40 @@ const getMemberRoleText = (member) => [
   ...(Array.isArray(member?.ministry_talents) ? member.ministry_talents : [])
 ].filter(Boolean).map(normalizeFilterText).join(' ');
 
+const getMemberPastoralText = (member) => [
+  member?.role,
+  member?.ministryRole,
+  member?.ministry_role,
+  member?.position,
+  member?.designation,
+  member?.title,
+  member?.roleInFamily,
+  member?.name
+].filter(Boolean).map(normalizeFilterText).join(' ');
+
+const isPastoralRank = (member) => {
+  const pastoralText = getMemberPastoralText(member);
+  const hasPastoralTitle = /\b(?:senior\s+pastor|associate\s+pastor|assistant\s+pastor|pastor|rev\.?|reverend|bishop)\b/.test(pastoralText);
+  const hasDivinityDoctorate = /\b(?:doctor\s+of\s+divinity|divinity\s+doctor|d\.?\s*d\.?)\b/.test(pastoralText);
+  const hasClergyDoctorTitle = /\bdr\.?\b/.test(
+    [member?.role, member?.ministryRole, member?.ministry_role, member?.position, member?.designation]
+      .filter(Boolean)
+      .map(normalizeFilterText)
+      .join(' ')
+  );
+
+  return hasPastoralTitle || hasDivinityDoctorate || hasClergyDoctorTitle;
+};
+
 const memberMatchesRole = (member, roleFilter) => {
   if (roleFilter === 'ALL') return true;
   const roleText = getMemberRoleText(member);
-  if (roleFilter === 'PASTOR') return /pastor|பாஸ்டர்|போதகர்/.test(roleText);
-  if (roleFilter === 'LEADER') return /leader|தலைவர்|elder|மூப்பர்|head of family/.test(roleText);
+  const pastoralRank = isPastoralRank(member);
+  if (roleFilter === 'PASTORAL') return pastoralRank;
+  if (roleFilter === 'LEADER') return !pastoralRank && /leader|தலைவர்|elder|மூப்பர்|head of family/.test(roleText);
   if (roleFilter === 'VOLUNTEER') return /volunteer|வாலண்டியர்|hospitality/.test(roleText);
   if (roleFilter === 'SUNDAY_SCHOOL_TEACHER') return /sunday school|சண்டே ஸ்கூல்|teacher|ஆசிரியர்|kids ministry/.test(roleText);
-  if (roleFilter === 'MEMBER') return !/pastor|பாஸ்டர்|போதகர்|leader|தலைவர்|elder|மூப்பர்|volunteer|வாலண்டியர்|sunday school|teacher|ஆசிரியர்/.test(roleText);
+  if (roleFilter === 'MEMBER') return !pastoralRank && !/leader|தலைவர்|elder|மூப்பர்|volunteer|வாலண்டியர்|sunday school|teacher|ஆசிரியர்/.test(roleText);
   return true;
 };
 
@@ -93,8 +119,8 @@ const isMemberAnointed = (member) => Boolean(
 );
 
 export default function MembersDesk({ session, registrationRequest, onRegistrationRequestHandled }) {
-  // 9 Church Ministry Talents
-  const TALENT_OPTIONS = [
+  // Default Church Ministry Talents. The Settings directory can override this list.
+  const DEFAULT_TALENT_OPTIONS = [
     "Worship Team & Vocals",
     "Sunday School & Kids Ministry",
     "Youth Fellowship",
@@ -146,6 +172,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
 
   const [families, setFamilies] = useState(defaultFamilies);
   const [isFamiliesLoaded, setIsFamiliesLoaded] = useState(false);
+  const [talentOptions, setTalentOptions] = useState(DEFAULT_TALENT_OPTIONS);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [ageFilter, setAgeFilter] = useState('ALL');
@@ -211,7 +238,11 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
   useEffect(() => {
     async function loadData() {
       try {
-        const data = await getVaultData('members', defaultFamilies);
+        const [data, configuredTalents] = await Promise.all([
+          getVaultData('members', defaultFamilies),
+          getVaultData('ministry_talents_catalog', DEFAULT_TALENT_OPTIONS)
+        ]);
+        if (Array.isArray(configuredTalents) && configuredTalents.length > 0) setTalentOptions(configuredTalents);
         if (Array.isArray(data) && data.length > 0) setFamilies(data);
       } catch (error) {
         console.error('Error loading member data:', error);
@@ -248,6 +279,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         familyId: family.familyId,
         houseId: family.houseId || `${family.familyId}-H`,
         ...family.headMember,
+        gender: family.headMember?.gender || 'Male',
         address: family.address || '',
         area: family.area || '',
         campus: family.campus || session?.activeCampus || 'Headquarters',
@@ -295,6 +327,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
       setEditingMemberId(memberToEdit.memberId);
       setMemberForm({
         ...memberToEdit,
+        gender: memberToEdit.gender || (memberToEdit.roleInFamily === 'Spouse / Wife' ? 'Female' : 'Male'),
         familyId: family.familyId,
         houseId: memberToEdit.memberId,
         ministryTalents: memberToEdit.ministryTalents || []
@@ -347,6 +380,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
             headMember: {
               ...f.headMember,
               ...headForm,
+              gender: headForm.gender || 'Male',
               memberId: headForm.houseId,
               roleInFamily: 'Head of Family',
               status: 'Active'
@@ -366,6 +400,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         gpsCoordinates: headForm.gpsCoordinates,
         headMember: {
           ...headForm,
+          gender: headForm.gender || 'Male',
           memberId: headForm.houseId,
           roleInFamily: 'Head of Family',
           status: 'Active'
@@ -388,6 +423,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
 
     const memberData = {
       ...memberForm,
+      gender: memberForm.gender || (memberForm.roleInFamily === 'Spouse / Wife' ? 'Female' : 'Male'),
       memberId: memberForm.houseId,
       status: 'Active',
       updatedAt: new Date().toISOString()
@@ -432,6 +468,10 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
       member?.roleInFamily,
       member?.role,
       member?.ministryRole,
+      member?.ministry_role,
+      member?.position,
+      member?.designation,
+      member?.title,
       ...(Array.isArray(member?.ministryTalents) ? member.ministryTalents : [])
     ].filter(Boolean).map(normalizeFilterText).join(' ');
     const matchesQuery = !query || searchableText.includes(query);
@@ -511,12 +551,12 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         />
       </div>
 
-      {/* Quick Filters & Dropdown Filters */}
+      {/* Member Filters */}
       <div className="p-4 rounded-2xl bg-slate-900/60 border border-white/[0.08] space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Filter size={15} className="text-cyan-400" />
-            <span className="text-[11px] uppercase tracking-wider font-bold text-slate-300">Quick Filters</span>
+            <span className="text-[11px] uppercase tracking-wider font-bold text-slate-300">Filters</span>
             {activeFilterCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[9px] font-bold">
                 {activeFilterCount} active
@@ -531,67 +571,6 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
           >
             <RotateCcw size={11} />
             <span>Clear filters</span>
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5">
-          {ROLE_FILTERS.map((filter) => (
-            <button
-              key={filter.value}
-              type="button"
-              onClick={() => setRoleFilter(filter.value)}
-              className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
-                roleFilter === filter.value
-                  ? 'bg-cyan-500/20 border-cyan-400/60 text-cyan-200 shadow-lg shadow-cyan-500/10'
-                  : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setAgeFilter(ageFilter === 'YOUTH' ? 'ALL' : 'YOUTH')}
-            className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
-              ageFilter === 'YOUTH'
-                ? 'bg-violet-500/20 border-violet-400/60 text-violet-200'
-                : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
-            }`}
-          >
-            Youth (13–30)
-          </button>
-          <button
-            type="button"
-            onClick={() => setAgeFilter(ageFilter === 'KIDS' ? 'ALL' : 'KIDS')}
-            className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
-              ageFilter === 'KIDS'
-                ? 'bg-violet-500/20 border-violet-400/60 text-violet-200'
-                : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
-            }`}
-          >
-            Children (≤12)
-          </button>
-          <button
-            type="button"
-            onClick={() => setSpiritualFilter(spiritualFilter === 'NOT_BAPTIZED' ? 'ALL' : 'NOT_BAPTIZED')}
-            className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
-              spiritualFilter === 'NOT_BAPTIZED'
-                ? 'bg-cyan-500/20 border-cyan-400/60 text-cyan-200'
-                : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
-            }`}
-          >
-            Not Baptized
-          </button>
-          <button
-            type="button"
-            onClick={() => setSpiritualFilter(spiritualFilter === 'NOT_ANOINTED' ? 'ALL' : 'NOT_ANOINTED')}
-            className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition cursor-pointer ${
-              spiritualFilter === 'NOT_ANOINTED'
-                ? 'bg-amber-500/20 border-amber-400/60 text-amber-200'
-                : 'bg-slate-950/70 border-white/10 text-slate-400 hover:text-white hover:border-white/25'
-            }`}
-          >
-            Not Anointed
           </button>
         </div>
 
@@ -672,8 +651,16 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                           {fam.familyId}
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                        ID: <span className="text-cyan-400 font-bold">{head.memberId}</span> • Age: {head.age || '—'} • Blood: {head.bloodGroup}
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <span>ID: <span className="text-cyan-400 font-bold">{head.memberId}</span></span>
+                        <span>•</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${head.gender === 'Female' ? 'text-pink-300 bg-pink-500/15 border border-pink-500/30' : 'text-blue-300 bg-blue-500/15 border border-blue-500/30'}`}>
+                          {head.gender === 'Female' ? '👩 Female' : '👨 Male'}
+                        </span>
+                        <span>•</span>
+                        <span>Age: {head.age || '—'}</span>
+                        <span>•</span>
+                        <span>Blood: {head.bloodGroup}</span>
                       </div>
                     </td>
 
@@ -769,8 +756,16 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                                         {member.roleInFamily}
                                       </span>
                                     </div>
-                                    <div className="text-[10px] text-slate-400 font-mono mt-1">
-                                      ID: <strong className="text-cyan-400">{member.memberId}</strong> • Age: {member.age || '—'} • Blood: {member.bloodGroup}
+                                    <div className="text-[10px] text-slate-400 font-mono mt-1 flex items-center gap-1.5 flex-wrap">
+                                      <span>ID: <strong className="text-cyan-400">{member.memberId}</strong></span>
+                                      <span>•</span>
+                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${member.gender === 'Female' ? 'text-pink-300 bg-pink-500/15 border border-pink-500/30' : 'text-blue-300 bg-blue-500/15 border border-blue-500/30'}`}>
+                                        {member.gender === 'Female' ? '👩 Female' : '👨 Male'}
+                                      </span>
+                                      <span>•</span>
+                                      <span>Age: {member.age || '—'}</span>
+                                      <span>•</span>
+                                      <span>Blood: {member.bloodGroup}</span>
                                     </div>
                                     {member.phone && (
                                       <div className="text-[10px] text-slate-400 font-mono mt-0.5">
@@ -868,20 +863,72 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              {/* Gender & Blood Group */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Gender *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setHeadForm({ ...headForm, gender: 'Male' })}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                        (headForm.gender || 'Male') === 'Male'
+                          ? 'bg-blue-600/25 border-blue-500 text-blue-300 font-bold shadow-sm shadow-blue-500/20 ring-1 ring-blue-500/40'
+                          : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-sm">👨</span>
+                      <span>Male</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHeadForm({ ...headForm, gender: 'Female' })}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                        headForm.gender === 'Female'
+                          ? 'bg-pink-600/25 border-pink-500 text-pink-300 font-bold shadow-sm shadow-pink-500/20 ring-1 ring-pink-500/40'
+                          : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-sm">👩</span>
+                      <span>Female</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Blood Group</label>
+                  <select
+                    value={headForm.bloodGroup}
+                    onChange={(e) => setHeadForm({ ...headForm, bloodGroup: e.target.value })}
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-rose-400 font-bold"
+                  >
+                    {['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'].map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Date of Birth & Age */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Date of Birth</label>
-                  <input type="date" value={headForm.dob} onChange={(e) => setHeadForm({ ...headForm, dob: e.target.value, age: calculateAge(e.target.value) })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-white" />
+                  <input
+                    type="date"
+                    value={headForm.dob}
+                    onChange={(e) => setHeadForm({ ...headForm, dob: e.target.value, age: calculateAge(e.target.value) })}
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Age (Auto)</label>
-                  <input type="number" value={headForm.age} readOnly className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-white font-mono" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">Blood Group</label>
-                  <select value={headForm.bloodGroup} onChange={(e) => setHeadForm({ ...headForm, bloodGroup: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-2 py-1.5 text-rose-400 font-bold">
-                    {['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'].map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
+                  <input
+                    type="number"
+                    value={headForm.age}
+                    readOnly
+                    placeholder="Auto calculated"
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono"
+                  />
                 </div>
               </div>
 
@@ -923,7 +970,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
               <div className="space-y-1.5 pt-1">
                 <label className="text-[10px] text-slate-400 font-bold uppercase">Church Ministry Talents</label>
                 <div className="flex flex-wrap gap-1.5">
-                  {TALENT_OPTIONS.map((talent) => {
+                  {talentOptions.map((talent) => {
                     const sel = headForm.ministryTalents.includes(talent);
                     return (
                       <button key={talent} type="button" onClick={() => {
@@ -978,10 +1025,15 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                     onChange={(e) => {
                       const newRole = e.target.value;
                       const suffix = newRole === 'Spouse / Wife' ? 'W' : 'C';
+                      let suggestedGender = memberForm.gender;
+                      if (!editingMemberId) {
+                        if (newRole === 'Spouse / Wife') suggestedGender = 'Female';
+                      }
                       setMemberForm({
                         ...memberForm,
                         roleInFamily: newRole,
-                        houseId: `${activeFamilyForNewMember.familyId}-${suffix}${Date.now().toString().slice(-2)}`
+                        gender: suggestedGender,
+                        ...(editingMemberId ? {} : { houseId: `${activeFamilyForNewMember.familyId}-${suffix}${Date.now().toString().slice(-2)}` })
                       });
                     }}
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-cyan-300 font-bold"
@@ -1008,20 +1060,72 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              {/* Gender & Blood Group */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Gender *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMemberForm({ ...memberForm, gender: 'Male' })}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                        (memberForm.gender || 'Male') === 'Male'
+                          ? 'bg-blue-600/25 border-blue-500 text-blue-300 font-bold shadow-sm shadow-blue-500/20 ring-1 ring-blue-500/40'
+                          : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-sm">👨</span>
+                      <span>Male</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMemberForm({ ...memberForm, gender: 'Female' })}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                        memberForm.gender === 'Female'
+                          ? 'bg-pink-600/25 border-pink-500 text-pink-300 font-bold shadow-sm shadow-pink-500/20 ring-1 ring-pink-500/40'
+                          : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-sm">👩</span>
+                      <span>Female</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Blood Group</label>
+                  <select
+                    value={memberForm.bloodGroup}
+                    onChange={(e) => setMemberForm({ ...memberForm, bloodGroup: e.target.value })}
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-rose-400 font-bold"
+                  >
+                    {['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'].map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Date of Birth & Age */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Date of Birth</label>
-                  <input type="date" value={memberForm.dob} onChange={(e) => setMemberForm({ ...memberForm, dob: e.target.value, age: calculateAge(e.target.value) })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-white" />
+                  <input
+                    type="date"
+                    value={memberForm.dob}
+                    onChange={(e) => setMemberForm({ ...memberForm, dob: e.target.value, age: calculateAge(e.target.value) })}
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Age (Auto)</label>
-                  <input type="number" value={memberForm.age} readOnly className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-white font-mono" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">Blood Group</label>
-                  <select value={memberForm.bloodGroup} onChange={(e) => setMemberForm({ ...memberForm, bloodGroup: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-2 py-1.5 text-rose-400 font-bold">
-                    {['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'].map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
+                  <input
+                    type="number"
+                    value={memberForm.age}
+                    readOnly
+                    placeholder="Auto calculated"
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono"
+                  />
                 </div>
               </div>
 
@@ -1052,7 +1156,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
               <div className="space-y-1.5 pt-1">
                 <label className="text-[10px] text-slate-400 font-bold uppercase">Member Ministry Talents & Interests</label>
                 <div className="flex flex-wrap gap-1.5">
-                  {TALENT_OPTIONS.map((talent) => {
+                  {talentOptions.map((talent) => {
                     const sel = (memberForm.ministryTalents || []).includes(talent);
                     return (
                       <button key={talent} type="button" onClick={() => {

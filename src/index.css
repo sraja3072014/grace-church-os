@@ -4,11 +4,15 @@
 
 @layer base {
   :root {
-    --card-glow-color: rgba(14, 116, 144, 0.4);
-    --glow-accent: rgba(14, 116, 144, 0.4);
+    --primary-accent: #06b6d4;
+    --aura-glow: rgba(6, 182, 212, 0.15);
+    --border-tint: rgba(6, 182, 212, 0.3);
+    --card-glow-color: rgba(6, 182, 212, 0.3);
+    --glow-accent: rgba(6, 182, 212, 0.15);
     --shadow-depth: rgba(0, 0, 0, 0.5);
     --dynamic-text-color: #ffffff;
     --ambient-glow-opacity: 0.32;
+    --ambient-shimmer-opacity: 0.35;
   }
 
   html,
@@ -111,7 +115,8 @@
 .win11-card:hover,
 .crystal-card:hover,
 .glass-panel:hover {
-  border-color: var(--card-glow-color, rgba(14, 116, 144, 0.6)) !important;
+  border-color: var(--border-tint, var(--card-glow-color, rgba(6, 182, 212, 0.4))) !important;
+  box-shadow: 0 16px 36px 0 var(--shadow-depth, rgba(0, 0, 0, 0.5)), 0 0 20px var(--aura-glow, rgba(6, 182, 212, 0.15)) !important;
 }
 
 /* =========================================================
@@ -135,43 +140,43 @@
   will-change: transform, opacity;
 }
 
-/* Orb 1: அமைதியான டீல் / ஐஸ் வாட்டர் */
+/* Orb 1: Primary Accent glow */
 .orb-1 {
   width: 55vw;
   height: 55vw;
   top: -15vw;
   left: -10vw;
-  background: radial-gradient(circle, rgba(14, 116, 144, 0.55) 0%, rgba(14, 116, 144, 0) 70%);
+  background: radial-gradient(circle, var(--aura-glow, rgba(6, 182, 212, 0.55)) 0%, transparent 70%);
   animation: calmFloat1 26s ease-in-out infinite alternate;
 }
 
-/* Orb 2: மெல்லிய லாவெண்டர் / இண்டிகோ */
+/* Orb 2: Border highlight aura */
 .orb-2 {
   width: 60vw;
   height: 60vw;
   top: -5vw;
   right: -15vw;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.45) 0%, rgba(99, 102, 241, 0) 70%);
+  background: radial-gradient(circle, var(--border-tint, rgba(99, 102, 241, 0.45)) 0%, transparent 70%);
   animation: calmFloat2 32s ease-in-out infinite alternate;
 }
 
-/* Orb 3: அமைதியான ரோஸ் கோல்ட் */
+/* Orb 3: Soft ambient glow */
 .orb-3 {
   width: 50vw;
   height: 50vw;
   bottom: -15vw;
   left: 10vw;
-  background: radial-gradient(circle, rgba(190, 24, 93, 0.35) 0%, rgba(190, 24, 93, 0) 70%);
+  background: radial-gradient(circle, var(--aura-glow, rgba(190, 24, 93, 0.35)) 0%, transparent 70%);
   animation: calmFloat3 28s ease-in-out infinite alternate;
 }
 
-/* Orb 4: கதகதப்பான மெழுகுவர்த்தி தங்கம் (Candlelight Amber) */
+/* Orb 4: Warm highlight glow */
 .orb-4 {
   width: 55vw;
   height: 55vw;
   bottom: -10vw;
   right: -10vw;
-  background: radial-gradient(circle, rgba(180, 83, 9, 0.4) 0%, rgba(180, 83, 9, 0) 70%);
+  background: radial-gradient(circle, var(--border-tint, rgba(180, 83, 9, 0.4)) 0%, transparent 70%);
   animation: calmFloat4 34s ease-in-out infinite alternate;
 }
 
@@ -217,4 +222,138 @@
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
   border: none !important;
+}
+
+/* =========================================================
+   3. Pure CSS GPU-Accelerated Atmospheric Shimmer Layers
+      (Solar Radiance, Lunar Obsidian, Rain & Mist Shimmer)
+   ========================================================= */
+
+.ambient-shimmer-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  opacity: var(--ambient-shimmer-opacity, 0.35);
+  transition: opacity 0.8s ease-in-out;
+}
+
+@media print {
+  .ambient-shimmer-container {
+    display: none !important;
+  }
+}
+
+/* Base class for shimmer layers - hardware accelerated, 0% CPU */
+.ambient-shimmer-layer {
+  position: absolute;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* 1. Solar Radiance Aura (Daytime / Sunny / Morning) */
+.ambient-shimmer-solar {
+  background: 
+    radial-gradient(circle 800px at 85% 10%, rgba(245, 158, 11, 0.22) 0%, rgba(251, 191, 36, 0.12) 30%, transparent 70%),
+    radial-gradient(circle 600px at 30% 0%, rgba(245, 158, 11, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 900px 500px at 60% 30%, rgba(253, 230, 138, 0.08) 0%, transparent 65%);
+  filter: blur(55px);
+  animation: solarRadiancePulse 22s ease-in-out infinite alternate;
+}
+
+@keyframes solarRadiancePulse {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate3d(-3vw, 2vh, 0) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(2vw, -2vh, 0) scale(0.96);
+    opacity: 0.82;
+  }
+}
+
+/* 2. Lunar Obsidian Shimmer (Night / Dusk / Midnight) */
+.ambient-shimmer-lunar {
+  background: 
+    radial-gradient(circle 750px at 20% 15%, rgba(129, 140, 248, 0.20) 0%, rgba(99, 102, 241, 0.12) 35%, rgba(30, 27, 75, 0.05) 70%, transparent 85%),
+    radial-gradient(circle 650px at 80% 75%, rgba(99, 102, 241, 0.14) 0%, rgba(79, 70, 229, 0.08) 40%, transparent 70%),
+    radial-gradient(ellipse 700px 450px at 50% 50%, rgba(199, 210, 254, 0.07) 0%, transparent 65%);
+  filter: blur(65px);
+  animation: lunarObsidianWave 30s ease-in-out infinite alternate;
+}
+
+@keyframes lunarObsidianWave {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate3d(3vw, -2.5vh, 0) scale(1.07);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(-2vw, 2vh, 0) scale(0.95);
+    opacity: 0.78;
+  }
+}
+
+/* 3. Rain Shimmer (Rainy / Thunderstorm) */
+.ambient-shimmer-rain {
+  background: repeating-linear-gradient(
+    165deg,
+    transparent 0px,
+    transparent 28px,
+    rgba(56, 189, 248, 0.04) 29px,
+    rgba(255, 255, 255, 0.07) 30px,
+    rgba(56, 189, 248, 0.04) 31px,
+    transparent 32px,
+    transparent 60px
+  );
+  background-size: 100% 360px;
+  animation: rainShimmerMove 2.8s linear infinite;
+}
+
+@keyframes rainShimmerMove {
+  0% {
+    transform: translate3d(0, -360px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* 4. Acrylic Mist Shimmer (Mist / Fog / Overcast Cloud) */
+.ambient-shimmer-mist {
+  background: 
+    radial-gradient(ellipse 90% 65% at 50% 40%, rgba(203, 213, 225, 0.16) 0%, rgba(148, 163, 184, 0.08) 50%, transparent 80%),
+    radial-gradient(circle 500px at 20% 70%, rgba(226, 232, 240, 0.12) 0%, transparent 60%),
+    radial-gradient(circle 550px at 80% 30%, rgba(148, 163, 184, 0.14) 0%, transparent 60%);
+  filter: blur(55px);
+  animation: mistHazeFloat 26s ease-in-out infinite alternate;
+}
+
+@keyframes mistHazeFloat {
+  0% {
+    transform: translate3d(-3vw, -2vh, 0) scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(3vw, 2vh, 0) scale(1.08);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate3d(-1vw, 3vh, 0) scale(1.02);
+    opacity: 0.72;
+  }
 }

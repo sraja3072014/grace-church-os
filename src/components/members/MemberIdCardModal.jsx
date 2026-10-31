@@ -93,6 +93,12 @@ export default function MemberIdCardModal({ member, family, onClose }) {
                   <span className="text-cyan-300 font-bold">{member.memberId || 'MBR-0101'}</span>
                   <span className="text-slate-500">•</span>
                   <span className="text-amber-300 font-bold">{family?.familyId || 'FAM-101'}</span>
+                  {member.gender && (
+                    <>
+                      <span className="text-slate-500">•</span>
+                      <span className="text-slate-300 font-semibold">{member.gender}</span>
+                    </>
+                  )}
                 </div>
 
                 <div className="text-[8px] text-slate-300 flex items-center gap-1 truncate pt-0.5">

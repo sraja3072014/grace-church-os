@@ -17,6 +17,7 @@ import MultiCampusHQDesk from '../campus/MultiCampusHQDesk';
 
 // 2. People & Access
 import UsersStaffTab from './people/UsersStaffTab';
+import MinistryTalentsDirectoryTab from './people/MinistryTalentsDirectoryTab';
 import RegistrationTab from './people/RegistrationTab';
 import AttendanceConfigTab from './people/AttendanceConfigTab';
 import AccessControlTab from './people/AccessControlTab';
@@ -399,6 +400,7 @@ export default function SettingsHub({ session }) {
       group: 'People & Access',
       items: [
         { id: 'users_staff', label: 'Staff Credentials', icon: Users },
+        { id: 'ministry_talents', label: 'Ministry & Talents', icon: HeartHandshake },
         { id: 'registration_cfg', label: 'Member Registration Intake', icon: UserPlus },
         { id: 'attendance_cfg', label: 'Attendance & QR Setup', icon: ClipboardCheck },
         { id: 'access_control', label: 'Access Control (RBAC)', icon: ShieldCheck },
@@ -484,6 +486,7 @@ export default function SettingsHub({ session }) {
           
           {/* People & Access */}
           {activeTab === 'users_staff' && <UsersStaffTab />}
+          {activeTab === 'ministry_talents' && <MinistryTalentsDirectoryTab />}
           {activeTab === 'registration_cfg' && <RegistrationTab />}
           {activeTab === 'attendance_cfg' && <AttendanceConfigTab />}
           {activeTab === 'access_control' && <AccessControlTab />}

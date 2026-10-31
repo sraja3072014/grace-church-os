@@ -12,6 +12,7 @@ import FinanceDesk from './components/finance/FinanceDesk';
 import CommunityHub from './components/community/CommunityHub';
 import SettingsHub from './components/settings/SettingsHub';
 import RainCanvas from './components/layout/RainCanvas';
+import AmbientShimmerBackdrop from './components/layout/AmbientShimmerBackdrop';
 import TaskbarDock from './components/layout/TaskbarDock';
 import VisitorsHub from './components/visitors/VisitorsDashboard';
 import PrayerWall from './components/prayer/PrayerWall';
@@ -23,14 +24,13 @@ import QuickWidgetBar from './components/widgets/QuickWidgetBar';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import MinistriesHubDesk from './components/ministry/MinistriesHubDesk';
 import { getLargeWallpaper } from './utils/storageDB';
-import { NATURE_PRESETS } from './components/settings/system/ThemeDisplayTab';
 import { syncLocalVaultToCloud } from './utils/cloudSyncEngine';
 import { canAccessModule } from './utils/accessControl';
+import { resolveAmbientTokens, applyAmbientTokens, getCurrentTimePhase } from './utils/adaptiveAmbientEngine';
 
 const DEFAULT_STYLE_WALLPAPERS = {
-  glassmorphism: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
-  aero_liquid: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
-  naturemorphism: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
+  glassmorphism: '',
+  aero_liquid: '',
   neumorphism: 'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?q=80&w=1920&auto=format&fit=crop',
   minimal_flat: ''
 };
@@ -57,10 +57,13 @@ export default function App() {
       const local = localStorage.getItem('graceos_theme_config');
       const parsed = local ? JSON.parse(local) : {};
       return {
+        paletteId: parsed.paletteId || 'obsidian_cyan',
+        primaryAccent: parsed.primaryAccent || '#06b6d4',
+        auraGlow: parsed.auraGlow || 'rgba(6, 182, 212, 0.15)',
+        borderTint: parsed.borderTint || 'rgba(6, 182, 212, 0.3)',
         preset: parsed.preset || 'aurora_cosmic',
-        styleModel: parsed.styleModel || 'glassmorphism',
-        bgMode: parsed.bgMode || 'nature_wallpaper',
-        natureWallpaperUrl: parsed.natureWallpaperUrl || (NATURE_PRESETS && NATURE_PRESETS[0]?.url) || 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
+        styleModel: parsed.styleModel === 'naturemorphism' ? 'glassmorphism' : (parsed.styleModel || 'glassmorphism'),
+        bgMode: parsed.bgMode === 'nature_wallpaper' ? 'dynamic_glow' : (parsed.bgMode || 'dynamic_glow'),
         bgColor: parsed.bgColor || '#07050d',
         textColor: parsed.textColor || '#ffffff',
         autoContrast: parsed.autoContrast ?? true,
@@ -68,7 +71,7 @@ export default function App() {
         wallpaperDim: parsed.wallpaperDim ?? 35,
         wallpaperBrightness: parsed.wallpaperBrightness ?? 100,
         auraOpacity: parsed.auraOpacity ?? 32,
-        glassGlowColor: parsed.glassGlowColor || 'rgba(14, 116, 144, 0.4)',
+        glassGlowColor: parsed.glassGlowColor || parsed.borderTint || 'rgba(6, 182, 212, 0.3)',
         shadowIntensity: parsed.shadowIntensity ?? 40,
         layoutStyle: parsed.layoutStyle || 'windows_dock',
         enableRainFX: parsed.enableRainFX || false,
@@ -78,10 +81,13 @@ export default function App() {
       };
     } catch {
       return {
+        paletteId: 'obsidian_cyan',
+        primaryAccent: '#06b6d4',
+        auraGlow: 'rgba(6, 182, 212, 0.15)',
+        borderTint: 'rgba(6, 182, 212, 0.3)',
         preset: 'aurora_cosmic',
         styleModel: 'glassmorphism',
-        bgMode: 'nature_wallpaper',
-        natureWallpaperUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop',
+        bgMode: 'dynamic_glow',
         bgColor: '#07050d',
         textColor: '#ffffff',
         autoContrast: true,
@@ -89,7 +95,7 @@ export default function App() {
         wallpaperDim: 35,
         wallpaperBrightness: 100,
         auraOpacity: 32,
-        glassGlowColor: 'rgba(14, 116, 144, 0.4)',
+        glassGlowColor: 'rgba(6, 182, 212, 0.3)',
         shadowIntensity: 40,
         layoutStyle: 'windows_dock',
         enableRainFX: false,
@@ -103,13 +109,50 @@ export default function App() {
   const syncThemeAndWallpaper = async () => {
     try {
       const local = localStorage.getItem('graceos_theme_config');
-      if (local) setTheme(JSON.parse(local));
+      if (local) {
+        const parsed = JSON.parse(local);
+        const resolved = resolveAmbientTokens(parsed);
+        setTheme({ ...parsed, resolvedAmbient: resolved });
+        if (resolved) {
+          applyAmbientTokens(resolved);
+        } else {
+          const root = document.documentElement;
+          if (parsed.bgColor) root.style.setProperty('--app-bg-color', parsed.bgColor);
+          if (parsed.textColor) root.style.setProperty('--dynamic-text-color', parsed.textColor);
+          if (parsed.primaryAccent) root.style.setProperty('--primary-accent', parsed.primaryAccent);
+          if (parsed.auraGlow) root.style.setProperty('--aura-glow', parsed.auraGlow);
+          if (parsed.borderTint) root.style.setProperty('--border-tint', parsed.borderTint);
+          if (parsed.glassGlowColor || parsed.borderTint) {
+            root.style.setProperty('--card-glow-color', parsed.glassGlowColor || parsed.borderTint);
+            root.style.setProperty('--glow-accent', parsed.auraGlow || parsed.glassGlowColor);
+          }
+        }
+        if (parsed.auraOpacity !== undefined) {
+          document.documentElement.style.setProperty('--ambient-glow-opacity', (parsed.auraOpacity / 100).toString());
+        }
+        if (parsed.shimmerOpacity !== undefined) {
+          document.documentElement.style.setProperty('--ambient-shimmer-opacity', (parsed.shimmerOpacity / 100).toString());
+        }
+      }
       const img = await getLargeWallpaper();
       setWallpaperData(img);
     } catch (err) {
       console.error('Error syncing theme:', err);
     }
   };
+
+  // 100% Offline Time-Adaptive real-time clock watcher
+  useEffect(() => {
+    if (theme?.adaptiveMode !== 'time') return;
+    const interval = setInterval(() => {
+      const resolved = resolveAmbientTokens(theme);
+      if (resolved) {
+        applyAmbientTokens(resolved);
+        setTheme((prev) => ({ ...prev, resolvedAmbient: resolved }));
+      }
+    }, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [theme?.adaptiveMode]);
 
   useEffect(() => {
     syncThemeAndWallpaper();
@@ -160,13 +203,11 @@ export default function App() {
   const isDockLayout = theme?.layoutStyle === 'windows_dock';
   const dynamicBgColor = theme?.bgColor || '#07050d';
   const currentModel = theme?.styleModel || 'glassmorphism';
-  const activeBgMode = theme?.bgMode || 'nature_wallpaper';
+  const activeBgMode = (theme?.bgMode === 'nature_wallpaper' ? 'dynamic_glow' : theme?.bgMode) || 'dynamic_glow';
 
   const activeWallpaper = activeBgMode === 'custom_upload'
     ? wallpaperData
-    : activeBgMode === 'nature_wallpaper'
-      ? (theme.natureWallpaperUrl || (NATURE_PRESETS && NATURE_PRESETS[0]?.url) || 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=2560&auto=format&fit=crop')
-      : (wallpaperData || DEFAULT_STYLE_WALLPAPERS[currentModel]);
+    : (activeBgMode === 'dynamic_glow' ? null : (wallpaperData || DEFAULT_STYLE_WALLPAPERS[currentModel]));
 
   const renderContent = () => {
     const moduleKey = {
@@ -240,16 +281,25 @@ export default function App() {
     }
   };
 
+  const activeTokens = resolveAmbientTokens(theme);
+  const activeRain = activeTokens?.enableRainFX ?? theme?.enableRainFX;
+  const activeThunder = activeTokens?.enableThunderPulse ?? theme?.enableThunderPulse;
+  const activeHolyDust = activeTokens?.enableHolyDustFX ?? theme?.enableHolyDustFX;
+
   return (
     <div 
       data-theme={currentModel}
       style={{
-        backgroundColor: dynamicBgColor,
+        backgroundColor: activeTokens?.bgColor || dynamicBgColor,
         color: dynamicTextColor,
         '--dynamic-text-color': dynamicTextColor,
-        '--card-glow-color': glassGlow,
+        '--card-glow-color': activeTokens?.cardGlow || glassGlow,
         '--shadow-depth': `rgba(0, 0, 0, ${shadowAlpha})`,
-        '--ambient-glow-opacity': (theme.auraOpacity || 32) / 100
+        '--ambient-glow-opacity': (theme?.auraOpacity || 32) / 100,
+        '--ambient-shimmer-opacity': (activeTokens?.shimmerOpacity ?? theme?.shimmerOpacity ?? 35) / 100,
+        '--primary-accent': activeTokens?.accent || theme?.primaryAccent || '#06b6d4',
+        '--aura-glow': activeTokens?.aura || theme?.auraGlow || 'rgba(6, 182, 212, 0.15)',
+        '--border-tint': activeTokens?.border || theme?.borderTint || 'rgba(6, 182, 212, 0.3)'
       }}
       className="relative flex h-screen w-screen overflow-hidden select-none font-sans transition-colors duration-300"
     >
@@ -260,10 +310,16 @@ export default function App() {
         <div className="ambient-glow-orb orb-4" />
       </div>
 
+      <AmbientShimmerBackdrop
+        shimmerMode={activeTokens?.shimmerMode || theme?.shimmerMode || 'solar'}
+        enabled={activeTokens?.enableShimmer ?? theme?.enableShimmer ?? true}
+        opacity={activeTokens?.shimmerOpacity ?? theme?.shimmerOpacity ?? 35}
+      />
+
       <RainCanvas 
-        enableRain={theme?.enableRainFX} 
-        enableThunder={theme?.enableThunderPulse} 
-        enableHolyDust={theme?.enableHolyDustFX} 
+        enableRain={activeRain} 
+        enableThunder={activeThunder} 
+        enableHolyDust={activeHolyDust} 
       />
 
       {activeBgMode !== 'dynamic_glow' && activeWallpaper && (

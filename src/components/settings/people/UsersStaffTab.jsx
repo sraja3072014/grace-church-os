@@ -6,7 +6,7 @@ import {
 import { getVaultData, setVaultData } from '../../../utils/vaultStore';
 
 export default function UsersStaffTab() {
-  // GraceOS 11-Core Schema-க்கு ஏற்ற நிலையான மாதிரித் தரவுகள்
+  // Stable sample records aligned with the GraceOS 11-Core schema.
   const defaultStaff = [
     { 
       id: 'STF-101', 
@@ -79,7 +79,7 @@ export default function UsersStaffTab() {
     password: '' 
   });
 
-  // 1. லோக்கல் வோல்ட் 'staff' மாட்யூலில் இருந்து தரவை ஏற்றுதல்
+  // 1. Load staff data from the local vault's `staff` module.
   useEffect(() => {
     async function loadStaff() {
       const data = await getVaultData('staff', defaultStaff);
@@ -88,7 +88,7 @@ export default function UsersStaffTab() {
     loadStaff();
   }, []);
 
-  // 2. லோக்கல் வோல்ட், லோக்கல் ஸ்டோரேஜ் மற்றும் கிளவுட் சின்க் செய்தல்
+  // 2. Synchronize the local vault, local storage, and cloud data.
   const sync = async (data) => {
     setUsers(data);
     await setVaultData('staff', data, true);
@@ -118,10 +118,10 @@ export default function UsersStaffTab() {
 
   const handleDelete = async (id) => {
     if (id === 'STF-101' || id === 1) {
-      alert('முதன்மை Senior Pastor Super Admin கணக்கை நீக்க முடியாது.');
+      alert('The primary Senior Pastor / Super Admin account cannot be deleted.');
       return;
     }
-    if (!window.confirm('இந்த ஊழியர்/துறை கணக்கை நீக்க விரும்புகிறீர்களா?')) return;
+    if (!window.confirm('Are you sure you want to delete this staff or department account?')) return;
     await sync(users.filter(u => u.id !== id));
   };
 
@@ -149,7 +149,7 @@ export default function UsersStaffTab() {
             <span>Staff &amp; Departmental Leaders ({users.length})</span>
           </h4>
           <p className="text-xs text-slate-400 mt-0.5">
-            சபையின் ஊழியர்கள் மற்றும் ஞாயிறு பள்ளி, வாலிபர், பெண்கள், ஆண்கள் ஐக்கிய பொறுப்பாளர்கள் பட்டியல்.
+            Staff members and leaders for Sunday School, Youth, Women’s Fellowship, and Men’s Fellowship.
           </p>
         </div>
         <button 
