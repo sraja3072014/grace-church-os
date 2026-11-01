@@ -25,6 +25,7 @@ import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import MinistriesHubDesk from './components/ministry/MinistriesHubDesk';
 import { getLargeWallpaper } from './utils/storageDB';
 import { syncLocalVaultToCloud } from './utils/cloudSyncEngine';
+import { hydrateCloudData, initializeRealtimeSyncEngine } from './utils/syncEngine';
 import { canAccessModule } from './utils/accessControl';
 import { resolveAmbientTokens, applyAmbientTokens, getCurrentTimePhase } from './utils/adaptiveAmbientEngine';
 
@@ -41,6 +42,8 @@ export default function App() {
   const [memberRegistrationRequest, setMemberRegistrationRequest] = useState(false);
   const [wallpaperData, setWallpaperData] = useState(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isCloudHydrating, setIsCloudHydrating] = useState(false);
+  const [cloudHydrationComplete, setCloudHydrationComplete] = useState(false);
   const sampleMemberId = "grace-member-uuid-12345";
 
   const [session, setSession] = useState(() => {
@@ -174,6 +177,40 @@ export default function App() {
     return () => clearInterval(syncTimer);
   }, [session]);
 
+  useEffect(() => {
+    if (!session) {
+      setCloudHydrationComplete(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let disposeRealtime = () => {};
+    const localStorageIsEmpty = typeof localStorage !== 'undefined' && localStorage.length === 0;
+
+    async function hydrateBeforeDashboard() {
+      setIsCloudHydrating(true);
+      try {
+        // A fresh browser has no local database. Pull before any dashboard module mounts.
+        // Existing sessions also pull once so stale/partial caches are repaired.
+        if (localStorageIsEmpty || navigator.onLine) {
+          await hydrateCloudData();
+        }
+      } finally {
+        if (!cancelled) {
+          setCloudHydrationComplete(true);
+          setIsCloudHydrating(false);
+          disposeRealtime = initializeRealtimeSyncEngine();
+        }
+      }
+    }
+
+    hydrateBeforeDashboard();
+    return () => {
+      cancelled = true;
+      disposeRealtime();
+    };
+  }, [session]);
+
   const handleLogout = async () => {
     if (navigator.onLine) {
       try {
@@ -194,6 +231,17 @@ export default function App() {
 
   if (!session) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  if (isCloudHydrating || !cloudHydrationComplete) {
+    return (
+      <div className="h-screen w-screen bg-slate-950 text-slate-200 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-cyan-400 text-lg font-black">GraceOS</div>
+          <div className="text-xs text-slate-400 mt-2">Synchronizing church database…</div>
+        </div>
+      </div>
+    );
   }
 
   const dynamicTextColor = theme?.textColor || '#ffffff';

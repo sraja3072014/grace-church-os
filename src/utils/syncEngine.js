@@ -18,6 +18,13 @@ export const SYNC_MODULES = [
   { key: 'branches', table: 'branches', primaryKey: 'id' }
 ];
 
+const TABLE_CANDIDATES = {
+  members: ['members'],
+  sub_members: ['sub_members'],
+  finance: ['finance_transactions', 'finance'],
+  attendance: ['attendance_logs', 'attendance']
+};
+
 let isSyncRunning = false;
 
 /**
@@ -88,6 +95,123 @@ function restoreFromCloud(moduleKey, row) {
   return row;
 }
 
+function unwrapCloudRow(row) {
+  if (!row || typeof row !== 'object') return {};
+  if (row.raw_payload && typeof row.raw_payload === 'object') {
+    return { ...row.raw_payload, ...row };
+  }
+  return row;
+}
+
+function normalizeCloudMember(row) {
+  const value = unwrapCloudRow(row);
+  const role = value.role || value.household_role || value.roleInFamily || '';
+  return {
+    ...value,
+    memberId: value.memberId || value.member_id || value.id,
+    name: value.name || value.full_name || value.fullName || value.head_name || 'Family Member',
+    familyId: String(value.familyId || value.family_id || value.house_id || value.id || ''),
+    familyName: value.familyName || value.family_name || '',
+    roleInFamily: role || 'Member',
+    gender: value.gender || '',
+    relationship: value.relationship || value.relationship_to_head || '',
+    spiritual_profile: value.spiritual_profile || value.spiritualProfile || {},
+    spiritualProfile: value.spiritualProfile || value.spiritual_profile || {},
+    phone: value.phone || value.mobile || '',
+    email: value.email || ''
+  };
+}
+
+function rebuildFamilyHierarchy(rows) {
+  const families = new Map();
+  rows.map(normalizeCloudMember).forEach((member, index) => {
+    const familyId = member.familyId || `FAM-${index + 1}`;
+    let family = families.get(familyId);
+    if (!family) {
+      family = {
+        id: familyId,
+        familyId,
+        familyName: member.familyName || `${member.name} & Household`,
+        headMember: null,
+        members: []
+      };
+      families.set(familyId, family);
+    }
+
+    const isHead = /head/i.test(String(member.roleInFamily)) ||
+      String(member.role || '').toUpperCase() === 'HEAD' ||
+      String(member.id) === String(member.familyId);
+    const cleanMember = {
+      ...member,
+      memberId: member.memberId || member.id,
+      roleInFamily: isHead ? 'Head of Family' : (member.roleInFamily || 'Member')
+    };
+    if (isHead && !family.headMember) family.headMember = cleanMember;
+    else family.members.push(cleanMember);
+  });
+
+  return Array.from(families.values()).map(family => {
+    if (!family.headMember && family.members.length) {
+      family.headMember = family.members.shift();
+      family.headMember.roleInFamily = 'Head of Family';
+    }
+    return family;
+  });
+}
+
+async function selectFirstAvailable(client, tables) {
+  for (const table of tables) {
+    const { data, error } = await client.from(table).select('*');
+    if (!error && Array.isArray(data)) return { table, data };
+  }
+  return { table: null, data: [] };
+}
+
+export async function hydrateCloudData() {
+  const client = getSupabase();
+  if (!client || !isOnlineAndReady()) return { success: false, reason: 'offline_or_unconfigured' };
+
+  try {
+    const [memberResult, subMemberResult, financeResult, attendanceResult] = await Promise.all([
+      selectFirstAvailable(client, TABLE_CANDIDATES.members),
+      selectFirstAvailable(client, TABLE_CANDIDATES.sub_members),
+      selectFirstAvailable(client, TABLE_CANDIDATES.finance),
+      selectFirstAvailable(client, TABLE_CANDIDATES.attendance)
+    ]);
+
+    const families = rebuildFamilyHierarchy([
+      ...memberResult.data,
+      ...subMemberResult.data
+    ]);
+    const finance = financeResult.data.map(row => {
+      const value = unwrapCloudRow(row);
+      return { ...value, amount: Number(value.amount) || 0, date: value.date || value.record_date || value.txn_date };
+    });
+    const attendance = attendanceResult.data.map(row => {
+      const value = unwrapCloudRow(row);
+      return {
+        ...value,
+        memberId: value.memberId || value.member_id,
+        date: value.date || value.record_date || value.service_date,
+        service: value.service || value.service_name || value.service_type
+      };
+    });
+
+    await setVaultData('members', families, false);
+    await setVaultData('finance', finance, false);
+    await setVaultData('attendance', attendance, false);
+    localStorage.setItem('app_members_family_database', JSON.stringify(families));
+    localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(finance));
+    localStorage.setItem('graceos_attendance_logs', JSON.stringify(attendance));
+    localStorage.setItem('graceos_cloud_hydrated_at', new Date().toISOString());
+
+    return { success: true, counts: { members: families.length, finance: finance.length, attendance: attendance.length } };
+  } catch (error) {
+    console.warn('[SyncEngine] Initial cloud hydration failed:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
 /**
  * PUSH: Local Vault to Supabase Cloud
  */
@@ -138,14 +262,19 @@ export async function pullModuleFromCloud(moduleKey) {
   if (!target) return { success: false, reason: 'unknown_module' };
 
   try {
-    const { data, error } = await client
-      .from(target.table)
-      .select('*');
-
-    if (error) throw error;
+    const result = await selectFirstAvailable(client, TABLE_CANDIDATES[moduleKey] || [target.table]);
+    const data = result.data;
     if (!Array.isArray(data)) return { success: true, count: 0 };
 
     const restoredRecords = data.map(row => restoreFromCloud(moduleKey, row));
+
+    if (moduleKey === 'members') {
+      const subMembers = await selectFirstAvailable(client, TABLE_CANDIDATES.sub_members);
+      const nested = rebuildFamilyHierarchy([...data, ...subMembers.data]);
+      await setVaultData(moduleKey, nested, false);
+      localStorage.setItem('app_members_family_database', JSON.stringify(nested));
+      return { success: true, count: nested.length };
+    }
 
     if (moduleKey === 'main_church') {
       const singleConfig = restoredRecords[0] || {};
@@ -156,7 +285,11 @@ export async function pullModuleFromCloud(moduleKey) {
       // Synchronize direct fallback keys for legacy components
       if (moduleKey === 'members') localStorage.setItem('app_members_family_database', JSON.stringify(restoredRecords));
       if (moduleKey === 'visitors') localStorage.setItem('app_visitors_database', JSON.stringify(restoredRecords));
-      if (moduleKey === 'finance') localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(restoredRecords));
+      if (moduleKey === 'finance') {
+        const normalizedFinance = restoredRecords.map(row => ({ ...row, amount: Number(row.amount) || 0 }));
+        await setVaultData(moduleKey, normalizedFinance, false);
+        localStorage.setItem('app_finance_transactions_ledger', JSON.stringify(normalizedFinance));
+      }
       if (moduleKey === 'events') localStorage.setItem('app_events_database', JSON.stringify(restoredRecords));
     }
 

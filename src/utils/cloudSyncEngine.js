@@ -39,7 +39,10 @@ export async function syncLocalVaultToCloud() {
         updated_at: new Date().toISOString()
       }));
 
-      const { error } = await supabase.from('finance').upsert(payload, { onConflict: 'id' });
+      let { error } = await supabase.from('finance_transactions').upsert(payload, { onConflict: 'id' });
+      if (error) {
+        ({ error } = await supabase.from('finance').upsert(payload, { onConflict: 'id' }));
+      }
       if (error) throw error;
       console.log(`[CloudSync] ✓ ${payload.length} Finance records synced.`);
     }
@@ -343,6 +346,8 @@ export async function syncMembers(supabase, familiesList) {
         holy_spirit_baptism_date: (h.isAnointed && h.holySpiritBaptismDate && String(h.holySpiritBaptismDate).trim() !== '') ? h.holySpiritBaptismDate : null,
         wedding_anniversary: h.weddingAnniversary && String(h.weddingAnniversary).trim() !== '' ? h.weddingAnniversary : null,
         ministry_talents: Array.isArray(h.ministryTalents) ? h.ministryTalents : [],
+        relationship: h.relationship || h.relationshipToHead || '',
+        spiritual_profile: h.spiritual_profile || h.spiritualProfile || {},
         raw_payload: h,
         updated_at: new Date().toISOString()
       });
@@ -383,6 +388,8 @@ export async function syncMembers(supabase, familiesList) {
           holy_spirit_baptism_date: (m.isAnointed && m.holySpiritBaptismDate && String(m.holySpiritBaptismDate).trim() !== '') ? m.holySpiritBaptismDate : null,
           wedding_anniversary: m.weddingAnniversary && String(m.weddingAnniversary).trim() !== '' ? m.weddingAnniversary : null,
           ministry_talents: Array.isArray(m.ministryTalents) ? m.ministryTalents : [],
+          relationship: m.relationship || m.relationshipToHead || '',
+          spiritual_profile: m.spiritual_profile || m.spiritualProfile || {},
           raw_payload: m,
           updated_at: new Date().toISOString()
         });
@@ -418,6 +425,8 @@ export async function syncMembers(supabase, familiesList) {
         holy_spirit_baptism_date: ((fam.isAnointed || fam.is_anointed) && (fam.holySpiritBaptismDate || fam.holy_spirit_baptism_date) && String(fam.holySpiritBaptismDate || fam.holy_spirit_baptism_date).trim() !== '') ? (fam.holySpiritBaptismDate || fam.holy_spirit_baptism_date) : null,
         wedding_anniversary: (fam.weddingAnniversary || fam.wedding_anniversary) && String(fam.weddingAnniversary || fam.wedding_anniversary).trim() !== '' ? (fam.weddingAnniversary || fam.wedding_anniversary) : null,
         ministry_talents: Array.isArray(fam.ministryTalents || fam.ministry_talents) ? (fam.ministryTalents || fam.ministry_talents) : [],
+        relationship: fam.relationship || fam.relationship_to_head || '',
+        spiritual_profile: fam.spiritual_profile || fam.spiritualProfile || {},
         raw_payload: fam,
         updated_at: new Date().toISOString()
       });

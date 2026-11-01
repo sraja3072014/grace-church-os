@@ -79,6 +79,15 @@ export default function MainDashboard({
       }
     }
     hydrateDashboardFromDisk();
+    const refreshAfterSync = () => hydrateDashboardFromDisk();
+    window.addEventListener('graceos_full_sync_completed', refreshAfterSync);
+    window.addEventListener('graceos_realtime_data_update', refreshAfterSync);
+    window.addEventListener('storage', refreshAfterSync);
+    return () => {
+      window.removeEventListener('graceos_full_sync_completed', refreshAfterSync);
+      window.removeEventListener('graceos_realtime_data_update', refreshAfterSync);
+      window.removeEventListener('storage', refreshAfterSync);
+    };
   }, [session]);
 
   const showToast = (msg) => {
@@ -118,7 +127,7 @@ export default function MainDashboard({
   }, [families]);
 
   const totalGiving = useMemo(() => {
-    return incomeList.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+    return incomeList.reduce((acc, curr) => acc + (Number(curr?.amount) || 0), 0);
   }, [incomeList]);
 
   const currentAttendanceMap = useMemo(() => {
