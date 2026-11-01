@@ -5,6 +5,8 @@ import {
   UserCheck, X, Sparkles, Filter
 } from 'lucide-react';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
+import LocationCaptureFields from '../common/LocationCaptureFields';
+import LocationNavigationButton from '../common/LocationNavigationButton';
 
 export default function VisitorsHub({ session }) {
   const stages = [
@@ -27,6 +29,7 @@ export default function VisitorsHub({ session }) {
     serviceAttended: '1st Sunday Service (Tamil)',
     prayerRequest: '',
     broughtBy: ''
+    , latitude: '', longitude: '', gps_address: '', maps_url: ''
   });
 
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -80,6 +83,7 @@ export default function VisitorsHub({ session }) {
       serviceAttended: regForm.serviceAttended,
       prayerRequest: regForm.prayerRequest.trim() || 'Salvation and general blessing',
       broughtBy: regForm.broughtBy.trim() || 'Self / Walk-in',
+      latitude: regForm.latitude || '', longitude: regForm.longitude || '', gps_address: regForm.gps_address || '', maps_url: regForm.maps_url || '',
       followUpStage: 'new_contact',
       assignedCaretaker: session?.username || 'Pastoral Care Desk',
       careNotes: 'New contact logged.'
@@ -96,7 +100,8 @@ export default function VisitorsHub({ session }) {
       area: '',
       serviceAttended: '1st Sunday Service (Tamil)',
       prayerRequest: '',
-      broughtBy: ''
+      broughtBy: '',
+      latitude: '', longitude: '', gps_address: '', maps_url: ''
     });
 
     setActiveSubTab('pipeline');
@@ -153,9 +158,17 @@ export default function VisitorsHub({ session }) {
           roleInFamily: 'Head of Family',
           gender: 'Male',
           phone: vis.phone,
+          latitude: vis.latitude || '',
+          longitude: vis.longitude || '',
+          gps_address: vis.gps_address || '',
+          maps_url: vis.maps_url || '',
           status: 'Active',
           campus: session?.activeCampus || 'Headquarters'
         },
+        latitude: vis.latitude || '',
+        longitude: vis.longitude || '',
+        gps_address: vis.gps_address || '',
+        maps_url: vis.maps_url || '',
         members: []
       };
 
@@ -305,6 +318,8 @@ export default function VisitorsHub({ session }) {
             />
           </div>
 
+          <LocationCaptureFields value={regForm} onChange={setRegForm} />
+
           <div>
             <label className="text-xs text-slate-300 font-medium">Special Prayer Request / Need</label>
             <textarea 
@@ -408,6 +423,7 @@ export default function VisitorsHub({ session }) {
                           <td className="p-3.5 max-w-xs">
                             <div className="text-slate-300 italic truncate">"{vis.prayerRequest}"</div>
                             <div className="text-[10px] text-slate-500">{vis.area} • Via: {vis.broughtBy}</div>
+                            <div className="mt-2"><LocationNavigationButton location={vis} onTagLocation={() => { setRegForm({ ...regForm, latitude: vis.latitude || '', longitude: vis.longitude || '', gps_address: vis.gps_address || '', maps_url: vis.maps_url || '' }); setActiveSubTab('register'); }} /></div>
                           </td>
 
                           <td className="p-3.5">

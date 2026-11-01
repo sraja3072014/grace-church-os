@@ -47,6 +47,10 @@ export async function convertVisitorToMember(visitorId, additionalFamilyDetails 
         memberId: newMemberId,
         name: visitor.name,
         phone: visitor.phone || '',
+        latitude: visitor.latitude || '',
+        longitude: visitor.longitude || '',
+        gps_address: visitor.gps_address || '',
+        maps_url: visitor.maps_url || '',
         gender: visitor.gender || 'Not Specified',
         campus: visitor.campus || 'Headquarters',
         joinDate: new Date().toISOString().split('T')[0],
@@ -63,6 +67,10 @@ export async function convertVisitorToMember(visitorId, additionalFamilyDetails 
         }
       ],
       address: visitor.address || visitor.area || '',
+      latitude: visitor.latitude || '',
+      longitude: visitor.longitude || '',
+      gps_address: visitor.gps_address || '',
+      maps_url: visitor.maps_url || '',
       createdAt: new Date().toISOString()
     };
 
@@ -97,6 +105,10 @@ export async function convertVisitorToMember(visitorId, additionalFamilyDetails 
         family_name: `${visitor.name} Household`,
         phone: visitor.phone || '',
         campus: visitor.campus || 'Headquarters',
+         latitude: Number.isFinite(Number(visitor.latitude)) ? Number(visitor.latitude) : null,
+         longitude: Number.isFinite(Number(visitor.longitude)) ? Number(visitor.longitude) : null,
+         gps_address: visitor.gps_address || '',
+         maps_url: visitor.maps_url || '',
         raw_payload: newMemberRecord,
         updated_at: new Date().toISOString()
       }], { onConflict: 'id' });
@@ -107,6 +119,10 @@ export async function convertVisitorToMember(visitorId, additionalFamilyDetails 
         name: visitor.name,
         phone: visitor.phone || '',
         area: visitor.area || '',
+         latitude: Number.isFinite(Number(visitor.latitude)) ? Number(visitor.latitude) : null,
+         longitude: Number.isFinite(Number(visitor.longitude)) ? Number(visitor.longitude) : null,
+         gps_address: visitor.gps_address || '',
+         maps_url: visitor.maps_url || '',
         raw_payload: {
           ...visitor,
           funnelStage: 'CONVERTED',

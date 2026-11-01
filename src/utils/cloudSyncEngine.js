@@ -227,6 +227,10 @@ export async function syncLocalVaultToCloud() {
         name: vis.name || 'New Visitor',
         phone: vis.phone || '',
         area: vis.area || '',
+        latitude: Number.isFinite(Number(vis.latitude)) ? Number(vis.latitude) : null,
+        longitude: Number.isFinite(Number(vis.longitude)) ? Number(vis.longitude) : null,
+        gps_address: vis.gps_address || '',
+        maps_url: vis.maps_url || '',
         raw_payload: vis,
         updated_at: new Date().toISOString()
       }));
@@ -314,6 +318,10 @@ export async function syncMembers(supabase, familiesList) {
     const area = fam.area || fam.headMember?.area || '';
     const address = fam.address || fam.headMember?.address || '';
     const gps = fam.gpsCoordinates || fam.gps_coordinates || fam.headMember?.gpsCoordinates || '';
+    const latitude = fam.latitude || fam.headMember?.latitude || null;
+    const longitude = fam.longitude || fam.headMember?.longitude || null;
+    const gpsAddress = fam.gps_address || fam.headMember?.gps_address || '';
+    const mapsUrl = fam.maps_url || fam.headMember?.maps_url || '';
 
     // 🌟 1. குடும்பத் தலைவரை (Head Member) சின்க் லிஸ்ட்டில் சேர்த்தல்
     if (fam.headMember) {
@@ -339,6 +347,10 @@ export async function syncMembers(supabase, familiesList) {
         area: area,
         address: address,
         gps_coordinates: gps,
+        latitude: Number.isFinite(Number(latitude)) ? Number(latitude) : null,
+        longitude: Number.isFinite(Number(longitude)) ? Number(longitude) : null,
+        gps_address: gpsAddress,
+        maps_url: mapsUrl,
         // 🌟 Checkbox boolean மற்றும் Date சரிசெய்தல்:
         is_baptized: Boolean(h.isBaptized),
         baptism_date: (h.isBaptized && h.baptismDate && String(h.baptismDate).trim() !== '') ? h.baptismDate : null,
@@ -381,6 +393,10 @@ export async function syncMembers(supabase, familiesList) {
           area: area,
           address: address,
           gps_coordinates: gps,
+          latitude: Number.isFinite(Number(m.latitude || latitude)) ? Number(m.latitude || latitude) : null,
+          longitude: Number.isFinite(Number(m.longitude || longitude)) ? Number(m.longitude || longitude) : null,
+          gps_address: m.gps_address || gpsAddress,
+          maps_url: m.maps_url || mapsUrl,
           // 🌟 சப்-மெம்பரின் ஞானஸ்நானம் & அபிஷேகம்:
           is_baptized: Boolean(m.isBaptized),
           baptism_date: (m.isBaptized && m.baptismDate && String(m.baptismDate).trim() !== '') ? m.baptismDate : null,
@@ -419,6 +435,10 @@ export async function syncMembers(supabase, familiesList) {
         area: area,
         address: address,
         gps_coordinates: gps,
+        latitude: Number.isFinite(Number(latitude)) ? Number(latitude) : null,
+        longitude: Number.isFinite(Number(longitude)) ? Number(longitude) : null,
+        gps_address: gpsAddress,
+        maps_url: mapsUrl,
         is_baptized: Boolean(fam.isBaptized || fam.is_baptized),
         baptism_date: ((fam.isBaptized || fam.is_baptized) && (fam.baptismDate || fam.baptism_date) && String(fam.baptismDate || fam.baptism_date).trim() !== '') ? (fam.baptismDate || fam.baptism_date) : null,
         is_anointed: Boolean(fam.isAnointed || fam.is_anointed),

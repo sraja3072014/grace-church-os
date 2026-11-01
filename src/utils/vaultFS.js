@@ -160,6 +160,10 @@ CREATE TABLE IF NOT EXISTS church_info (
   branch       TEXT,
   address      TEXT,
   city         TEXT,
+  latitude     REAL,
+  longitude    REAL,
+  gps_address  TEXT,
+  maps_url     TEXT,
   state        TEXT,
   country      TEXT,
   pincode      TEXT,
@@ -194,6 +198,10 @@ CREATE TABLE IF NOT EXISTS members (
   phone          TEXT,
   email          TEXT,
   address        TEXT,
+  latitude       REAL,
+  longitude      REAL,
+  gps_address    TEXT,
+  maps_url       TEXT,
   city           TEXT,
   photo_url      TEXT,
   family_id      INTEGER,
@@ -217,6 +225,10 @@ CREATE TABLE IF NOT EXISTS visitors (
   visit_date    TEXT,
   follow_up     TEXT DEFAULT 'PENDING',
   prayer_request TEXT,
+  latitude      REAL,
+  longitude     REAL,
+  gps_address   TEXT,
+  maps_url      TEXT,
   created_at    TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

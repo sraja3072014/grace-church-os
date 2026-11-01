@@ -4,6 +4,8 @@ import ExcelDataEngineModal from '../tools/ExcelDataEngineModal';
 import ProfileApprovalQueueModal from './ProfileApprovalQueueModal';
 import { soundFX } from '../../utils/audioEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
+import LocationCaptureFields from '../common/LocationCaptureFields';
+import LocationNavigationButton from '../common/LocationNavigationButton';
 import { 
   Users, UserPlus, Search, Layers, Plus, Trash2, Edit2, 
   Phone, Mail, MapPin, Navigation, Calendar, ShieldCheck, 
@@ -207,6 +209,10 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     area: '',
     campus: session?.activeCampus || 'Headquarters',
     gpsCoordinates: '',
+    latitude: '',
+    longitude: '',
+    gps_address: '',
+    maps_url: '',
     bloodGroup: 'O+',
     weddingAnniversary: '',
     isBaptized: false,
@@ -232,7 +238,11 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     baptismDate: '',
     isAnointed: false,
     holySpiritBaptismDate: '',
-    ministryTalents: []
+    ministryTalents: [],
+    latitude: '',
+    longitude: '',
+    gps_address: '',
+    maps_url: ''
   });
 
   useEffect(() => {
@@ -283,7 +293,11 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         address: family.address || '',
         area: family.area || '',
         campus: family.campus || session?.activeCampus || 'Headquarters',
-        ministryTalents: family.headMember?.ministryTalents || []
+        ministryTalents: family.headMember?.ministryTalents || [],
+        latitude: family.headMember?.latitude || family.latitude || '',
+        longitude: family.headMember?.longitude || family.longitude || '',
+        gps_address: family.headMember?.gps_address || family.gps_address || '',
+        maps_url: family.headMember?.maps_url || family.maps_url || ''
       });
     } else {
       const nextNum = families.length + 101;
@@ -302,6 +316,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         area: '',
         campus: session?.activeCampus || 'Headquarters',
         gpsCoordinates: '',
+        latitude: '', longitude: '', gps_address: '', maps_url: '',
         bloodGroup: 'O+',
         weddingAnniversary: '',
         isBaptized: false,
@@ -377,6 +392,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
             area: headForm.area,
             campus: headForm.campus,
             gpsCoordinates: headForm.gpsCoordinates,
+            latitude: headForm.latitude, longitude: headForm.longitude, gps_address: headForm.gps_address, maps_url: headForm.maps_url,
             headMember: {
               ...f.headMember,
               ...headForm,
@@ -398,6 +414,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         area: headForm.area,
         campus: headForm.campus,
         gpsCoordinates: headForm.gpsCoordinates,
+          latitude: headForm.latitude, longitude: headForm.longitude, gps_address: headForm.gps_address, maps_url: headForm.maps_url,
         headMember: {
           ...headForm,
           gender: headForm.gender || 'Male',
@@ -662,6 +679,9 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                         <span>•</span>
                         <span>Blood: {head.bloodGroup}</span>
                       </div>
+                      <div className="mt-2">
+                        <LocationNavigationButton location={head} onTagLocation={() => handleOpenHeadModal(fam)} />
+                      </div>
                     </td>
 
                     <td className="p-3.5">
@@ -798,6 +818,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                                   </div>
 
                                   <div className="flex items-center justify-between border-t border-white/5 pt-2">
+                                       <LocationNavigationButton location={member} onTagLocation={() => handleOpenMemberModal(fam, member)} />
                                     <button
                                       type="button"
                                       onClick={() => setSelectedMemberForCard({ ...member, familyId: fam.familyId, campus: fam.campus })}
@@ -846,17 +867,22 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                   <label className="text-[10px] text-slate-400 block mb-1">Family ID *</label>
                   <input type="text" readOnly value={headForm.familyId} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-cyan-400 font-mono font-bold" />
                 </div>
+
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Head House ID</label>
                   <input type="text" readOnly value={headForm.houseId} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-cyan-400 font-mono font-bold" />
                 </div>
               </div>
 
+              <LocationCaptureFields value={headForm} onChange={setHeadForm} />
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Full Name *</label>
                   <input type="text" required value={headForm.name} onChange={(e) => setHeadForm({ ...headForm, name: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-bold" />
                 </div>
+
+                <LocationCaptureFields value={memberForm} onChange={setMemberForm} compact />
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Mobile Phone *</label>
                   <input type="tel" required value={headForm.phone} onChange={(e) => setHeadForm({ ...headForm, phone: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono" />

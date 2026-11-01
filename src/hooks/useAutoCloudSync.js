@@ -34,7 +34,12 @@ export function useAutoCloudSync() {
             full_name: fam.headMember.name || 'Member',
             phone: fam.headMember.phone || '',
             role: 'HEAD',
-            campus: fam.area || 'Headquarters'
+            campus: fam.area || 'Headquarters',
+            latitude: Number.isFinite(Number(fam.headMember.latitude || fam.latitude)) ? Number(fam.headMember.latitude || fam.latitude) : null,
+            longitude: Number.isFinite(Number(fam.headMember.longitude || fam.longitude)) ? Number(fam.headMember.longitude || fam.longitude) : null,
+            gps_address: fam.headMember.gps_address || fam.gps_address || '',
+            maps_url: fam.headMember.maps_url || fam.maps_url || '',
+            raw_payload: fam.headMember
           }] : [];
 
           const otherMembers = (fam.members || []).map(m => ({
@@ -42,7 +47,12 @@ export function useAutoCloudSync() {
             full_name: m.name || 'Family Member',
             phone: m.phone || '',
             role: m.relation || 'MEMBER',
-            campus: fam.area || 'Headquarters'
+            campus: fam.area || 'Headquarters',
+            latitude: Number.isFinite(Number(m.latitude || fam.latitude)) ? Number(m.latitude || fam.latitude) : null,
+            longitude: Number.isFinite(Number(m.longitude || fam.longitude)) ? Number(m.longitude || fam.longitude) : null,
+            gps_address: m.gps_address || fam.gps_address || '',
+            maps_url: m.maps_url || fam.maps_url || '',
+            raw_payload: m
           }));
 
           return [...head, ...otherMembers];
