@@ -2,6 +2,94 @@
 import { getSupabase } from './supabaseClient';
 import { getVaultData } from './vaultStore';
 
+function normalizeVisitorStage(visitor) {
+  if (visitor?.is_converted || visitor?.funnelStage === 'CONVERTED') return 'CONVERTED';
+  if (['1ST_VISIT', 'LEADER_CALLED', 'HOME_VISITED', 'CONVERTED'].includes(visitor?.pipeline_stage)) return visitor.pipeline_stage;
+  if (['CONTACTED', 'calling_scheduled'].includes(visitor?.stage || visitor?.followUpStage)) return 'LEADER_CALLED';
+  if (['PRAYER_MEET', 'home_visit', 'COMMITTED', 'ready_for_membership'].includes(visitor?.stage || visitor?.followUpStage)) return 'HOME_VISITED';
+  return '1ST_VISIT';
+}
+
+export const syncVisitors = async (localVisitors = []) => {
+  const supabase = getSupabase();
+  if (!supabase) {
+    console.warn('[CloudSync - Visitors] Supabase client not initialized. Skipping sync.');
+    return { success: false, error: 'Supabase unconfigured', count: 0 };
+  }
+
+  try {
+    const flatVisitorsPayload = (Array.isArray(localVisitors) ? localVisitors : []).map((v) => {
+      const parsedLat = v.latitude ? parseFloat(v.latitude) : null;
+      const parsedLng = v.longitude ? parseFloat(v.longitude) : null;
+      const validCoords = Number.isFinite(parsedLat) && Number.isFinite(parsedLng);
+      const lat = validCoords ? parsedLat : null;
+      const lng = validCoords ? parsedLng : null;
+      const coords = v.gps_coordinates || (validCoords ? `${lat}, ${lng}` : null);
+      const mapsUrl = v.maps_url || (validCoords
+        ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+        : '');
+
+      return {
+        id: String(v.id || `VIS-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`),
+        name: String(v.name || v.fullName || 'Anonymous Visitor').trim(),
+        phone: String(v.phone || '').trim(),
+        area: String(v.area || '').trim(),
+        latitude: lat,
+        longitude: lng,
+        gps_coordinates: coords,
+        maps_url: mapsUrl,
+        pipeline_stage: v.is_converted ? 'CONVERTED' : (v.pipeline_stage || normalizeVisitorStage(v)),
+        call_notes: v.call_notes || null,
+        home_visit_date: v.home_visit_date || null,
+        assigned_leader: v.assigned_leader || null,
+        is_converted: Boolean(v.is_converted || v.pipeline_stage === 'CONVERTED'),
+        converted_member_id: v.converted_member_id || v.convertedMemberId || null,
+        converted_at: v.converted_at || v.convertedAt || null,
+        raw_payload: v,
+        updated_at: new Date().toISOString()
+      };
+    });
+
+    if (flatVisitorsPayload.length > 0) {
+      const { error } = await supabase
+        .from('visitors')
+        .upsert(flatVisitorsPayload, {
+          onConflict: 'id',
+          ignoreDuplicates: false
+        });
+
+      if (error) {
+        console.error('[CloudSync Error - Visitors Push]:', error.message || error);
+        throw error;
+      }
+    }
+
+    const { data: cloudVisitors, error: pullError } = await supabase
+      .from('visitors')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (pullError) {
+      console.error('[CloudSync Error - Visitors Pull]:', pullError.message || pullError);
+      throw pullError;
+    }
+
+    console.log(`[CloudSync] ✓ ${flatVisitorsPayload.length} Visitors synced cleanly.`);
+    return {
+      success: true,
+      count: flatVisitorsPayload.length,
+      cloudData: cloudVisitors || []
+    };
+  } catch (err) {
+    console.error('[CloudSync Error - Visitors]:', err);
+    return {
+      success: false,
+      error: err.message || 'Unknown sync error',
+      count: 0
+    };
+  }
+};
+
 export async function syncLocalVaultToCloud() {
   const supabase = getSupabase();
   if (!supabase) {
@@ -39,10 +127,7 @@ export async function syncLocalVaultToCloud() {
         updated_at: new Date().toISOString()
       }));
 
-      let { error } = await supabase.from('finance_transactions').upsert(payload, { onConflict: 'id' });
-      if (error) {
-        ({ error } = await supabase.from('finance').upsert(payload, { onConflict: 'id' }));
-      }
+      const { error } = await supabase.from('finance').upsert(payload, { onConflict: 'id' });
       if (error) throw error;
       console.log(`[CloudSync] ✓ ${payload.length} Finance records synced.`);
     }
@@ -221,23 +306,9 @@ export async function syncLocalVaultToCloud() {
   // 🌟 9. Visitors
   try {
     const localVisitors = await getVaultData('visitors', []);
-    if (Array.isArray(localVisitors) && localVisitors.length > 0) {
-      const payload = localVisitors.map((vis, idx) => ({
-        id: String(vis.id || `VIS-${idx + 101}`),
-        name: vis.name || 'New Visitor',
-        phone: vis.phone || '',
-        area: vis.area || '',
-        latitude: Number.isFinite(Number(vis.latitude)) ? Number(vis.latitude) : null,
-        longitude: Number.isFinite(Number(vis.longitude)) ? Number(vis.longitude) : null,
-        gps_address: vis.gps_address || '',
-        maps_url: vis.maps_url || '',
-        raw_payload: vis,
-        updated_at: new Date().toISOString()
-      }));
-
-      const { error } = await supabase.from('visitors').upsert(payload, { onConflict: 'id' });
-      if (error) throw error;
-      console.log(`[CloudSync] ✓ ${payload.length} Visitors synced.`);
+    const result = await syncVisitors(localVisitors);
+    if (!result.success) {
+      console.warn('[CloudSync Error - Visitors]:', result.error);
     }
   } catch (err) {
     console.warn('[CloudSync Error - Visitors]:', err.message || err);
@@ -311,6 +382,15 @@ export async function syncMembers(supabase, familiesList) {
 
   const flatMembersPayload = [];
 
+  const getFamilyCode = (member, index) => {
+    const existingCode = member.family_id || member.familyCode;
+    if (existingCode) return existingCode;
+    const role = String(member.roleInFamily || member.household_role || '').toLowerCase();
+    if (role.includes('spouse') || role.includes('wife') || role.includes('husband')) return 'W1';
+    if (role.includes('parent') || role.includes('elder') || role.includes('father') || role.includes('mother')) return `P${index + 1}`;
+    return `C${index + 1}`;
+  };
+
   familiesList.forEach((fam, famIdx) => {
     const familyId = String(fam.familyId || fam.family_id || fam.id || `FAM-${famIdx + 101}`);
     const familyName = fam.familyName || fam.family_name || `${fam.headMember?.name || fam.name || 'Member'} & Household`;
@@ -320,7 +400,7 @@ export async function syncMembers(supabase, familiesList) {
     const gps = fam.gpsCoordinates || fam.gps_coordinates || fam.headMember?.gpsCoordinates || '';
     const latitude = fam.latitude || fam.headMember?.latitude || null;
     const longitude = fam.longitude || fam.headMember?.longitude || null;
-    const gpsAddress = fam.gps_address || fam.headMember?.gps_address || '';
+    const gpsAddress = fam.gps_coordinates || fam.headMember?.gps_coordinates || '';
     const mapsUrl = fam.maps_url || fam.headMember?.maps_url || '';
 
     // 🌟 1. குடும்பத் தலைவரை (Head Member) சின்க் லிஸ்ட்டில் சேர்த்தல்
@@ -335,7 +415,8 @@ export async function syncMembers(supabase, familiesList) {
         family_name: familyName,
         head_name: headName,
         house_id: headId,
-        household_role: h.roleInFamily || 'Head of Family',
+        household_role: 'HEAD',
+         family_id: familyId,
         name: headName,
         gender: h.gender || 'Male',
         date_of_birth: h.dob && String(h.dob).trim() !== '' ? h.dob : null,
@@ -349,7 +430,7 @@ export async function syncMembers(supabase, familiesList) {
         gps_coordinates: gps,
         latitude: Number.isFinite(Number(latitude)) ? Number(latitude) : null,
         longitude: Number.isFinite(Number(longitude)) ? Number(longitude) : null,
-        gps_address: gpsAddress,
+        gps_coordinates: gpsAddress,
         maps_url: mapsUrl,
         // 🌟 Checkbox boolean மற்றும் Date சரிசெய்தல்:
         is_baptized: Boolean(h.isBaptized),
@@ -358,8 +439,7 @@ export async function syncMembers(supabase, familiesList) {
         holy_spirit_baptism_date: (h.isAnointed && h.holySpiritBaptismDate && String(h.holySpiritBaptismDate).trim() !== '') ? h.holySpiritBaptismDate : null,
         wedding_anniversary: h.weddingAnniversary && String(h.weddingAnniversary).trim() !== '' ? h.weddingAnniversary : null,
         ministry_talents: Array.isArray(h.ministryTalents) ? h.ministryTalents : [],
-        relationship: h.relationship || h.relationshipToHead || '',
-        spiritual_profile: h.spiritual_profile || h.spiritualProfile || {},
+        household_role: h.household_role || h.household_roleToHead || '',
         raw_payload: h,
         updated_at: new Date().toISOString()
       });
@@ -369,9 +449,9 @@ export async function syncMembers(supabase, familiesList) {
     if (Array.isArray(fam.members) && fam.members.length > 0) {
       fam.members.forEach((m, idx) => {
         if (!m || !m.name) return;
-
         const subRole = m.roleInFamily || 'Member';
-        const suffix = subRole.includes('Spouse') || subRole.includes('Wife') ? 'W' : `C${idx + 1}`;
+        const familyCode = getFamilyCode(m, idx);
+        const suffix = familyCode;
         const subId = m.houseId || m.memberId || `${familyId}-${suffix}`;
 
         flatMembersPayload.push({
@@ -381,6 +461,7 @@ export async function syncMembers(supabase, familiesList) {
           head_name: fam.headMember?.name || fam.head_name || fam.headName || fam.name || '',
           house_id: subId,
           household_role: subRole,
+          family_id: familyCode,
           name: m.name,
           gender: m.gender || (subRole.includes('Wife') ? 'Female' : 'Male'),
           date_of_birth: m.dob && String(m.dob).trim() !== '' ? m.dob : null,
@@ -395,7 +476,7 @@ export async function syncMembers(supabase, familiesList) {
           gps_coordinates: gps,
           latitude: Number.isFinite(Number(m.latitude || latitude)) ? Number(m.latitude || latitude) : null,
           longitude: Number.isFinite(Number(m.longitude || longitude)) ? Number(m.longitude || longitude) : null,
-          gps_address: m.gps_address || gpsAddress,
+          gps_coordinates: m.gps_coordinates || gpsAddress,
           maps_url: m.maps_url || mapsUrl,
           // 🌟 சப்-மெம்பரின் ஞானஸ்நானம் & அபிஷேகம்:
           is_baptized: Boolean(m.isBaptized),
@@ -404,8 +485,7 @@ export async function syncMembers(supabase, familiesList) {
           holy_spirit_baptism_date: (m.isAnointed && m.holySpiritBaptismDate && String(m.holySpiritBaptismDate).trim() !== '') ? m.holySpiritBaptismDate : null,
           wedding_anniversary: m.weddingAnniversary && String(m.weddingAnniversary).trim() !== '' ? m.weddingAnniversary : null,
           ministry_talents: Array.isArray(m.ministryTalents) ? m.ministryTalents : [],
-          relationship: m.relationship || m.relationshipToHead || '',
-          spiritual_profile: m.spiritual_profile || m.spiritualProfile || {},
+          household_role: m.household_role || m.household_roleToHead || '',
           raw_payload: m,
           updated_at: new Date().toISOString()
         });
@@ -423,7 +503,8 @@ export async function syncMembers(supabase, familiesList) {
         family_name: familyName,
         head_name: headName,
         house_id: headId,
-        household_role: fam.household_role || fam.roleInFamily || 'Head of Family',
+        household_role: 'HEAD',
+         family_id: familyId,
         name: headName,
         gender: fam.gender || 'Male',
         date_of_birth: fam.dob && String(fam.dob).trim() !== '' ? fam.dob : (fam.date_of_birth || null),
@@ -437,7 +518,7 @@ export async function syncMembers(supabase, familiesList) {
         gps_coordinates: gps,
         latitude: Number.isFinite(Number(latitude)) ? Number(latitude) : null,
         longitude: Number.isFinite(Number(longitude)) ? Number(longitude) : null,
-        gps_address: gpsAddress,
+        gps_coordinates: gpsAddress,
         maps_url: mapsUrl,
         is_baptized: Boolean(fam.isBaptized || fam.is_baptized),
         baptism_date: ((fam.isBaptized || fam.is_baptized) && (fam.baptismDate || fam.baptism_date) && String(fam.baptismDate || fam.baptism_date).trim() !== '') ? (fam.baptismDate || fam.baptism_date) : null,
@@ -445,8 +526,7 @@ export async function syncMembers(supabase, familiesList) {
         holy_spirit_baptism_date: ((fam.isAnointed || fam.is_anointed) && (fam.holySpiritBaptismDate || fam.holy_spirit_baptism_date) && String(fam.holySpiritBaptismDate || fam.holy_spirit_baptism_date).trim() !== '') ? (fam.holySpiritBaptismDate || fam.holy_spirit_baptism_date) : null,
         wedding_anniversary: (fam.weddingAnniversary || fam.wedding_anniversary) && String(fam.weddingAnniversary || fam.wedding_anniversary).trim() !== '' ? (fam.weddingAnniversary || fam.wedding_anniversary) : null,
         ministry_talents: Array.isArray(fam.ministryTalents || fam.ministry_talents) ? (fam.ministryTalents || fam.ministry_talents) : [],
-        relationship: fam.relationship || fam.relationship_to_head || '',
-        spiritual_profile: fam.spiritual_profile || fam.spiritualProfile || {},
+        household_role: fam.household_role || fam.household_role_to_head || '',
         raw_payload: fam,
         updated_at: new Date().toISOString()
       });

@@ -34,6 +34,61 @@ const SPIRITUAL_FILTERS = [
   { value: 'NOT_ANOINTED', label: 'Not Anointed' }
 ];
 
+const emptyMemberForm = {
+  familyId: '',
+  houseId: '',
+  roleInFamily: 'Spouse / Wife',
+  name: '',
+  gender: 'Male',
+  dob: '',
+  date_of_birth: '',
+  age: '',
+  bloodGroup: 'O+',
+  phone: '',
+  email: '',
+  campus: 'Main',
+  area: '',
+  address: '',
+  gps_coordinates: '',
+  latitude: '',
+  longitude: '',
+  maps_url: '',
+  isBaptized: false,
+  baptismDate: '',
+  isAnointed: false,
+  holySpiritBaptismDate: '',
+  weddingAnniversary: '',
+  ministryTalents: []
+};
+
+const sanitizeMemberFormData = (data = {}) => ({
+  ...emptyMemberForm,
+  ...data,
+  name: data.name ?? '',
+  gender: data.gender ?? (data.roleInFamily === 'Spouse / Wife' ? 'Female' : 'Male'),
+  dob: data.date_of_birth ?? data.dob ?? '',
+  date_of_birth: data.date_of_birth ?? data.dob ?? '',
+  age: data.age ?? '',
+  bloodGroup: data.bloodGroup ?? data.blood_group ?? 'O+',
+  phone: data.phone ?? '',
+  email: data.email ?? '',
+  campus: data.campus ?? 'Main',
+  area: data.area ?? '',
+  address: data.address ?? '',
+  gps_coordinates: data.gps_coordinates ?? data.gpsCoordinates ?? '',
+  latitude: data.latitude ?? '',
+  longitude: data.longitude ?? '',
+  maps_url: data.maps_url ?? data.mapsUrl ?? '',
+  isBaptized: data.isBaptized ?? data.is_baptized ?? false,
+  baptismDate: data.baptismDate ?? data.baptism_date ?? '',
+  isAnointed: data.isAnointed ?? data.is_anointed ?? false,
+  holySpiritBaptismDate: data.holySpiritBaptismDate ?? data.holy_spirit_baptism_date ?? '',
+  weddingAnniversary: data.weddingAnniversary ?? data.wedding_anniversary ?? '',
+  ministryTalents: Array.isArray(data.ministryTalents ?? data.ministry_talents)
+    ? (data.ministryTalents ?? data.ministry_talents)
+    : []
+});
+
 const normalizeFilterText = (value) => String(value || '').trim().toLowerCase();
 
 const getMemberAge = (member) => {
@@ -211,7 +266,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     gpsCoordinates: '',
     latitude: '',
     longitude: '',
-    gps_address: '',
+    gps_coordinates: '',
     maps_url: '',
     bloodGroup: 'O+',
     weddingAnniversary: '',
@@ -222,28 +277,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     ministryTalents: []
   });
 
-  const [memberForm, setMemberForm] = useState({
-    familyId: '',
-    houseId: '',
-    roleInFamily: 'Spouse / Wife',
-    name: '',
-    gender: 'Female',
-    dob: '',
-    age: '',
-    phone: '',
-    email: '',
-    bloodGroup: 'O+',
-    weddingAnniversary: '',
-    isBaptized: false,
-    baptismDate: '',
-    isAnointed: false,
-    holySpiritBaptismDate: '',
-    ministryTalents: [],
-    latitude: '',
-    longitude: '',
-    gps_address: '',
-    maps_url: ''
-  });
+  const [memberForm, setMemberForm] = useState(emptyMemberForm);
 
   useEffect(() => {
     async function loadData() {
@@ -296,7 +330,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         ministryTalents: family.headMember?.ministryTalents || [],
         latitude: family.headMember?.latitude || family.latitude || '',
         longitude: family.headMember?.longitude || family.longitude || '',
-        gps_address: family.headMember?.gps_address || family.gps_address || '',
+        gps_coordinates: family.headMember?.gps_coordinates || family.gps_coordinates || '',
         maps_url: family.headMember?.maps_url || family.maps_url || ''
       });
     } else {
@@ -316,7 +350,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         area: '',
         campus: session?.activeCampus || 'Headquarters',
         gpsCoordinates: '',
-        latitude: '', longitude: '', gps_address: '', maps_url: '',
+        latitude: '', longitude: '', gps_coordinates: '', maps_url: '',
         bloodGroup: 'O+',
         weddingAnniversary: '',
         isBaptized: false,
@@ -340,37 +374,26 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
     setActiveFamilyForNewMember(family);
     if (memberToEdit) {
       setEditingMemberId(memberToEdit.memberId);
-      setMemberForm({
+      setMemberForm(sanitizeMemberFormData({
         ...memberToEdit,
-        gender: memberToEdit.gender || (memberToEdit.roleInFamily === 'Spouse / Wife' ? 'Female' : 'Male'),
         familyId: family.familyId,
-        houseId: memberToEdit.memberId,
-        ministryTalents: memberToEdit.ministryTalents || []
-      });
+        houseId: memberToEdit.memberId || memberToEdit.houseId,
+        campus: memberToEdit.campus ?? family.campus ?? session?.activeCampus ?? 'Main'
+      }));
     } else {
       setEditingMemberId(null);
       const subIndex = (family.members?.length || 0) + 1;
       const initialRole = subIndex === 1 ? 'Spouse / Wife' : 'Son / Daughter';
       const suffix = initialRole === 'Spouse / Wife' ? 'W' : `C${subIndex - 1}`;
       
-      setMemberForm({
+      setMemberForm(sanitizeMemberFormData({
         familyId: family.familyId,
         houseId: `${family.familyId}-${suffix}`,
         roleInFamily: initialRole,
-        name: '',
-        gender: initialRole === 'Spouse / Wife' ? 'Female' : 'Male',
-        dob: '',
-        age: '',
         phone: family.headMember?.phone || '',
-        email: '',
-        bloodGroup: 'O+',
-        weddingAnniversary: '',
-        isBaptized: false,
-        baptismDate: '',
-        isAnointed: false,
-        holySpiritBaptismDate: '',
-        ministryTalents: []
-      });
+        gender: initialRole === 'Spouse / Wife' ? 'Female' : 'Male',
+        campus: family.campus ?? session?.activeCampus ?? 'Main'
+      }));
     }
     setIsMemberModalOpen(true);
   };
@@ -392,7 +415,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
             area: headForm.area,
             campus: headForm.campus,
             gpsCoordinates: headForm.gpsCoordinates,
-            latitude: headForm.latitude, longitude: headForm.longitude, gps_address: headForm.gps_address, maps_url: headForm.maps_url,
+            latitude: headForm.latitude, longitude: headForm.longitude, gps_coordinates: headForm.gps_coordinates, maps_url: headForm.maps_url,
             headMember: {
               ...f.headMember,
               ...headForm,
@@ -414,7 +437,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
         area: headForm.area,
         campus: headForm.campus,
         gpsCoordinates: headForm.gpsCoordinates,
-          latitude: headForm.latitude, longitude: headForm.longitude, gps_address: headForm.gps_address, maps_url: headForm.maps_url,
+          latitude: headForm.latitude, longitude: headForm.longitude, gps_coordinates: headForm.gps_coordinates, maps_url: headForm.maps_url,
         headMember: {
           ...headForm,
           gender: headForm.gender || 'Male',
@@ -882,7 +905,6 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                   <input type="text" required value={headForm.name} onChange={(e) => setHeadForm({ ...headForm, name: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-bold" />
                 </div>
 
-                <LocationCaptureFields value={memberForm} onChange={setMemberForm} compact />
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Mobile Phone *</label>
                   <input type="tel" required value={headForm.phone} onChange={(e) => setHeadForm({ ...headForm, phone: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono" />
@@ -1045,7 +1067,7 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">Relationship / Role in Family *</label>
+                  <label className="text-[10px] text-slate-400 block mb-1">household_role / Role in Family *</label>
                   <select
                     value={memberForm.roleInFamily}
                     onChange={(e) => {
@@ -1078,13 +1100,14 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Member Full Name *</label>
-                  <input type="text" required placeholder="e.g. Mary Stephen" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-bold" />
+                  <input type="text" name="name" required placeholder="e.g. Mary Stephen" value={memberForm.name ?? ''} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-bold" />
                 </div>
                 <div>
                   <label className="text-[10px] text-slate-400 block mb-1">Mobile Phone (Optional)</label>
-                  <input type="tel" placeholder="+91 98400..." value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono" />
+                  <input type="tel" name="phone" placeholder="+91 98400..." value={memberForm.phone ?? ''} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono" />
                 </div>
               </div>
+              <LocationCaptureFields value={memberForm} onChange={setMemberForm} compact />
 
               {/* Gender & Blood Group */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1138,8 +1161,14 @@ export default function MembersDesk({ session, registrationRequest, onRegistrati
                   <label className="text-[10px] text-slate-400 block mb-1">Date of Birth</label>
                   <input
                     type="date"
-                    value={memberForm.dob}
-                    onChange={(e) => setMemberForm({ ...memberForm, dob: e.target.value, age: calculateAge(e.target.value) })}
+                    name="date_of_birth"
+                    value={memberForm.date_of_birth ?? ''}
+                    onChange={(e) => setMemberForm({
+                      ...memberForm,
+                      dob: e.target.value,
+                      date_of_birth: e.target.value,
+                      age: calculateAge(e.target.value)
+                    })}
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white"
                   />
                 </div>

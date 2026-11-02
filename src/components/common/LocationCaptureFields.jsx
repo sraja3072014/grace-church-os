@@ -27,8 +27,8 @@ export default function LocationCaptureFields({ value, onChange, compact = false
         <input type="number" step="any" placeholder="Latitude" value={value.latitude || ''} onChange={(e) => update({ latitude: e.target.value, maps_url: buildGoogleMapsNavigationUrl(e.target.value, value.longitude) })} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" />
         <input type="number" step="any" placeholder="Longitude" value={value.longitude || ''} onChange={(e) => update({ longitude: e.target.value, maps_url: buildGoogleMapsNavigationUrl(value.latitude, e.target.value) })} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" />
       </div>
-      <input type="url" placeholder="Paste Google Maps Share URL (optional)" value={value.maps_url || ''} onChange={(e) => handleMapsUrl(e.target.value)} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" />
-      <input type="text" placeholder="Landmark / GPS address note (optional)" value={value.gps_address || ''} onChange={(e) => update({ gps_address: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" />
+      <input type="url" name="maps_url" placeholder="Paste Google Maps Share URL (optional)" value={value.maps_url || ''} onChange={(e) => handleMapsUrl(e.target.value)} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" />
+      <input type="text" name="gps_coordinates" placeholder="e.g. 11.0168, 76.9558" value={value.gps_coordinates || ''} onChange={(e) => update({ gps_coordinates: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" />
     </div>
   );
 }

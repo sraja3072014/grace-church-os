@@ -6,10 +6,12 @@ import {
 import { soundFX } from '../../utils/audioEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
 import { convertVisitorToMember } from '../../utils/visitorConversionService';
+import { getVisitorPipelineStage } from '../dashboard/VisitorPipelineWidget';
 
 export default function VisitorsFunnelDesk() {
   const [visitors, setVisitors] = useState([]);
   const [convertingVisitorId, setConvertingVisitorId] = useState(null);
+  const [pipelineFilter, setPipelineFilter] = useState('ALL');
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -28,6 +30,8 @@ export default function VisitorsFunnelDesk() {
           area: 'Tambaram',
           invitedBy: 'Bro. David Paul',
           stage: 'FIRST_VISIT',
+          pipeline_stage: '1ST_VISIT',
+          is_converted: false,
           visitDate: '2026-09-06',
           notes: 'Looking for youth fellowship'
         },
@@ -38,6 +42,8 @@ export default function VisitorsFunnelDesk() {
           area: 'Velachery',
           invitedBy: 'Sister Hepzibah',
           stage: 'CONTACTED',
+          pipeline_stage: 'LEADER_CALLED',
+          is_converted: false,
           visitDate: '2026-08-30',
           notes: 'Requested prayer for family peace'
         }
@@ -45,6 +51,12 @@ export default function VisitorsFunnelDesk() {
       setVisitors(data);
     }
     loadVisitors();
+  }, []);
+
+  useEffect(() => {
+    const handlePipelineFilter = (event) => setPipelineFilter(event.detail?.stage || 'ALL');
+    window.addEventListener('graceos_visitor_pipeline_filter', handlePipelineFilter);
+    return () => window.removeEventListener('graceos_visitor_pipeline_filter', handlePipelineFilter);
   }, []);
 
   const saveVisitors = async (updatedList) => {
@@ -65,6 +77,8 @@ export default function VisitorsFunnelDesk() {
       area: form.area.trim() || 'General City',
       invitedBy: form.invitedBy.trim() || 'Self Walk-in',
       stage: 'FIRST_VISIT',
+      pipeline_stage: '1ST_VISIT',
+      is_converted: false,
       visitDate: new Date().toISOString().slice(0, 10),
       notes: form.notes.trim()
     };
@@ -76,12 +90,13 @@ export default function VisitorsFunnelDesk() {
 
   const handleAdvanceStage = async (visitorId) => {
     soundFX?.playClickPop?.();
-    const stages = ['FIRST_VISIT', 'CONTACTED', 'PRAYER_MEET', 'COMMITTED'];
+    const stages = ['1ST_VISIT', 'LEADER_CALLED', 'HOME_VISITED'];
     const updated = visitors.map(v => {
       if (v.id === visitorId) {
-        const currIdx = stages.indexOf(v.stage || 'FIRST_VISIT');
-        const nextStage = currIdx < stages.length - 1 ? stages[currIdx + 1] : v.stage;
-        return { ...v, stage: nextStage };
+        const currentStage = getVisitorPipelineStage(v);
+        const currIdx = stages.indexOf(currentStage);
+        const nextStage = currIdx < stages.length - 1 ? stages[currIdx + 1] : currentStage;
+        return { ...v, pipeline_stage: nextStage, stage: nextStage === 'LEADER_CALLED' ? 'CONTACTED' : 'PRAYER_MEET', followUpStage: nextStage === 'LEADER_CALLED' ? 'calling_scheduled' : 'home_visit' };
       }
       return v;
     });
@@ -113,6 +128,9 @@ export default function VisitorsFunnelDesk() {
         return {
           ...currentVisitor,
           funnelStage: 'CONVERTED',
+          pipeline_stage: 'CONVERTED',
+          is_converted: true,
+          converted_member_id: result.memberId,
           status: 'Converted to Member',
           convertedMemberId: result.memberId
         };
@@ -141,11 +159,15 @@ export default function VisitorsFunnelDesk() {
     window.open(`https://web.whatsapp.com/send?phone=${formatted}&text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  const visibleVisitors = pipelineFilter === 'ALL'
+    ? visitors
+    : visitors.filter((visitor) => getVisitorPipelineStage(visitor) === pipelineFilter);
+
   const stageLabels = {
-    FIRST_VISIT: { label: '1st Visit (New Seeker)', color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
-    CONTACTED: { label: 'Contacted (Pastoral Call)', color: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' },
-    PRAYER_MEET: { label: 'Cottage Prayer / Cell Group', color: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' },
-    COMMITTED: { label: 'Committed Church Member', color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' }
+    '1ST_VISIT': { label: '1st Visit (New Seeker)', color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+    LEADER_CALLED: { label: 'Pastoral / Leader Call', color: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' },
+    HOME_VISITED: { label: 'Home Visit', color: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' },
+    CONVERTED: { label: 'Full Member', color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
   };
 
   return (
@@ -257,7 +279,7 @@ export default function VisitorsFunnelDesk() {
           </div>
 
           <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
-            {visitors.map((visitor, idx) => (
+            {visibleVisitors.map((visitor, idx) => (
               <div
                 key={visitor.id || visitor.visitorId || `vis-${idx}`}
                 className="p-4 rounded-2xl bg-slate-950/80 border border-white/5 space-y-3 hover:border-white/10 transition"
@@ -278,8 +300,8 @@ export default function VisitorsFunnelDesk() {
                     )}
                   </div>
 
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border shrink-0 ${stageLabels[visitor.stage || 'FIRST_VISIT']?.color}`}>
-                    {stageLabels[visitor.stage || 'FIRST_VISIT']?.label}
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border shrink-0 ${stageLabels[getVisitorPipelineStage(visitor)]?.color}`}>
+                    {stageLabels[getVisitorPipelineStage(visitor)]?.label}
                   </span>
                 </div>
 

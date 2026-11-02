@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS church_info (
   city         TEXT,
   latitude     REAL,
   longitude    REAL,
-  gps_address  TEXT,
+  gps_coordinates  TEXT,
   maps_url     TEXT,
   state        TEXT,
   country      TEXT,
@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS members (
   address        TEXT,
   latitude       REAL,
   longitude      REAL,
-  gps_address    TEXT,
+  gps_coordinates    TEXT,
   maps_url       TEXT,
   city           TEXT,
   photo_url      TEXT,
@@ -227,7 +227,7 @@ CREATE TABLE IF NOT EXISTS visitors (
   prayer_request TEXT,
   latitude      REAL,
   longitude     REAL,
-  gps_address   TEXT,
+  gps_coordinates   TEXT,
   maps_url      TEXT,
   created_at    TEXT DEFAULT CURRENT_TIMESTAMP
 );

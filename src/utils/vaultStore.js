@@ -317,7 +317,7 @@ export const sqlFileStore = {
     lines.push('  address TEXT,');
     lines.push('  latitude REAL,');
     lines.push('  longitude REAL,');
-    lines.push('  gps_address TEXT,');
+    lines.push('  gps_coordinates TEXT,');
     lines.push('  maps_url TEXT,');
     lines.push('  status TEXT');
     lines.push(');');
@@ -345,7 +345,7 @@ export const sqlFileStore = {
 
     for (const m of Array.isArray(members) ? members : []) {
       lines.push(
-        'INSERT INTO members (member_code, full_name, gender, phone, email, address, latitude, longitude, gps_address, maps_url, status) VALUES (' +
+        'INSERT INTO members (member_code, full_name, gender, phone, email, address, latitude, longitude, gps_coordinates, maps_url, status) VALUES (' +
           [
             this.sanitize(m.member_code ?? m.memberCode),
             this.sanitize(m.full_name ?? m.name),
@@ -355,7 +355,7 @@ export const sqlFileStore = {
             this.sanitize(m.address),
             this.sanitize(m.latitude),
             this.sanitize(m.longitude),
-            this.sanitize(m.gps_address),
+            this.sanitize(m.gps_coordinates),
             this.sanitize(m.maps_url),
             this.sanitize(m.status ?? 'ACTIVE'),
           ].join(', ') +
