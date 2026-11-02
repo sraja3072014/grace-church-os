@@ -33,11 +33,12 @@ export function useAutoCloudSync() {
             family_id: fam.id?.toString() || 'FAM-1',
             full_name: fam.headMember.name || 'Member',
             phone: fam.headMember.phone || '',
-            role: 'HEAD',
+            household_role: 'HEAD',
+            family_id: 'H',
             campus: fam.area || 'Headquarters',
             latitude: Number.isFinite(Number(fam.headMember.latitude || fam.latitude)) ? Number(fam.headMember.latitude || fam.latitude) : null,
             longitude: Number.isFinite(Number(fam.headMember.longitude || fam.longitude)) ? Number(fam.headMember.longitude || fam.longitude) : null,
-            gps_address: fam.headMember.gps_address || fam.gps_address || '',
+            gps_coordinates: fam.headMember.gps_coordinates || fam.gps_coordinates || '',
             maps_url: fam.headMember.maps_url || fam.maps_url || '',
             raw_payload: fam.headMember
           }] : [];
@@ -46,11 +47,12 @@ export function useAutoCloudSync() {
             family_id: fam.id?.toString() || 'FAM-1',
             full_name: m.name || 'Family Member',
             phone: m.phone || '',
-            role: m.relation || 'MEMBER',
+            household_role: m.roleInFamily || m.relation || 'MEMBER',
+            family_id: m.family_id || (String(m.relation || m.roleInFamily || '').toLowerCase().includes('spouse') ? 'W1' : `C${(fam.members || []).indexOf(m) + 1}`),
             campus: fam.area || 'Headquarters',
             latitude: Number.isFinite(Number(m.latitude || fam.latitude)) ? Number(m.latitude || fam.latitude) : null,
             longitude: Number.isFinite(Number(m.longitude || fam.longitude)) ? Number(m.longitude || fam.longitude) : null,
-            gps_address: m.gps_address || fam.gps_address || '',
+            gps_coordinates: m.gps_coordinates || fam.gps_coordinates || '',
             maps_url: m.maps_url || fam.maps_url || '',
             raw_payload: m
           }));
@@ -63,10 +65,11 @@ export function useAutoCloudSync() {
         }
       }
 
-      // 2. நிதி மற்றும் தசமபாகங்களை finance_ledger டேபிளுக்கு அனுப்புதல்
+      // 2. நிதி மற்றும் தசமபாகங்களை finance டேபிளுக்கு அனுப்புதல்
       const localFinance = await getVaultData('finance', []);
       if (Array.isArray(localFinance) && localFinance.length > 0) {
-        const payloadFinance = localFinance.map(tx => ({
+        const payloadFinance = localFinance.map((tx, index) => ({
+          id: String(tx.id || tx.receiptNo || `FIN-${Date.now()}-${index}`),
           receipt_no: tx.receiptNo || tx.id?.toString() || `RCP-${Date.now()}`,
           donor_name: tx.donorName || tx.name || 'Anonymous Believer',
           donor_phone: tx.phone || '',
@@ -74,23 +77,26 @@ export function useAutoCloudSync() {
           amount: Number(tx.amount) || 0,
           payment_mode: tx.mode || 'UPI',
           is_80g_exempt: Boolean(tx.is80G),
-          campus: tx.campus || 'Headquarters'
+          campus: tx.campus || 'Headquarters',
+          record_date: tx.date || tx.record_date || new Date().toISOString().slice(0, 10),
+          updated_at: new Date().toISOString()
         }));
 
-        await supabase.from('finance_ledger').upsert(payloadFinance, { onConflict: 'receipt_no', ignoreDuplicates: true });
+        await supabase.from('finance').upsert(payloadFinance, { onConflict: 'id', ignoreDuplicates: true });
       }
 
-      // 3. ஜெபக் குறிப்புகளை prayer_requests டேபிளுக்கு அனுப்புதல்
+      // 3. ஜெபக் குறிப்புகளை prayers டேபிளுக்கு அனுப்புதல்
       const localPrayers = await getVaultData('prayers', []);
       if (Array.isArray(localPrayers) && localPrayers.length > 0) {
-        const payloadPrayers = localPrayers.map(p => ({
+        const payloadPrayers = localPrayers.map((p, index) => ({
+          id: String(p.id || `PRAYER-${Date.now()}-${index}`),
           requester_name: p.requester || 'Believer',
           phone: p.phone || '',
           petition: p.petition || p.request || '',
           status: p.status || 'UNDER_PRAYER'
         }));
 
-        await supabase.from('prayer_requests').upsert(payloadPrayers, { onConflict: 'requester_name,petition', ignoreDuplicates: true });
+        await supabase.from('prayers').upsert(payloadPrayers, { onConflict: 'id', ignoreDuplicates: true });
       }
 
       const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

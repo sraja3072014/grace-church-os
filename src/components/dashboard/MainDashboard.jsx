@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import CelebrationDispatcherWidget from '../widgets/CelebrationDispatcherWidget';
 import CellLeaderSyncWidget from './CellLeaderSyncWidget';
+import VisitorPipelineWidget from './VisitorPipelineWidget';
 
 export default function MainDashboard({
   setActiveTab,
@@ -83,10 +84,13 @@ export default function MainDashboard({
     window.addEventListener('graceos_full_sync_completed', refreshAfterSync);
     window.addEventListener('graceos_realtime_data_update', refreshAfterSync);
     window.addEventListener('storage', refreshAfterSync);
+    const handleVisitorConversion = (event) => showToast(`Visitor successfully welcomed as Full Member (ID: ${event.detail?.memberId || 'MEM-NEW'})!`);
+    window.addEventListener('graceos_visitor_converted', handleVisitorConversion);
     return () => {
       window.removeEventListener('graceos_full_sync_completed', refreshAfterSync);
       window.removeEventListener('graceos_realtime_data_update', refreshAfterSync);
       window.removeEventListener('storage', refreshAfterSync);
+      window.removeEventListener('graceos_visitor_converted', handleVisitorConversion);
     };
   }, [session]);
 
@@ -183,7 +187,9 @@ export default function MainDashboard({
       prayerRequest: newVisitorForm.prayerRequest || 'General Prayer',
       firstVisitDate: todayDate,
       serviceAttended: selectedService,
-      followUpStage: 'new_contact'
+      followUpStage: 'new_contact',
+      pipeline_stage: '1ST_VISIT',
+      is_converted: false
     };
 
     const updatedVisitors = [newRecord, ...visitors];
@@ -208,10 +214,65 @@ export default function MainDashboard({
     { name: 'Mission & Outreach (ICICI - 2045)', tithe: '70%', offering: '15%', building: '15%', total: '₹ 42,000' }
   ];
 
-  const countStage1 = visitors.filter(v => (v.followUpStage || 'new_contact') === 'new_contact').length;
-  const countStage2 = visitors.filter(v => v.followUpStage === 'calling_scheduled').length;
-  const countStage3 = visitors.filter(v => v.followUpStage === 'home_visit').length;
-  const countStage4 = visitors.filter(v => v.followUpStage === 'ready_for_membership').length;
+  const visitorsData = Array.isArray(visitors) ? visitors : [];
+
+  const countStage1 = useMemo(
+    () => visitorsData.filter(
+      (visitor) => !visitor.is_converted && (!visitor.pipeline_stage || visitor.pipeline_stage === '1ST_VISIT')
+    ).length,
+    [visitorsData]
+  );
+
+  const countStage2 = useMemo(
+    () => visitorsData.filter(
+      (visitor) => !visitor.is_converted && (visitor.pipeline_stage === 'LEADER_CALLED' || visitor.pipeline_stage === 'PASTORAL_CALL')
+    ).length,
+    [visitorsData]
+  );
+
+  const countStage3 = useMemo(
+    () => visitorsData.filter(
+      (visitor) => !visitor.is_converted && visitor.pipeline_stage === 'HOME_VISITED'
+    ).length,
+    [visitorsData]
+  );
+
+  const countStage4 = useMemo(
+    () => visitorsData.filter(
+      (visitor) => visitor.is_converted || visitor.pipeline_stage === 'CONVERTED'
+    ).length,
+    [visitorsData]
+  );
+
+  const advanceVisitorPipeline = async (visitor, currentStage) => {
+    const nextStage = {
+      '1ST_VISIT': 'LEADER_CALLED',
+      LEADER_CALLED: 'HOME_VISITED',
+      HOME_VISITED: 'HOME_VISITED'
+    }[currentStage];
+    if (!nextStage) return;
+    const updatedVisitors = visitors.map((item) => {
+      if (String(item.id || item.visitorId) !== String(visitor.id || visitor.visitorId)) return item;
+      return {
+        ...item,
+        pipeline_stage: nextStage,
+        stage: nextStage === 'LEADER_CALLED' ? 'CONTACTED' : nextStage === 'HOME_VISITED' ? 'PRAYER_MEET' : item.stage,
+        followUpStage: nextStage === 'LEADER_CALLED' ? 'calling_scheduled' : 'home_visit',
+        call_notes: nextStage === 'LEADER_CALLED' ? item.call_notes || 'Leader call completed.' : item.call_notes,
+        home_visit_date: nextStage === 'HOME_VISITED' && !item.home_visit_date ? todayDate : item.home_visit_date
+      };
+    });
+    setVisitors(updatedVisitors);
+    await setVaultData('visitors', updatedVisitors, true);
+    showToast(nextStage === 'LEADER_CALLED' ? 'Leader call marked complete.' : 'Home visit stage updated.');
+  };
+
+  const openVisitorStage = (stage) => {
+    setActiveTab?.('visitors');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('graceos_visitor_pipeline_filter', { detail: { stage } }));
+    }
+  };
 
   return (
     <div 
@@ -328,7 +389,11 @@ export default function MainDashboard({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         
         {/* 1. Visitor Engagement Pipeline */}
-        <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between gap-3">
+        <div className="lg:col-span-3">
+          <VisitorPipelineWidget visitors={visitors} onOpenStage={openVisitorStage} onAdvanceStage={advanceVisitorPipeline} />
+        </div>
+        {/* Legacy compact metrics retained below for quick glance */}
+        <div className="hidden">
           <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <HeartHandshake className="text-rose-400" size={15} />

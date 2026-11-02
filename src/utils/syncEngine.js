@@ -1,6 +1,7 @@
 // src/utils/syncEngine.js
 import { getSupabase } from './supabaseClient';
 import { getVaultData, setVaultData } from './vaultStore';
+import { syncMembers } from './cloudSyncEngine';
 
 /**
  * 10 Core Tables & Vault Keys Mapping
@@ -20,9 +21,8 @@ export const SYNC_MODULES = [
 
 const TABLE_CANDIDATES = {
   members: ['members'],
-  sub_members: ['sub_members'],
-  finance: ['finance_transactions', 'finance'],
-  attendance: ['attendance_logs', 'attendance']
+  finance: ['finance'],
+  attendance: ['attendance']
 };
 
 let isSyncRunning = false;
@@ -113,8 +113,9 @@ function normalizeCloudMember(row) {
     familyId: String(value.familyId || value.family_id || value.house_id || value.id || ''),
     familyName: value.familyName || value.family_name || '',
     roleInFamily: role || 'Member',
+    family_id: value.family_id || value.familyCode || '',
     gender: value.gender || '',
-    relationship: value.relationship || value.relationship_to_head || '',
+    household_role: value.household_role || value.household_role_to_head || '',
     spiritual_profile: value.spiritual_profile || value.spiritualProfile || {},
     spiritualProfile: value.spiritualProfile || value.spiritual_profile || {},
     phone: value.phone || value.mobile || '',
@@ -138,7 +139,9 @@ function rebuildFamilyHierarchy(rows) {
       families.set(familyId, family);
     }
 
-    const isHead = /head/i.test(String(member.roleInFamily)) ||
+    const isHead = String(member.family_id).toUpperCase() === 'H' ||
+      String(member.household_role).toUpperCase() === 'HEAD' ||
+      /head/i.test(String(member.roleInFamily)) ||
       String(member.role || '').toUpperCase() === 'HEAD' ||
       String(member.id) === String(member.familyId);
     const cleanMember = {
@@ -172,17 +175,13 @@ export async function hydrateCloudData() {
   if (!client || !isOnlineAndReady()) return { success: false, reason: 'offline_or_unconfigured' };
 
   try {
-    const [memberResult, subMemberResult, financeResult, attendanceResult] = await Promise.all([
+    const [memberResult, financeResult, attendanceResult] = await Promise.all([
       selectFirstAvailable(client, TABLE_CANDIDATES.members),
-      selectFirstAvailable(client, TABLE_CANDIDATES.sub_members),
       selectFirstAvailable(client, TABLE_CANDIDATES.finance),
       selectFirstAvailable(client, TABLE_CANDIDATES.attendance)
     ]);
 
-    const families = rebuildFamilyHierarchy([
-      ...memberResult.data,
-      ...subMemberResult.data
-    ]);
+    const families = rebuildFamilyHierarchy(memberResult.data);
     const finance = financeResult.data.map(row => {
       const value = unwrapCloudRow(row);
       return { ...value, amount: Number(value.amount) || 0, date: value.date || value.record_date || value.txn_date };
@@ -234,6 +233,11 @@ export async function pushModuleToCloud(moduleKey) {
 
     if (localData.length === 0) return { success: true, count: 0 };
 
+    if (moduleKey === 'members') {
+      await syncMembers(client, localData);
+      return { success: true, count: localData.length };
+    }
+
     const cloudRows = localData
       .map(item => normalizeForCloud(moduleKey, item))
       .filter(Boolean);
@@ -269,8 +273,7 @@ export async function pullModuleFromCloud(moduleKey) {
     const restoredRecords = data.map(row => restoreFromCloud(moduleKey, row));
 
     if (moduleKey === 'members') {
-      const subMembers = await selectFirstAvailable(client, TABLE_CANDIDATES.sub_members);
-      const nested = rebuildFamilyHierarchy([...data, ...subMembers.data]);
+      const nested = rebuildFamilyHierarchy(data);
       await setVaultData(moduleKey, nested, false);
       localStorage.setItem('app_members_family_database', JSON.stringify(nested));
       return { success: true, count: nested.length };
