@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Flame, LogOut } from 'lucide-react';
+import RoleNavSwitcher from './RoleNavSwitcher';
 
 export default function Header({ onLogout, session }) {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -12,7 +13,7 @@ export default function Header({ onLogout, session }) {
   return (
     <header className="h-16 classic-glass-header px-6 flex items-center justify-between gap-4 shrink-0 select-none z-10 w-full">
       
-      {/* பிராண்ட் தலைப்பு */}
+      {/* Brand Title */}
       <div className="shrink-0 flex items-center gap-3">
         <div className="flex flex-col">
           <h1 className="text-sm md:text-base font-black text-white tracking-wide flex items-center gap-2">
@@ -23,7 +24,7 @@ export default function Header({ onLogout, session }) {
         </div>
       </div>
 
-      {/* அறிவிப்புப் பட்டை (Ticker Notice) */}
+      {/* Ticker Notice */}
       <div className="flex-1 max-w-xl mx-2 overflow-hidden rounded-full bg-black/30 border border-orange-500/20 px-4 py-1.5 flex items-center gap-3">
         <span className="shrink-0 px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 text-[10px] font-semibold flex items-center gap-1.5 border border-orange-500/30">
           <Flame size={12} className="text-orange-400" /> NOTICE
@@ -35,9 +36,12 @@ export default function Header({ onLogout, session }) {
         </div>
       </div>
 
-      {/* வலதுபுறக் கட்டுப்பாடுகள் (Right Controls) */}
+      {/* Right Controls */}
       <div className="flex items-center gap-3 shrink-0">
-        {/* நேரம் மற்றும் தேதி */}
+        {/* Interactive RBAC Role Switcher */}
+        <RoleNavSwitcher session={session} />
+
+        {/* Date and Time */}
         <div className="text-right hidden sm:block border-r border-orange-500/20 pr-4">
           <p className="text-xs md:text-sm font-bold tracking-wider text-orange-100 font-mono">
             {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
@@ -47,7 +51,7 @@ export default function Header({ onLogout, session }) {
           </p>
         </div>
 
-        {/* பயனர் விபரம் (User Avatar Card) */}
+        {/* User Avatar Card */}
         <div className="flex items-center gap-2 bg-orange-500/10 p-1 pr-3 rounded-full border border-orange-500/20">
           <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-600 flex items-center justify-center font-bold text-[11px] text-white shadow-md shadow-orange-500/30">
             {session?.username ? session.username.slice(0, 2).toUpperCase() : 'AD'}

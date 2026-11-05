@@ -1,0 +1,2 @@
+[functions.login-with-identifier]
+verify_jwt = false

@@ -25,6 +25,7 @@ export const VAULT_TABLE_FILES = [
   'expenses',
   'attendance',
   'prayers',
+  'prayer_slots',
   'events',
   'locale',
   'advanced_config',
@@ -43,6 +44,7 @@ const TABLE_LOCALSTORAGE_KEYS = {
   expenses: 'app_expenses_ledger',
   attendance: 'graceos_attendance_logs',
   prayers: 'graceos_prayer_wall_db',
+  prayer_slots: 'graceos_prayer_slots',
   events: 'graceos_church_events_db',
   locale: 'graceos_locale_config',
   advanced_config: 'app_advanced_config',
@@ -275,14 +277,41 @@ CREATE TABLE IF NOT EXISTS attendance_logs (
 );
 
 CREATE TABLE IF NOT EXISTS prayer_requests (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  requester   TEXT,
-  member_id   INTEGER,
-  category    TEXT,
-  request     TEXT NOT NULL,
-  status      TEXT DEFAULT 'OPEN',
-  prayed_on   TEXT,
-  created_at  TEXT DEFAULT CURRENT_TIMESTAMP
+  id              TEXT PRIMARY KEY,
+  member_id       TEXT,
+  requester_name  TEXT NOT NULL DEFAULT 'Anonymous Believer',
+  phone           TEXT,
+  category        TEXT NOT NULL DEFAULT 'GENERAL',
+  request_text    TEXT NOT NULL,
+  is_confidential INTEGER NOT NULL DEFAULT 0,
+  prayer_count    INTEGER NOT NULL DEFAULT 0,
+  status          TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS prayers (
+  id            TEXT PRIMARY KEY,
+  user_id       TEXT,
+  author_name   TEXT NOT NULL DEFAULT 'Anonymous Believer',
+  category      TEXT NOT NULL DEFAULT 'GENERAL',
+  description   TEXT NOT NULL,
+  visibility    TEXT NOT NULL DEFAULT 'PUBLIC',
+  prayer_count  INTEGER NOT NULL DEFAULT 0,
+  is_answered   INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS prayer_chain_slots (
+  id                TEXT PRIMARY KEY,
+  user_id           TEXT NOT NULL,
+  author_name       TEXT NOT NULL DEFAULT 'Prayer Warrior',
+  slot_date         TEXT NOT NULL,
+  start_minute      INTEGER NOT NULL,
+  duration_minutes  INTEGER NOT NULL DEFAULT 60,
+  status            TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS events (

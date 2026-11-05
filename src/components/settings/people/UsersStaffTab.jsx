@@ -4,6 +4,7 @@ import {
   Edit3, Trash2, X, Check, Building2, ShieldCheck 
 } from 'lucide-react';
 import { getVaultData, setVaultData } from '../../../utils/vaultStore';
+import { sanitizeStaffRecords } from '../../../utils/authSession';
 
 export default function UsersStaffTab() {
   // Stable sample records aligned with the GraceOS 11-Core schema.
@@ -11,7 +12,6 @@ export default function UsersStaffTab() {
     { 
       id: 'STF-101', 
       name: 'Rev. Dr. S. Johnraja', 
-      username: 'pastor.lead', 
       email: 'pastor@gracechurch.org', 
       phone: '+91 98765 43210', 
       role: 'Senior Pastor / Super Admin', 
@@ -90,9 +90,10 @@ export default function UsersStaffTab() {
 
   // 2. Synchronize the local vault, local storage, and cloud data.
   const sync = async (data) => {
-    setUsers(data);
-    await setVaultData('staff', data, true);
-    localStorage.setItem('graceos_vault_staff', JSON.stringify(data));
+    const safeRecords = sanitizeStaffRecords(data);
+    setUsers(safeRecords);
+    await setVaultData('staff', safeRecords, true);
+    localStorage.setItem('graceos_vault_staff', JSON.stringify(safeRecords));
   };
 
   const handleOpenAdd = () => {

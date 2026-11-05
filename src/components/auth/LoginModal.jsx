@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, User, Building2, ArrowRight } from 'lucide-react';
+import { Lock, User, Building2, ArrowRight, AlertCircle } from 'lucide-react';
+import { getSupabase } from '../../utils/supabaseClient';
+import { buildAuthSession, persistAuthSession } from '../../utils/authSession';
 
 export default function LoginModal({ onLoginSuccess }) {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('••••••••');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   const [churchLogo, setChurchLogo] = useState(null);
 
   const mainChurch = JSON.parse(localStorage.getItem('graceos_main_church') || '{"churchName": "Grace City Church"}');
   const branches = JSON.parse(localStorage.getItem('graceos_branches') || '[]');
-  
+
   const [selectedCampus, setSelectedCampus] = useState(mainChurch.churchName);
 
   useEffect(() => {
@@ -16,16 +19,42 @@ export default function LoginModal({ onLoginSuccess }) {
     if (savedLogo) setChurchLogo(savedLogo);
   }, []);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const userSession = {
-      username: username || 'System Admin',
-      role: 'Super Admin',
-      activeCampus: selectedCampus,
-      isLoggedIn: true
-    };
-    localStorage.setItem('graceos_session', JSON.stringify(userSession));
-    onLoginSuccess(userSession);
+    setErrorMsg('');
+
+    const email = username.trim();
+    const pass = password.trim();
+
+    if (!email || !pass) {
+      setErrorMsg('Enter both your email address and password.');
+      return;
+    }
+
+    const supabase = getSupabase();
+    if (!supabase) {
+      setErrorMsg('Authentication is not configured. Please enable Supabase in Settings and try again.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+      if (!data.user) throw new Error('Authentication did not return a valid user profile.');
+
+      const authSession = await buildAuthSession(data.user, supabase);
+      persistAuthSession(authSession);
+      onLoginSuccess(authSession);
+    } catch (error) {
+      const message = String(error?.message || '').toLowerCase();
+      if (message.includes('invalid login credentials')) {
+        setErrorMsg('The email address or password is incorrect.');
+      } else if (message.includes('email not confirmed')) {
+        setErrorMsg('Please confirm your email address before signing in.');
+      } else {
+        setErrorMsg(error?.message || 'Authentication could not be completed. Please try again.');
+      }
+    }
   };
 
   return (
@@ -88,6 +117,13 @@ export default function LoginModal({ onLoginSuccess }) {
               className="w-full bg-slate-950/70 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 transition"
             />
           </div>
+
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
+              <AlertCircle size={14} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
           <button 
             type="submit"

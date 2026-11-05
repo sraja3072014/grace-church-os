@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { soundFX } from '../../utils/audioEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
-import CottagePrayerDesk from './CottagePrayerDesk';
+import AreaCottageVisitDesk from './AreaCottageVisitDesk';
 import SundayRosterDesk from './SundayRosterDesk';
 import OrdinanceRegistryDesk from './OrdinanceRegistryDesk';
 import MinistryAttendanceHub from './MinistryAttendanceHub';
@@ -157,7 +157,7 @@ With Love,
       </div>
 
       {/* 🌟 1. Cottage Prayer Visits Tab */}
-      {activeMainTab === 'cottage_prayer' && <CottagePrayerDesk session={session} />}
+      {activeMainTab === 'cottage_prayer' && <AreaCottageVisitDesk session={session} />}
 
       {/* 🌟 2. Departmental Fellowships Tab (Moved and Integrated Code) */}
       {activeMainTab === 'departmental_fellowships' && (

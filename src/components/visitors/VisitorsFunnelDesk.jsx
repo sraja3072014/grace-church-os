@@ -137,9 +137,7 @@ export default function VisitorsFunnelDesk() {
       });
       setVisitors(updatedVisitors);
       localStorage.setItem('graceos_visitors_database', JSON.stringify(updatedVisitors));
-      window.alert(
-        `வெற்றி! ${result.name} புதிய உறுப்பினராக சேர்க்கப்பட்டார். Member ID: ${result.memberId}`
-      );
+      window.alert(result.message);
     } catch (error) {
       console.error('Visitor conversion failed:', error);
       window.alert(`பிழை: ${error.message}`);

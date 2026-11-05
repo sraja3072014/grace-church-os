@@ -40,44 +40,44 @@ const colorClasses = {
   emerald: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300',
 };
 
-export default function VisitorPipelineWidget({ visitors = [], onOpenStage, onAdvanceStage }) {
+export default function VisitorPipelineWidget({ visitors = [], onOpenStage, onAdvanceStage, compact = false }) {
   const stageData = useMemo(() => VISITOR_PIPELINE_STAGES.map((stage) => ({
     ...stage,
     visitors: visitors.filter((visitor) => getVisitorPipelineStage(visitor) === stage.id),
   })), [visitors]);
 
   return (
-    <section className="p-5 win11-card rounded-2xl border border-white/[0.08] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2.5">
+    <section className={`${compact ? 'p-3 space-y-2' : 'p-5 space-y-4'} win11-card rounded-2xl border border-white/[0.08]`}>
+      <div className={`flex flex-wrap items-center justify-between gap-2 border-b border-white/5 ${compact ? 'pb-2' : 'pb-2.5'}`}>
         <div>
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <UsersRound className="text-rose-400" size={15} /> Visitor Pipeline Funnel
+          <h4 className={`${compact ? 'text-[11px]' : 'text-xs'} font-bold text-white uppercase tracking-wider flex items-center gap-2`}>
+            <UsersRound className="text-rose-400" size={compact ? 14 : 15} /> Visitor Pipeline Funnel
           </h4>
-          <p className="text-[10px] text-slate-500 mt-1">Track each new visitor from welcome to membership.</p>
+          <p className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-slate-500 mt-1`}>Track each new visitor from welcome to membership.</p>
         </div>
-        <button type="button" onClick={() => onOpenStage?.('ALL')} className="text-[10px] text-slate-400 hover:text-white">
+        <button type="button" onClick={() => onOpenStage?.('ALL')} className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-slate-400 hover:text-white`}>
           {visitors.filter((visitor) => getVisitorPipelineStage(visitor) !== 'CONVERTED').length} active care records
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className={`grid ${compact ? 'grid-cols-2 gap-2' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3'}`}>
         {stageData.map((stage) => {
           const Icon = stage.icon;
           const latest = stage.visitors.slice(0, 3);
           return (
-            <div key={stage.id} className={`rounded-2xl border p-3 ${colorClasses[stage.color]}`}>
+            <div key={stage.id} className={`${compact ? 'rounded-xl border p-2' : 'rounded-2xl border p-3'} ${colorClasses[stage.color]}`}>
               <button type="button" onClick={() => onOpenStage?.(stage.id)} className="w-full text-left cursor-pointer">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wide">{stage.label}</span>
-                  <Icon size={15} />
+                  <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} font-black uppercase tracking-wide`}>{stage.label}</span>
+                  <Icon size={compact ? 13 : 15} />
                 </div>
-                <div className="text-2xl font-black text-white mt-2">{stage.visitors.length}</div>
-                <div className="text-[10px] opacity-75">{stage.description}</div>
+                <div className={`${compact ? 'text-xl mt-1' : 'text-2xl mt-2'} font-black text-white`}>{stage.visitors.length}</div>
+                <div className={`${compact ? 'text-[9px]' : 'text-[10px]'} opacity-75`}>{stage.description}</div>
               </button>
 
-              <div className="mt-3 space-y-1.5 min-h-14">
-                {latest.length === 0 ? <span className="text-[10px] opacity-60">No records yet</span> : latest.map((visitor) => (
-                  <div key={visitor.id || visitor.visitorId || visitor.name} className="truncate text-[10px] text-white/90">
+              <div className={`${compact ? 'mt-2 space-y-1 min-h-10' : 'mt-3 space-y-1.5 min-h-14'}`}>
+                {latest.length === 0 ? <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} opacity-60`}>No records yet</span> : latest.map((visitor) => (
+                  <div key={visitor.id || visitor.visitorId || visitor.name} className={`truncate ${compact ? 'text-[9px]' : 'text-[10px]'} text-white/90`}>
                     {visitor.name || 'Unnamed visitor'}
                   </div>
                 ))}
@@ -87,19 +87,19 @@ export default function VisitorPipelineWidget({ visitors = [], onOpenStage, onAd
                 <button
                   type="button"
                   onClick={() => onAdvanceStage?.(stage.visitors[0], stage.id)}
-                  className="mt-3 w-full rounded-xl bg-slate-950/40 px-2 py-1.5 text-[10px] font-bold text-white hover:bg-slate-950/70 flex items-center justify-center gap-1"
+                  className={`${compact ? 'mt-2 rounded-lg px-1 py-1 text-[9px]' : 'mt-3 rounded-xl px-2 py-1.5 text-[10px]'} w-full bg-slate-950/40 font-bold text-white hover:bg-slate-950/70 flex items-center justify-center gap-1`}
                 >
                   {stage.id === '1ST_VISIT' ? 'Mark Leader Call Done' : stage.id === 'LEADER_CALLED' ? 'Schedule Home Visit' : 'Mark Ready for Membership'}
                   <ArrowRight size={12} />
                 </button>
               )}
-              {stage.id === 'CONVERTED' && <div className="mt-3 text-[10px] font-bold flex items-center gap-1"><CheckCircle2 size={12} /> Permanent members</div>}
+              {stage.id === 'CONVERTED' && <div className={`${compact ? 'mt-2 text-[9px]' : 'mt-3 text-[10px]'} font-bold flex items-center gap-1`}><CheckCircle2 size={12} /> Permanent members</div>}
             </div>
           );
         })}
       </div>
 
-      <div className="flex items-center gap-2 text-[10px] text-slate-500 border-t border-white/5 pt-3">
+      <div className={`flex items-center gap-2 ${compact ? 'text-[9px] pt-2' : 'text-[10px] pt-3'} text-slate-500 border-t border-white/5`}>
         <CalendarDays size={13} /> Click any stage to open the visitor registry filtered to that stage.
       </div>
     </section>

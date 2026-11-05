@@ -7,6 +7,10 @@ import {
 } from 'lucide-react';
 import { sendReceiptViaWhatsApp } from '../../utils/whatsappEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
+import {
+  getFinanceSubTabsForRole,
+  isFinanceDeskRole
+} from '../../config/navigationConfig';
 import FinanceAnalyticsTab from './FinanceAnalyticsTab';
 import Annual80GCertificateModal from './Annual80GCertificateModal';
 import PrintableReceiptModal from './PrintableReceiptModal';
@@ -34,12 +38,72 @@ const SEED_EXPENSES = [
   { id: 'EXP-102', date: '2026-08-25', category: 'Sound, Media & Instruments', amount: 12000, paymentMode: 'UPI / GPay', notes: 'Wireless Mic System' }
 ];
 
-export default function FinanceDesk({ session }) {
-  const [activeFinanceSubTab, setActiveFinanceSubTab] = useState('income');
+const FINANCE_TAB_ICONS = {
+  donations: TrendingUp,
+  expenses: Receipt,
+  receipts_80g: FileText,
+  sponsorships: Heart,
+  equipment: Package,
+  analytics: DollarSign,
+  payroll: ShieldCheck,
+  agm_audit: FileCheck2
+};
+
+function getInitialFinanceTab() {
+  try {
+    const query = new URLSearchParams(window.location.search);
+    const requestedTab = query.get('financeTab') || query.get('financeSubTab')
+      || query.get('subTab') || query.get('tab')
+      || sessionStorage.getItem('graceos_finance_subtab')
+      || localStorage.getItem('graceos_finance_subtab')
+      || 'donations';
+    return requestedTab === 'income' ? 'donations' : requestedTab;
+  } catch {
+    return 'donations';
+  }
+}
+
+function readAuthSession() {
+  try {
+    const raw = localStorage.getItem('graceos_auth_session')
+      || localStorage.getItem('graceos_session');
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.warn('[FinanceDesk] Could not read the saved session:', error);
+    return null;
+  }
+}
+
+export default function FinanceDesk({ session: providedSession, currentUser }) {
+  const [activeFinanceSubTab, setActiveFinanceSubTab] = useState(getInitialFinanceTab);
   const [toastMessage, setToastMessage] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [churchConfig, setChurchConfig] = useState(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+  const session = providedSession || currentUser || readAuthSession();
+  const authorizedTabs = useMemo(() => getFinanceSubTabsForRole(session?.role), [session?.role]);
+  const activeTabConfig = authorizedTabs.find((tab) => tab.id === activeFinanceSubTab);
+  const effectiveFinanceSubTab = activeTabConfig?.id || authorizedTabs[0]?.id || 'donations';
+  const accessWarning = isFinanceDeskRole(session?.role) && activeFinanceSubTab !== effectiveFinanceSubTab;
+
+  useEffect(() => {
+    if (activeFinanceSubTab !== effectiveFinanceSubTab) {
+      setActiveFinanceSubTab(effectiveFinanceSubTab);
+    }
+  }, [activeFinanceSubTab, effectiveFinanceSubTab]);
+
+  const selectFinanceTab = (tabId) => {
+    if (!authorizedTabs.some((tab) => tab.id === tabId)) {
+      setActiveFinanceSubTab(tabId);
+      return;
+    }
+    setActiveFinanceSubTab(tabId);
+    try {
+      sessionStorage.setItem('graceos_finance_subtab', tabId);
+    } catch (error) {
+      console.warn('[FinanceDesk] Could not save the selected finance tab:', error);
+    }
+  };
 
   // Fellowship & Sponsorships State with Custom Cause Support
   const [sponsorships, setSponsorships] = useState([]);
@@ -69,6 +133,7 @@ export default function FinanceDesk({ session }) {
   const [expensesList, setExpensesList] = useState(SEED_EXPENSES);
 
   useEffect(() => {
+    if (!isFinanceDeskRole(session?.role)) return undefined;
     let isMounted = true;
     const loadFinanceData = async () => {
       const storedIncome = await getVaultData('finance', SEED_INCOME);
@@ -97,7 +162,7 @@ export default function FinanceDesk({ session }) {
 
     loadFinanceData();
     return () => { isMounted = false; };
-  }, []);
+  }, [session?.role]);
 
   const [incomeForm, setIncomeForm] = useState({
     member: '',
@@ -219,6 +284,17 @@ export default function FinanceDesk({ session }) {
   const netBalance = totalIncome - totalExpenses;
   const totalSponsorshipValue = sponsorships.reduce((sum, s) => sum + (Number(s.amountEstimate) || 0), 0);
 
+  if (!isFinanceDeskRole(session?.role)) {
+    return (
+      <div role="alert" className="m-6 rounded-2xl border border-rose-400/20 bg-slate-900 p-6 text-center">
+        <h2 className="text-sm font-bold text-rose-300">Finance Desk access is restricted</h2>
+        <p className="mt-2 text-xs text-slate-400">
+          Your role cannot view church finance records. Use the personal giving portal to submit contributions and view your receipts.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 select-none animate-in fade-in duration-200 pb-16 text-slate-100">
       {toastMessage && (
@@ -243,104 +319,52 @@ export default function FinanceDesk({ session }) {
         {/* Sub-tab Navigation */}
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="flex flex-wrap items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/10 shrink-0">
-            <button
-              type="button"
-              onClick={() => setActiveFinanceSubTab('income')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'income' ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <TrendingUp size={14} />
-              <span>Income &amp; Tithes</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFinanceSubTab('expenses')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'expenses' ? 'bg-rose-500 text-white shadow-md font-bold' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Receipt size={14} />
-              <span>Expense Vouchers</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFinanceSubTab('receipts_80g')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'receipts_80g' ? 'bg-amber-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <FileText size={14} />
-              <span>80G Generator</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFinanceSubTab('sponsorships')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'sponsorships' ? 'bg-pink-500 text-white shadow-md font-bold' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Heart size={14} />
-              <span>Fellowship &amp; Sponsorships</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFinanceSubTab('equipment')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'equipment' ? 'bg-cyan-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Package size={14} />
-              <span>Equipment</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFinanceSubTab('analytics')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'analytics' ? 'bg-gradient-to-r from-rose-500 to-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <span>Audit &amp; Analytics</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFinanceSubTab('payroll')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'payroll' ? 'bg-sky-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <ShieldCheck size={14} />
-              <span>Staff Payroll</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFinanceSubTab('agm_audit')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeFinanceSubTab === 'agm_audit' ? 'bg-amber-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <FileCheck2 size={14} />
-              <span>AGM Annual Audit</span>
-            </button>
+            {authorizedTabs.map((tab) => {
+              const Icon = FINANCE_TAB_ICONS[tab.id];
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => selectFinanceTab(tab.id)}
+                  aria-current={effectiveFinanceSubTab === tab.id ? 'page' : undefined}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    effectiveFinanceSubTab === tab.id
+                      ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {Icon && <Icon size={14} />}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
-          <button
-            type="button"
-            onClick={() => setIsCertificateOpen(true)}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-cyan-300 border border-white/10 transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <FileCheck2 size={15} />
-            <span>Annual 80G Certificate</span>
-          </button>
+          {isFinanceDeskRole(session?.role) && (
+            <button
+              type="button"
+              onClick={() => setIsCertificateOpen(true)}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-cyan-300 border border-white/10 transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <FileCheck2 size={15} />
+              <span>Annual 80G Certificate</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {activeFinanceSubTab === 'analytics' && <FinanceAnalyticsTab />}
-      {activeFinanceSubTab === 'payroll' && <StaffPayrollDesk session={session} />}
-      {activeFinanceSubTab === 'agm_audit' && <AnnualAuditAGMDesk session={session} />}
-      {activeFinanceSubTab === 'equipment' && <TreasuryAndAssetDesk session={session} />}
+      {accessWarning && (
+        <div role="alert" className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-xs text-amber-200">
+          This finance tab is not available for your role. You have been returned to {authorizedTabs[0]?.label || 'the first authorized tab'}.
+        </div>
+      )}
+
+      {effectiveFinanceSubTab === 'analytics' && <FinanceAnalyticsTab />}
+      {effectiveFinanceSubTab === 'payroll' && <StaffPayrollDesk session={session} />}
+      {effectiveFinanceSubTab === 'agm_audit' && <AnnualAuditAGMDesk session={session} />}
+      {effectiveFinanceSubTab === 'equipment' && <TreasuryAndAssetDesk session={session} />}
 
       {/* 3 Metric Summary Cards */}
-      {activeFinanceSubTab !== 'equipment' && activeFinanceSubTab !== 'sponsorships' && (
+      {effectiveFinanceSubTab !== 'equipment' && effectiveFinanceSubTab !== 'sponsorships' && (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="win11-card p-5 rounded-3xl border border-white/10 space-y-2">
           <div className="flex items-center justify-between text-slate-400">
@@ -384,7 +408,7 @@ export default function FinanceDesk({ session }) {
       )}
 
       {/* TAB 1: INCOME & TITHES */}
-      {activeFinanceSubTab === 'income' && (
+      {effectiveFinanceSubTab === 'donations' && (
         <div className="space-y-6">
           <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
             <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2 font-mono">
@@ -523,7 +547,7 @@ export default function FinanceDesk({ session }) {
       )}
 
       {/* TAB 2: EXPENSES */}
-      {activeFinanceSubTab === 'expenses' && (
+      {effectiveFinanceSubTab === 'expenses' && (
         <div className="space-y-6">
           <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
             <h3 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2 font-mono">
@@ -638,7 +662,7 @@ export default function FinanceDesk({ session }) {
       )}
 
       {/* TAB 3: 80G RECEIPT DIRECTORY */}
-      {activeFinanceSubTab === 'receipts_80g' && (
+      {effectiveFinanceSubTab === 'receipts_80g' && (
         <div className="win11-card p-6 rounded-3xl border border-white/10 space-y-4">
           <div className="border-b border-white/10 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -677,7 +701,7 @@ export default function FinanceDesk({ session }) {
       )}
 
       {/* FELLOWSHIP & SPONSORSHIPS TAB VIEW (Updated without Choir/General Fund & with Custom Cause + Full Address) */}
-      {activeFinanceSubTab === 'sponsorships' && (
+      {effectiveFinanceSubTab === 'sponsorships' && (
         <div className="space-y-6 animate-in fade-in">
           <div className="p-4 rounded-2xl bg-slate-900/60 border border-white/10 max-w-sm">
             <span className="text-xs text-slate-400 block uppercase font-mono">Total Sponsorship Valuation</span>

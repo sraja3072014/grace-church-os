@@ -9,6 +9,7 @@ import DynamicAuraKiosk from './components/attendance/DynamicAuraKiosk';
 import SmartAttendanceScannerModal from './components/attendance/SmartAttendanceScannerModal';
 import MembersDesk from './components/members/MembersDesk';
 import FinanceDesk from './components/finance/FinanceDesk';
+import MemberGivingPortal from './components/finance/MemberGivingPortal';
 import CommunityHub from './components/community/CommunityHub';
 import SettingsHub from './components/settings/SettingsHub';
 import RainCanvas from './components/layout/RainCanvas';
@@ -24,10 +25,13 @@ import QuickWidgetBar from './components/widgets/QuickWidgetBar';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import MinistriesHubDesk from './components/ministry/MinistriesHubDesk';
 import { getLargeWallpaper } from './utils/storageDB';
-import { syncLocalVaultToCloud } from './utils/cloudSyncEngine';
-import { hydrateCloudData, initializeRealtimeSyncEngine } from './utils/syncEngine';
+import { syncLocalVaultToCloud, executeBidirectionalSync, setupRealtimeSyncListener } from './utils/cloudSyncEngine';
+import { hydrateCloudData } from './utils/syncEngine';
 import { canAccessModule } from './utils/accessControl';
 import { resolveAmbientTokens, applyAmbientTokens, getCurrentTimePhase } from './utils/adaptiveAmbientEngine';
+import { isPersonalGivingRole } from './config/navigationConfig';
+import { getSupabase } from './utils/supabaseClient';
+import { buildAuthSession, persistAuthSession, sanitizeStaffVault } from './utils/authSession';
 
 const DEFAULT_STYLE_WALLPAPERS = {
   glassmorphism: '',
@@ -46,15 +50,75 @@ export default function App() {
   const [cloudHydrationComplete, setCloudHydrationComplete] = useState(false);
   const sampleMemberId = "grace-member-uuid-12345";
 
-  const [session, setSession] = useState(() => {
-    try {
-      const saved = localStorage.getItem('graceos_auth_session')
-        || localStorage.getItem('graceos_session');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
+  const [session, setSession] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    let authChangeVersion = 0;
+    let subscription;
+
+    const initializeAuthentication = async () => {
+      try {
+        await sanitizeStaffVault();
+      } catch (error) {
+        console.error('[Auth] Could not sanitize legacy staff credentials:', error);
+      }
+
+      if (!active) return;
+      const supabase = getSupabase();
+      if (!supabase) {
+        persistAuthSession(null);
+        setIsAuthLoading(false);
+        return;
+      }
+
+      const applyAuthSession = async (authSession) => {
+        const version = ++authChangeVersion;
+        if (!authSession?.user) {
+          persistAuthSession(null);
+          if (active && version === authChangeVersion) {
+            setSession(null);
+            setIsAuthLoading(false);
+          }
+          return;
+        }
+
+        try {
+          const nextSession = await buildAuthSession(authSession.user, supabase);
+          if (active && version === authChangeVersion) {
+            persistAuthSession(nextSession);
+            setSession(nextSession);
+            setIsAuthLoading(false);
+          }
+        } catch (error) {
+          console.error('[Auth] Could not restore the authenticated profile:', error);
+          if (active && version === authChangeVersion) {
+            persistAuthSession(null);
+            setSession(null);
+            setIsAuthLoading(false);
+          }
+        }
+      };
+
+      const { data } = supabase.auth.onAuthStateChange((_event, authSession) => {
+        void Promise.resolve().then(() => applyAuthSession(authSession));
+      });
+      subscription = data.subscription;
+    };
+
+    void initializeAuthentication();
+    return () => {
+      active = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isPersonalGivingRole(session?.role) && activeTab === 'dashboard') {
+      setActiveTab('finance');
     }
-  });
+  }, [session?.role, activeTab]);
 
   const [theme, setTheme] = useState(() => {
     try {
@@ -199,7 +263,7 @@ export default function App() {
         if (!cancelled) {
           setCloudHydrationComplete(true);
           setIsCloudHydrating(false);
-          disposeRealtime = initializeRealtimeSyncEngine();
+          disposeRealtime = setupRealtimeSyncListener();
         }
       }
     }
@@ -219,15 +283,33 @@ export default function App() {
         console.warn('Logout sync warning:', err);
       }
     }
-    localStorage.removeItem('graceos_auth_session');
-    localStorage.removeItem('graceos_session');
+    const supabase = getSupabase();
+    if (supabase) {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('[Auth] Sign out failed:', error);
+        return;
+      }
+    }
+    persistAuthSession(null);
     setSession(null);
   };
 
   const handleLoginSuccess = (user) => {
-    localStorage.setItem('graceos_session', JSON.stringify(user));
+    persistAuthSession(user);
     setSession(user);
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="h-screen w-screen bg-slate-950 text-slate-200 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-cyan-400 text-lg font-black">GraceOS</div>
+          <div className="text-xs text-slate-400 mt-2">Checking authentication…</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!session) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
@@ -259,6 +341,10 @@ export default function App() {
     : (activeBgMode === 'dynamic_glow' ? null : (wallpaperData || DEFAULT_STYLE_WALLPAPERS[currentModel]));
 
   const renderContent = () => {
+    if (isPersonalGivingRole(session?.role) && (activeTab === 'dashboard' || activeTab === 'finance')) {
+      return <MemberGivingPortal currentUser={session} />;
+    }
+
     const moduleKey = {
       prayer_wall: 'prayer',
       events_hub: 'events',
@@ -268,9 +354,9 @@ export default function App() {
     if (!canAccessModule(session?.role, moduleKey)) {
       return (
         <div className="p-8 text-center bg-slate-900 border border-rose-500/20 rounded-2xl m-6">
-          <h3 className="text-base font-bold text-rose-400">அணுகல் மறுக்கப்பட்டது (Access Denied)</h3>
+          <h3 className="text-base font-bold text-rose-400">Access Denied</h3>
           <p className="text-xs text-slate-400 mt-1">
-            உங்கள் பொறுப்பிற்கு ({session?.role}) இந்தப் பகுதியை அணுக அனுமதி இல்லை. தலைமைப் போதகரைத் தொடர்பு கொள்ளவும்.
+            Your role ({session?.role}) does not have permission to access this module. Please contact the Senior Pastor or Administrator.
           </p>
         </div>
       );
@@ -309,7 +395,7 @@ export default function App() {
       case 'ministries':
         return <MinistriesHubDesk session={session} />;
       case 'finance':
-        return <FinanceDesk session={session} />;
+        return <FinanceDesk session={session} currentUser={session} />;
       case 'broadcast':
         return <BulkBroadcastMessenger />;
       case 'community':
@@ -422,7 +508,7 @@ export default function App() {
 
       {isDockLayout && (
         <div className="relative z-30">
-          <TaskbarDock activeTab={activeTab || 'dashboard'} setActiveTab={setActiveTab} />
+          <TaskbarDock activeTab={activeTab || 'dashboard'} setActiveTab={setActiveTab} session={session} />
         </div>
       )}
 

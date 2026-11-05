@@ -12,7 +12,7 @@ export default function BankAccountsTab() {
   const [accounts, setAccounts] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [form, setForm] = useState({ bankName: '', accNumber: '', ifsc: '', branch: '', upiId: '', type: 'Primary Current A/C', balance: '₹ 0' });
+  const [form, setForm] = useState({ bankName: '', accNumber: '', ifsc: '', branch: '', upiId: '', isVerified: false, type: 'Primary Current A/C', balance: '₹ 0' });
 
   useEffect(() => {
     async function loadAccounts() {
@@ -30,7 +30,7 @@ export default function BankAccountsTab() {
 
   const handleOpenAdd = () => {
     setEditItem(null);
-    setForm({ bankName: '', accNumber: '', ifsc: '', branch: '', upiId: '', type: 'Primary Current A/C', balance: '₹ 0' });
+    setForm({ bankName: '', accNumber: '', ifsc: '', branch: '', upiId: '', isVerified: false, type: 'Primary Current A/C', balance: '₹ 0' });
     setModalOpen(true);
   };
 
@@ -52,11 +52,24 @@ export default function BankAccountsTab() {
   const handleSaveAccount = async (e) => {
     e.preventDefault();
     if (!form.bankName || !form.accNumber) return;
+    if (form.isVerified && !/^[\w.-]+@[\w.-]+$/.test(String(form.upiId || '').trim())) {
+      alert('Enter a valid UPI VPA before marking it as verified.');
+      return;
+    }
+
+    const savedForm = { ...form, upiId: String(form.upiId || '').trim(), isVerified: Boolean(form.isVerified) };
 
     if (editItem) {
-      await sync(accounts.map(a => a.id === editItem.id ? { ...form, id: editItem.id } : a));
+      await sync(accounts.map((account) => ({
+        ...account,
+        ...(savedForm.isVerified ? { isVerified: account.id === editItem.id } : {}),
+        ...(account.id === editItem.id ? { ...savedForm, id: editItem.id } : {})
+      })));
     } else {
-      await sync([...accounts, { ...form, id: Date.now() }]);
+      const currentAccounts = savedForm.isVerified
+        ? accounts.map((account) => ({ ...account, isVerified: false }))
+        : accounts;
+      await sync([...currentAccounts, { ...savedForm, id: Date.now() }]);
     }
     setModalOpen(false);
   };
@@ -88,6 +101,7 @@ export default function BankAccountsTab() {
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
                   {acc.type}
                 </span>
+                {acc.isVerified && <span className="text-[9px] font-bold uppercase text-emerald-300">Verified UPI</span>}
                 <span className="text-xs font-mono font-bold text-emerald-400">{acc.balance}</span>
               </div>
 
@@ -219,6 +233,16 @@ export default function BankAccountsTab() {
                   className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
                 />
               </div>
+
+              <label className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-[11px] text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.isVerified)}
+                  onChange={(e) => setForm({ ...form, isVerified: e.target.checked })}
+                  className="mt-0.5 accent-emerald-400"
+                />
+                <span>Verified Church UPI destination (only a verified VPA is shown in member giving)</span>
+              </label>
 
               <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-white/10">
                 <button 

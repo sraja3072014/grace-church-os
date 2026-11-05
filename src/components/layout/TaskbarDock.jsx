@@ -5,8 +5,9 @@ import {
   Receipt, MessageSquare, BarChart3, HeartHandshake, 
   CalendarDays, Radio, BookOpen, Settings, Search, Sparkles, X
 } from 'lucide-react';
+import { isPersonalGivingRole } from '../../config/navigationConfig';
 
-export default function TaskbarDock({ activeTab, setActiveTab }) {
+export default function TaskbarDock({ activeTab, setActiveTab, session }) {
   const [startOpen, setStartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -14,7 +15,13 @@ export default function TaskbarDock({ activeTab, setActiveTab }) {
     { id: 'dashboard', label: 'Dashboard', desc: 'Realtime Church Overview', icon: LayoutDashboard, pinned: true },
     { id: 'attendance', label: 'Attendance', desc: 'Service Check-in & QR Desk', icon: CheckSquare, pinned: true },
     { id: 'members', label: 'Members Registry', desc: 'Family & Soul Directory', icon: Users, pinned: true },
-    { id: 'finance', label: 'Finance & 80G', desc: 'Tithe Counter & Tax Receipts', icon: Receipt, pinned: true },
+    {
+      id: 'finance',
+      label: isPersonalGivingRole(session?.role) ? 'My Giving' : 'Finance & 80G',
+      desc: isPersonalGivingRole(session?.role) ? 'Personal contributions & receipts' : 'Tithe Counter & Tax Receipts',
+      icon: Receipt,
+      pinned: true
+    },
     { id: 'broadcast', label: 'Broadcast Hub', desc: 'Broadcasts & Group Circles', icon: MessageSquare, pinned: true },
     { id: 'prayer', label: 'Prayer Wall', desc: 'Intercession & Healing Requests', icon: HeartHandshake, pinned: true },
     { id: 'events', label: 'Events Hub', desc: 'Service Schedules & Meetings', icon: CalendarDays, pinned: true },

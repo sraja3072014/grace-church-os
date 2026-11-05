@@ -8,6 +8,7 @@ import {
 import { soundFX } from '../../utils/audioEngine';
 import { t } from '../../utils/localeEngine';
 import { checkModulePermission } from '../../utils/accessControl';
+import { isPersonalGivingRole, NAVIGATION_MODULES, resolveRoleKey } from '../../config/navigationConfig';
 
 export default function FusionSidebar({ activeTab, setActiveTab, session }) {
   const [churchName, setChurchName] = useState('Grace City Church');
@@ -54,15 +55,20 @@ export default function FusionSidebar({ activeTab, setActiveTab, session }) {
     { id: 'prayer', label: t ? t('prayer') : 'Prayer', icon: HeartHandshake, color: 'from-rose-500 to-pink-600' },
     { id: 'events', label: t ? t('events') : 'Events', icon: Calendar, color: 'from-amber-500 to-rose-600' },
     { id: 'livestream', label: t ? t('livestream') : 'Live Stream', icon: Radio, color: 'from-orange-500 to-amber-500' },
-    { id: 'finance', label: t ? t('finance') : 'Finance', icon: DollarSign, color: 'from-emerald-400 to-teal-600' },
+    { id: 'finance', label: isPersonalGivingRole(session?.role) ? 'My Giving' : (t ? t('finance') : 'Finance'), icon: DollarSign, color: 'from-emerald-400 to-teal-600' },
     { id: 'broadcast', label: t ? t('broadcast') : 'Broadcast', icon: Megaphone, color: 'from-amber-500 to-orange-600', badge: 'SMS/WA' },
     { id: 'reports', label: t ? t('reports') : 'Reports', icon: BarChart3, color: 'from-orange-400 to-rose-500' },
     { id: 'settings', label: t ? t('settings') : 'Settings', icon: Settings, color: 'from-stone-400 to-stone-600' },
   ];
 
+  const roleKey = resolveRoleKey(session?.role);
   const filteredNavigation = menuItems.filter((item) => {
+    const module = NAVIGATION_MODULES.find((entry) => entry.id === item.id);
+    if (!module || (roleKey && !module.permittedRoles.includes(roleKey))) return false;
     if (item.id === 'dashboard' || item.id === 'settings') return true;
-    return checkModulePermission(session?.role, item.moduleKey || item.id);
+    if (item.id === 'finance' && isPersonalGivingRole(session?.role)) return true;
+    return !module.requiresModulePermission
+      || checkModulePermission(session?.role, item.moduleKey || item.id);
   });
 
   return (

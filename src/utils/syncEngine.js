@@ -4,7 +4,7 @@ import { getVaultData, setVaultData } from './vaultStore';
 import { syncMembers } from './cloudSyncEngine';
 
 /**
- * 10 Core Tables & Vault Keys Mapping
+ * Core cloud tables & local vault keys
  */
 export const SYNC_MODULES = [
   { key: 'members', table: 'members', primaryKey: 'familyId' },
@@ -13,6 +13,7 @@ export const SYNC_MODULES = [
   { key: 'expenses', table: 'expenses', primaryKey: 'id' },
   { key: 'visitors', table: 'visitors', primaryKey: 'id' },
   { key: 'prayers', table: 'prayers', primaryKey: 'id' },
+  { key: 'prayer_slots', table: 'prayer_chain_slots', primaryKey: 'id' },
   { key: 'events', table: 'events', primaryKey: 'id' },
   { key: 'staff', table: 'staff', primaryKey: 'id' },
   { key: 'main_church', table: 'main_church', primaryKey: 'id' },
@@ -69,6 +70,46 @@ function normalizeForCloud(moduleKey, record) {
       campus: record.headMember?.campus || record.campus || 'Headquarters',
       raw_payload: record,
       updated_at: new Date().toISOString()
+    };
+  }
+
+  if (moduleKey === 'prayers') {
+    const category = String(record.category || 'GENERAL').toUpperCase();
+    const visibility = String(record.visibility || '').toUpperCase();
+    const confidentialityValue = record.is_confidential ?? record.isConfidential ?? record.isPrivate;
+    const isPastoral = visibility === 'PASTORAL'
+      || confidentialityValue === true
+      || confidentialityValue === 1
+      || String(confidentialityValue).toLowerCase() === 'true';
+    const isAnonymous = visibility === 'ANONYMOUS' || record.is_anonymous === true;
+    const status = String(record.status || '').toUpperCase();
+    return {
+      id: String(record.id || `PR-${Date.now()}`),
+      user_id: record.user_id || record.member_id || record.memberId || null,
+      author_name: isAnonymous ? 'Anonymous Believer' : record.author_name || record.requester_name || record.requester || record.name || 'Anonymous Believer',
+      category: ['NATION', 'HEALING', 'FAMILY', 'JOB', 'SPIRITUAL', 'DELIVERANCE', 'GENERAL'].includes(category) ? category : 'GENERAL',
+      description: record.description || record.request_text || record.request || record.details || '',
+      visibility: isPastoral ? 'PASTORAL' : isAnonymous ? 'ANONYMOUS' : 'PUBLIC',
+      prayer_count: Math.max(0, Number(record.prayer_count ?? record.prayerCount) || 0),
+      is_answered: status === 'ANSWERED' || record.is_answered === true,
+      created_at: record.created_at || record.createdAt || record.date || new Date().toISOString(),
+      raw_payload: record,
+      updated_at: record.updated_at || new Date().toISOString()
+    };
+  }
+
+  if (moduleKey === 'prayer_slots') {
+    return {
+      id: String(record.id || `PS-${Date.now()}`),
+      user_id: String(record.user_id || record.userId || ''),
+      author_name: record.author_name || record.name || 'Prayer Warrior',
+      slot_date: record.date || record.slot_date || new Date().toISOString().slice(0, 10),
+      start_minute: Math.max(0, Number(record.start_minute) || 0),
+      duration_minutes: Math.max(30, Number(record.duration_minutes) || 60),
+      status: record.status === 'CANCELLED' ? 'CANCELLED' : 'ACTIVE',
+      created_at: record.created_at || new Date().toISOString(),
+      raw_payload: record,
+      updated_at: record.updated_at || new Date().toISOString()
     };
   }
 
@@ -241,6 +282,15 @@ export async function pushModuleToCloud(moduleKey) {
     const cloudRows = localData
       .map(item => normalizeForCloud(moduleKey, item))
       .filter(Boolean);
+
+    if (moduleKey === 'prayers' || moduleKey === 'prayer_slots') {
+      const functionName = moduleKey === 'prayers' ? 'sync_prayer' : 'sync_prayer_slot';
+      for (const record of cloudRows) {
+        const { error } = await client.rpc(functionName, { record_payload: record });
+        if (error) throw error;
+      }
+      return { success: true, count: cloudRows.length };
+    }
 
     const { error } = await client
       .from(target.table)

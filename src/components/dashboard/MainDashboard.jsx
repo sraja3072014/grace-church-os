@@ -3,15 +3,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { soundFX } from '../../utils/audioEngine';
 import { getVaultData, setVaultData } from '../../utils/vaultStore';
 import { 
-  Users, Building2, TrendingUp, DollarSign, 
+  Users, Building2, TrendingUp,
   CalendarCheck, ArrowUpRight, Sparkles, Receipt, 
-  HeartHandshake, X, Search, Check, 
-  Clock, Phone, AlertCircle, Info, Landmark, MapPin, 
+  X, Search, Check,
+  Clock,
   UserPlus, Database, CheckCircle2
 } from 'lucide-react';
 import CelebrationDispatcherWidget from '../widgets/CelebrationDispatcherWidget';
-import CellLeaderSyncWidget from './CellLeaderSyncWidget';
-import VisitorPipelineWidget from './VisitorPipelineWidget';
+import ExecutiveSummaryRow from './ExecutiveSummaryRow';
+import { isFinanceDeskRole } from '../../config/navigationConfig';
 
 export default function MainDashboard({
   setActiveTab,
@@ -32,7 +32,9 @@ export default function MainDashboard({
   const [families, setFamilies] = useState([]);
   const [visitors, setVisitors] = useState([]);
   const [incomeList, setIncomeList] = useState([]);
+  const [expensesList, setExpensesList] = useState([]);
   const [attendanceLedger, setAttendanceLedger] = useState([]);
+  const [careRequests, setCareRequests] = useState([]);
 
   const [churchInfo, setChurchInfo] = useState(() => {
     try {
@@ -65,12 +67,16 @@ export default function MainDashboard({
       const dbFamilies = await getVaultData('members', []);
       const dbVisitors = await getVaultData('visitors', []);
       const dbFinance = await getVaultData('finance', []);
+      const dbExpenses = await getVaultData('expenses', []);
       const dbAttendance = await getVaultData('attendance', []);
+      const dbCareRequests = await getVaultData('care_requests', []);
 
-      setFamilies(dbFamilies);
-      setVisitors(dbVisitors);
-      setIncomeList(dbFinance);
-      setAttendanceLedger(dbAttendance);
+      setFamilies(Array.isArray(dbFamilies) ? dbFamilies : []);
+      setVisitors(Array.isArray(dbVisitors) ? dbVisitors : []);
+      setIncomeList(Array.isArray(dbFinance) ? dbFinance : []);
+      setExpensesList(Array.isArray(dbExpenses) ? dbExpenses : []);
+      setAttendanceLedger(Array.isArray(dbAttendance) ? dbAttendance : []);
+      setCareRequests(Array.isArray(dbCareRequests) ? dbCareRequests : []);
 
       if (session?.activeCampus) {
         setChurchInfo(prev => ({
@@ -102,24 +108,38 @@ export default function MainDashboard({
   // Believers Unique Identifier Map
   const allBelievers = useMemo(() => {
     const list = [];
+    const seenMemberIds = new Set();
+    const addBeliever = (believer, fallbackId) => {
+      const memberId = String(
+        believer?.id || believer?.memberId || believer?.member_id || fallbackId
+      );
+      if (seenMemberIds.has(memberId)) return;
+      seenMemberIds.add(memberId);
+      return memberId;
+    };
     (families || []).forEach((fam, fIdx) => {
       const fId = fam?.familyId || `FAM-${fIdx + 101}`;
       if (fam?.headMember) {
-        list.push({
-          ...fam.headMember,
-          uniqueId: fam.headMember.memberId || `MBR-${fIdx + 1001}`,
-          memberId: fam.headMember.memberId || `MBR-${fIdx + 1001}`,
-          name: fam.headMember.name || 'Family Head',
-          familyName: fam.familyName || 'Household',
-          roleInFamily: 'Head of Family',
-          phone: fam.headMember.phone || ''
-        });
+        const memberId = addBeliever(fam.headMember, `${fId}-HEAD`);
+        if (memberId) {
+          list.push({
+            ...fam.headMember,
+            uniqueId: memberId,
+            memberId,
+            name: fam.headMember.name || 'Family Head',
+            familyName: fam.familyName || 'Household',
+            roleInFamily: 'Head of Family',
+            phone: fam.headMember.phone || ''
+          });
+        }
       }
       (fam?.members || []).forEach((m, mIdx) => {
+        const memberId = addBeliever(m, `${fId}-MEMBER-${mIdx + 1}`);
+        if (!memberId) return;
         list.push({
           ...m,
-          uniqueId: m.memberId || `MBR-SUB-${mIdx}`,
-          memberId: m.memberId || `MBR-SUB-${mIdx}`,
+          uniqueId: memberId,
+          memberId,
           name: m.name || 'Family Member',
           familyName: fam.familyName || 'Household',
           roleInFamily: m.roleInFamily || 'Member',
@@ -128,6 +148,19 @@ export default function MainDashboard({
       });
     });
     return list;
+  }, [families]);
+
+  const uniqueMemberCount = useMemo(() => {
+    const memberIds = new Set([
+      ...(families || []).map((family) => (
+        family?.headMember?.id || family?.headMember?.memberId || family?.headMember?.member_id
+      )),
+      ...(families || []).flatMap((family) => (
+        (Array.isArray(family?.members) ? family.members : [])
+          .map((member) => member?.id || member?.memberId || member?.member_id)
+      ))
+    ].filter(Boolean).map(String));
+    return memberIds.size;
   }, [families]);
 
   const totalGiving = useMemo(() => {
@@ -202,71 +235,6 @@ export default function MainDashboard({
     showToast('New Seeker registered & marked present successfully!');
   };
 
-  const criticalCareList = [
-    { name: 'Bro. Sarah Jenkins', missed: 'Missed 4 Services (Last seen 1 month ago)', phone: '+91 98765 11001' },
-    { name: 'Bro. David Miller', missed: 'Missed 3 Services (Calling Pending)', phone: '+91 98765 11002' },
-    { name: 'Sister Marcus Thompson', missed: 'Missed 5 Services (Home Visit Needed)', phone: '+91 98765 11003' }
-  ];
-
-  const treasuryBranches = [
-    { name: 'Main Cathedral Treasury (SBI - 4401)', tithe: '65%', offering: '25%', building: '10%', total: '₹ 1,85,000' },
-    { name: 'North Campus Building (HDFC - 8812)', tithe: '40%', offering: '40%', building: '20%', total: '₹ 95,000' },
-    { name: 'Mission & Outreach (ICICI - 2045)', tithe: '70%', offering: '15%', building: '15%', total: '₹ 42,000' }
-  ];
-
-  const visitorsData = Array.isArray(visitors) ? visitors : [];
-
-  const countStage1 = useMemo(
-    () => visitorsData.filter(
-      (visitor) => !visitor.is_converted && (!visitor.pipeline_stage || visitor.pipeline_stage === '1ST_VISIT')
-    ).length,
-    [visitorsData]
-  );
-
-  const countStage2 = useMemo(
-    () => visitorsData.filter(
-      (visitor) => !visitor.is_converted && (visitor.pipeline_stage === 'LEADER_CALLED' || visitor.pipeline_stage === 'PASTORAL_CALL')
-    ).length,
-    [visitorsData]
-  );
-
-  const countStage3 = useMemo(
-    () => visitorsData.filter(
-      (visitor) => !visitor.is_converted && visitor.pipeline_stage === 'HOME_VISITED'
-    ).length,
-    [visitorsData]
-  );
-
-  const countStage4 = useMemo(
-    () => visitorsData.filter(
-      (visitor) => visitor.is_converted || visitor.pipeline_stage === 'CONVERTED'
-    ).length,
-    [visitorsData]
-  );
-
-  const advanceVisitorPipeline = async (visitor, currentStage) => {
-    const nextStage = {
-      '1ST_VISIT': 'LEADER_CALLED',
-      LEADER_CALLED: 'HOME_VISITED',
-      HOME_VISITED: 'HOME_VISITED'
-    }[currentStage];
-    if (!nextStage) return;
-    const updatedVisitors = visitors.map((item) => {
-      if (String(item.id || item.visitorId) !== String(visitor.id || visitor.visitorId)) return item;
-      return {
-        ...item,
-        pipeline_stage: nextStage,
-        stage: nextStage === 'LEADER_CALLED' ? 'CONTACTED' : nextStage === 'HOME_VISITED' ? 'PRAYER_MEET' : item.stage,
-        followUpStage: nextStage === 'LEADER_CALLED' ? 'calling_scheduled' : 'home_visit',
-        call_notes: nextStage === 'LEADER_CALLED' ? item.call_notes || 'Leader call completed.' : item.call_notes,
-        home_visit_date: nextStage === 'HOME_VISITED' && !item.home_visit_date ? todayDate : item.home_visit_date
-      };
-    });
-    setVisitors(updatedVisitors);
-    await setVaultData('visitors', updatedVisitors, true);
-    showToast(nextStage === 'LEADER_CALLED' ? 'Leader call marked complete.' : 'Home visit stage updated.');
-  };
-
   const openVisitorStage = (stage) => {
     setActiveTab?.('visitors');
     if (typeof window !== 'undefined') {
@@ -311,7 +279,7 @@ export default function MainDashboard({
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full badge-emerald">+12.4%</span>
           </div>
           <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-black stat-number">{allBelievers.length.toLocaleString()}</p>
+            <p className="text-2xl sm:text-3xl font-black stat-number">{uniqueMemberCount.toLocaleString()}</p>
             <span className="text-[10px] text-slate-400 font-semibold mt-1 inline-block">Active registered souls</span>
           </div>
         </div>
@@ -327,16 +295,25 @@ export default function MainDashboard({
           </div>
         </div>
 
-        <div onClick={() => setActiveTab?.('finance')} className="p-5 win11-card rounded-2xl cursor-pointer flex flex-col justify-between transition hover:scale-[1.01]">
+        <div
+          onClick={isFinanceDeskRole(session?.role) ? () => setActiveTab?.('finance') : undefined}
+          className={`p-5 win11-card rounded-2xl flex flex-col justify-between transition ${isFinanceDeskRole(session?.role) ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-300">Month Giving Inflow</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full badge-emerald">Audited</span>
+            <span className="text-xs font-semibold text-slate-300">
+              {isFinanceDeskRole(session?.role) ? 'Month Giving Inflow' : 'Giving Summary'}
+            </span>
+            {isFinanceDeskRole(session?.role) && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full badge-emerald">Audited</span>
+            )}
           </div>
           <div className="mt-3">
             <p className="text-2xl sm:text-3xl font-black stat-number text-emerald-400">
-              ₹ {totalGiving.toLocaleString()}
+              {isFinanceDeskRole(session?.role) ? `₹ ${totalGiving.toLocaleString()}` : 'Restricted'}
             </p>
-            <span className="text-[10px] text-slate-400 font-semibold mt-1 inline-block font-mono">80G Physical Disk Vault</span>
+            <span className="text-[10px] text-slate-400 font-semibold mt-1 inline-block font-mono">
+              {isFinanceDeskRole(session?.role) ? '80G Physical Disk Vault' : 'Finance roles only'}
+            </span>
           </div>
         </div>
 
@@ -385,125 +362,23 @@ export default function MainDashboard({
         })}
       </div>
 
-      {/* 4. Core Operational Grid (Including CellLeaderSyncWidget & CelebrationDispatcherWidget) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        
-        {/* 1. Visitor Engagement Pipeline */}
-        <div className="lg:col-span-3">
-          <VisitorPipelineWidget visitors={visitors} onOpenStage={openVisitorStage} onAdvanceStage={advanceVisitorPipeline} />
+      {/* 4. Core Operational Grid */}
+      <div className="space-y-5">
+        <ExecutiveSummaryRow
+          visitors={visitors}
+          careRequests={careRequests}
+          finance={incomeList}
+          expenses={expensesList}
+          canViewTreasury={isFinanceDeskRole(session?.role)}
+          onOpenVisitorFunnel={(stage) => openVisitorStage(stage)}
+          onOpenCare={() => setActiveTab?.('ministries')}
+          onOpenFinance={() => setActiveTab?.('finance')}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Celebration Dispatcher */}
+          <CelebrationDispatcherWidget />
         </div>
-        {/* Legacy compact metrics retained below for quick glance */}
-        <div className="hidden">
-          <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <HeartHandshake className="text-rose-400" size={15} />
-              <span>Visitor Pipeline</span>
-            </h4>
-            <span className="text-[10px] text-slate-400 font-mono">{visitors.length} Seekers</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div onClick={() => setActiveTab?.('visitors')} className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center cursor-pointer hover:scale-[1.02] transition">
-              <span className="text-[9px] text-amber-300 uppercase font-bold block">1st Visit</span>
-              <div className="text-lg font-black text-amber-400 font-mono">{countStage1}</div>
-              <span className="text-[9px] text-slate-400">New Seekers</span>
-            </div>
-
-            <div onClick={() => setActiveTab?.('visitors')} className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-center cursor-pointer hover:scale-[1.02] transition">
-              <span className="text-[9px] text-sky-300 uppercase font-bold block">Pastoral Call</span>
-              <div className="text-lg font-black text-sky-400 font-mono">{countStage2}</div>
-              <span className="text-[9px] text-slate-400">Under Care</span>
-            </div>
-
-            <div onClick={() => setActiveTab?.('visitors')} className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-center cursor-pointer hover:scale-[1.02] transition">
-              <span className="text-[9px] text-indigo-300 uppercase font-bold block">Home Visit</span>
-              <div className="text-lg font-black text-indigo-400 font-mono">{countStage3}</div>
-              <span className="text-[9px] text-slate-400">Cell Groups</span>
-            </div>
-
-            <div onClick={() => setActiveTab?.('visitors')} className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center cursor-pointer hover:scale-[1.02] transition">
-              <span className="text-[9px] text-emerald-300 uppercase font-bold block">Full Member</span>
-              <div className="text-lg font-black text-emerald-400 font-mono">{countStage4}</div>
-              <span className="text-[9px] text-slate-400">Ready to Add</span>
-            </div>
-          </div>
-
-          <p className="text-[10px] text-slate-500 text-center border-t border-white/5 pt-2">
-            Clicking opens visitor care registry.
-          </p>
-        </div>
-
-        {/* 2. Critical Care Alerts */}
-        <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between gap-3">
-          <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-            <div className="flex items-center gap-2 text-rose-400">
-              <AlertCircle size={15} />
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white">Critical Care Alerts</h4>
-            </div>
-            <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[9px] font-bold">Action Needed</span>
-          </div>
-
-          <div className="space-y-2">
-            {criticalCareList.map((person, idx) => (
-              <div key={idx} className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between">
-                <div className="overflow-hidden pr-2">
-                  <div className="text-xs font-bold text-white truncate">{person.name}</div>
-                  <div className="text-[10px] text-rose-400 font-medium truncate">{person.missed}</div>
-                </div>
-                <button 
-                  type="button"
-                  onClick={() => alert(`Calling ${person.name} (${person.phone})...`)}
-                  className="p-2 rounded-lg bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 transition shrink-0 cursor-pointer"
-                  title="Call Believer"
-                >
-                  <Phone size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-500 border-t border-white/5 pt-2">
-            <Info size={11} />
-            <span>Feeds directly from attendance drops.</span>
-          </div>
-        </div>
-
-        {/* 3. Multi-Branch Treasury Split */}
-        <div className="p-5 win11-card rounded-2xl border border-white/[0.08] flex flex-col justify-between gap-3">
-          <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-            <div className="flex items-center gap-2 text-amber-400">
-              <Landmark size={15} />
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white">Multi-Branch Treasury</h4>
-            </div>
-            <span className="text-xs font-mono text-emerald-400 font-bold">Live Split</span>
-          </div>
-
-          <div className="space-y-2.5">
-            {treasuryBranches.map((b, idx) => (
-              <div key={idx} className="space-y-1 p-2 rounded-xl bg-black/20 border border-white/5">
-                <div className="flex justify-between text-xs">
-                  <span className="font-bold text-slate-300 truncate text-[11px]">{b.name}</span>
-                  <span className="font-mono text-emerald-400 font-bold shrink-0">{b.total}</span>
-                </div>
-                <div className="w-full h-1.5 rounded-full overflow-hidden flex bg-slate-800">
-                  <div className="bg-amber-400 h-full" style={{ width: b.tithe }} title={`Tithe: ${b.tithe}`} />
-                  <div className="bg-rose-500 h-full" style={{ width: b.offering }} title={`Offering: ${b.offering}`} />
-                  <div className="bg-emerald-400 h-full" style={{ width: b.building }} title={`Building: ${b.building}`} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-[10px] text-slate-500 text-center border-t border-white/5 pt-2">
-            Realtime multi-campus ledger routing active.
-          </p>
-        </div>
-
-        {/* 4. Cell Leader Live Sync Widget */}
-        <CellLeaderSyncWidget session={session} />
-
-        {/* 5. Celebration Dispatcher */}
-        <CelebrationDispatcherWidget />
       </div>
 
       {/* 6. Quick Attendance Modal */}

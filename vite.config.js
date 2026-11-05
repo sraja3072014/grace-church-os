@@ -11,4 +11,17 @@ export default defineConfig({
       ignored: ['**/*.tmp', '**/*.tmpdir/**', '**/node_modules/**', '**/.git/**']
     }
   },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-qrcode': ['html5-qrcode', 'qrcode.react']
+        }
+      }
+    }
+  }
 });
